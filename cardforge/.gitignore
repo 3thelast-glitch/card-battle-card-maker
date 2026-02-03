@@ -1,0 +1,5 @@
+node_modules
+dist
+apps/main/dist
+apps/renderer/dist
+.DS_Store

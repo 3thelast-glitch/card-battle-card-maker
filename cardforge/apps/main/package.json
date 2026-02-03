@@ -1,0 +1,20 @@
+{
+  "name": "@cardsmith/main",
+  "private": true,
+  "version": "0.1.0",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "dev": "npm run build && electron .",
+    "build": "tsc -p tsconfig.json && node scripts/rename.cjs",
+    "dist": "npm run build && electron-builder",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "electron": "^30.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.6.3"
+  }
+}

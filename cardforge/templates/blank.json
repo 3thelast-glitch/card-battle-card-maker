@@ -1,0 +1,12 @@
+{
+  "id": "blank",
+  "name": "Blank",
+  "description": "A clean canvas to start from scratch.",
+  "category": "Blank",
+  "size": {
+    "w": 750,
+    "h": 1050
+  },
+  "background": "#0e1830",
+  "elements": []
+}

@@ -1,0 +1,15 @@
+/// <reference types="vite/client" />
+
+declare global {
+  interface Window {
+    cardsmith?: {
+      openFile: () => Promise<{ canceled: boolean; filePaths?: string[] }>;
+      saveFile: () => Promise<{ canceled: boolean; filePath?: string }>;
+      selectFolder: () => Promise<{ canceled: boolean; filePaths?: string[] }>;
+      readFile: (filePath: string) => Promise<{ ok: boolean; text?: string }>;
+      writeFile: (filePath: string, payload: { text?: string; data?: ArrayBuffer }) => Promise<{ ok: boolean }>;
+    };
+  }
+}
+
+export {};
