@@ -1,15 +1,19 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Rect, Text, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
 import type { Blueprint, ElementModel } from '@cardsmith/core';
 import { applyBindingsToElements } from '@cardsmith/core';
 import { useHtmlImage } from '../../utils/konva';
+import { getImageLayout } from '../../utils/imageFit';
 
 export type ExportCanvasHandle = {
   renderToDataUrl: (rowData: Record<string, any>, pixelRatio: number) => Promise<string | null>;
 };
 
-export const ExportCanvas = forwardRef<ExportCanvasHandle, { blueprint: Blueprint }>((props, ref) => {
+export const ExportCanvas = forwardRef<
+  ExportCanvasHandle,
+  { blueprint: Blueprint; projectRoot?: string }
+>((props, ref) => {
   const stageRef = useRef<Konva.Stage>(null);
   const [rowData, setRowData] = useState<Record<string, any>>({});
 
@@ -40,14 +44,14 @@ export const ExportCanvas = forwardRef<ExportCanvasHandle, { blueprint: Blueprin
           {elements
             .slice()
             .sort((a, b) => a.zIndex - b.zIndex)
-            .map((el) => renderStaticElement(el))}
+            .map((el) => renderStaticElement(el, props.projectRoot))}
         </Layer>
       </Stage>
     </div>
   );
 });
 
-function renderStaticElement(el: ElementModel) {
+function renderStaticElement(el: ElementModel, projectRoot?: string) {
   if (!el.visible) return null;
   if (el.type === 'shape') {
     return (
@@ -114,24 +118,35 @@ function renderStaticElement(el: ElementModel) {
     );
   }
   if (el.type === 'image') {
-    return <StaticImage key={el.id} el={el} />;
+    return <StaticImage key={el.id} el={el} projectRoot={projectRoot} />;
   }
   return null;
 }
 
-function StaticImage({ el }: { el: ElementModel }) {
-  const img = useHtmlImage((el as any).src);
+function StaticImage({ el, projectRoot }: { el: ElementModel; projectRoot?: string }) {
+  const img = useHtmlImage((el as any).src, projectRoot);
   const item = el as any;
+  const layout = getImageLayout(img, item.w, item.h, item.fit);
   return (
-    <KonvaImage
+    <Group
       x={item.x}
       y={item.y}
-      width={item.w}
-      height={item.h}
       rotation={item.rotation}
-      image={img ?? undefined}
       opacity={item.opacity ?? 1}
-    />
+      clipX={0}
+      clipY={0}
+      clipWidth={item.w}
+      clipHeight={item.h}
+    >
+      <Rect width={item.w} height={item.h} opacity={0} />
+      <KonvaImage
+        image={img ?? undefined}
+        x={layout.x}
+        y={layout.y}
+        width={layout.width}
+        height={layout.height}
+      />
+    </Group>
   );
 }
 

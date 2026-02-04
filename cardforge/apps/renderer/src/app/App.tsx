@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../state/appStore';
 import { loadBuiltInTemplates } from '../templates/loadTemplates';
 import { HomeScreen } from '../features/home/HomeScreen';
@@ -6,11 +7,17 @@ import { DashboardScreen } from '../features/project/DashboardScreen';
 import { EditorScreen } from '../features/editor/EditorScreen';
 import { DataTableScreen } from '../features/data/DataTableScreen';
 import { ExportScreen } from '../features/export/ExportScreen';
+import { TemplateGalleryScreen } from '../features/templates/TemplateGalleryScreen';
+import { SettingsScreen } from '../features/settings/SettingsScreen';
+import { AssetsScreen } from '../features/assets/AssetsScreen';
 import { Button, Row } from '../components/ui';
 import { createProjectFromBlueprint, createEmptyProject } from '@cardsmith/core';
 import { addRecentProject, loadRecentProjects, parseProject, stringifyProject } from '@cardsmith/storage';
+import type { TemplateDefinition } from '../templates/types';
+import { templateToBlueprint } from '../templates/types';
 
 export function App() {
+  const { t, i18n } = useTranslation();
   const {
     screen,
     setScreen,
@@ -49,7 +56,7 @@ export function App() {
     try {
       loaded = parseProject(res.text);
     } catch (err) {
-      alert('Failed to parse project file.');
+      alert(t('app.errors.parseProject'));
       return;
     }
     loaded.meta.filePath = pickedPath;
@@ -79,9 +86,13 @@ export function App() {
   };
 
   const createNewProject = (name: string, templateId?: string) => {
-    if (!templates.length) return;
-    const template = templates.find((t) => t.id === templateId) ?? templates[0];
-    const project = template ? createProjectFromBlueprint(template, name) : createEmptyProject(name);
+    const safeName = name?.trim() || t('project.untitled');
+    const template = (templates.find((tpl) => tpl.id === templateId) ?? templates[0]) as TemplateDefinition | undefined;
+    const blueprint = template ? templateToBlueprint(template, i18n.language) : undefined;
+    const project = blueprint ? createProjectFromBlueprint(blueprint, safeName) : createEmptyProject(safeName);
+    project.sets = project.sets.map((set, idx) =>
+      idx === 0 ? { ...set, name: t('project.defaultSet') } : set,
+    );
     setProject(project);
     setActiveBlueprintId(project.blueprints[0]?.id);
     setActiveSetId(project.sets[0]?.id);
@@ -94,35 +105,47 @@ export function App() {
       <div className="topbar">
         <Row gap={14}>
           <div>
-            <div className="topbar-title">CardSmith Studio</div>
-            <div className="topbar-subtitle">Windows-first tabletop component designer</div>
+            <div className="topbar-title">{t('app.title')}</div>
+            <div className="topbar-subtitle">{t('app.subtitle')}</div>
           </div>
           {project ? (
             <div className="topbar-subtitle">
-              Project: <strong>{project.meta.name}</strong>
+              {t('app.project')}: <strong>{project.meta.name}</strong>
             </div>
           ) : null}
         </Row>
         <Row gap={8}>
+          <Button variant={screen === 'home' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('home')}>
+            {t('app.nav.home')}
+          </Button>
+          <Button variant={screen === 'templates' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('templates')}>
+            {t('app.nav.templates')}
+          </Button>
           {project ? (
             <>
               <Button variant={screen === 'dashboard' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('dashboard')}>
-                Dashboard
+                {t('app.nav.dashboard')}
               </Button>
               <Button variant={screen === 'editor' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('editor')}>
-                Blueprint
+                {t('app.nav.blueprint')}
               </Button>
               <Button variant={screen === 'data' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('data')}>
-                Data
+                {t('app.nav.data')}
+              </Button>
+              <Button variant={screen === 'assets' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('assets')}>
+                {t('app.nav.assets')}
               </Button>
               <Button variant={screen === 'export' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('export')}>
-                Export
+                {t('app.nav.export')}
               </Button>
-              <Button variant="outline" size="sm" onClick={saveProject} title="Ctrl+S">
-                Save
+              <Button variant="outline" size="sm" onClick={saveProject} title={t('app.saveTooltip')}>
+                {t('app.nav.save')}
               </Button>
             </>
           ) : null}
+          <Button variant={screen === 'settings' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('settings')}>
+            {t('app.nav.settings')}
+          </Button>
         </Row>
       </div>
 
@@ -132,8 +155,13 @@ export function App() {
           recents={recents}
           onCreate={createNewProject}
           onOpen={openProject}
+          onBrowseTemplates={() => setScreen('templates')}
         />
       ) : null}
+      {screen === 'templates' ? (
+        <TemplateGalleryScreen templates={templates} onCreate={createNewProject} />
+      ) : null}
+      {screen === 'settings' ? <SettingsScreen /> : null}
       {screen === 'dashboard' && project ? (
         <DashboardScreen
           project={project}
@@ -145,6 +173,7 @@ export function App() {
       ) : null}
       {screen === 'editor' && project ? <EditorScreen project={project} onChange={setProject} /> : null}
       {screen === 'data' && project ? <DataTableScreen project={project} onChange={setProject} /> : null}
+      {screen === 'assets' && project ? <AssetsScreen project={project} onChange={setProject} /> : null}
       {screen === 'export' && project ? <ExportScreen project={project} onChange={setProject} /> : null}
     </div>
   );

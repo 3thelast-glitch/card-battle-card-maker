@@ -28,5 +28,8 @@ export function parseProject(text: string): Project {
     blueprints: parsed.blueprints ?? [],
     items: parsed.items ?? [],
     dataTables: parsed.dataTables ?? [],
+    assets: {
+      images: parsed.assets?.images ?? [],
+    },
   };
 }

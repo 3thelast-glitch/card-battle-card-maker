@@ -14,6 +14,19 @@ export type Project = {
   blueprints: Blueprint[];
   items: Item[];
   dataTables: DataTable[];
+  assets: ProjectAssets;
+};
+
+export type ProjectAssets = {
+  images: ImageAsset[];
+};
+
+export type ImageAsset = {
+  id: Id;
+  name: string;
+  src: string;
+  size?: number;
+  addedAt?: string;
 };
 
 export type SetModel = {
@@ -74,7 +87,8 @@ export type TextElement = ElementBase & {
 export type ImageElement = ElementBase & {
   type: 'image';
   src: string;
-  fit?: 'cover' | 'contain' | 'stretch';
+  fit?: 'cover' | 'contain' | 'fill';
+  lockRatio?: boolean;
   radius?: number;
   stroke?: string;
   strokeWidth?: number;

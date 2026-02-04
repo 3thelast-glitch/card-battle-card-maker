@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 
 const isDev = !app.isPackaged;
 
@@ -69,6 +70,19 @@ ipcMain.handle('dialog:selectFolder', async () => {
   });
 });
 
+ipcMain.handle('dialog:openImageFiles', async () => {
+  return dialog.showOpenDialog({
+    title: 'Import Images',
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      {
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'],
+      },
+    ],
+  });
+});
+
 ipcMain.handle('fs:readFile', async (_evt, { filePath }: { filePath: string }) => {
   const text = await fs.readFile(filePath, 'utf-8');
   return { ok: true, text };
@@ -90,5 +104,22 @@ ipcMain.handle(
       return { ok: true };
     }
     return { ok: false, error: 'Missing write payload' };
+  },
+);
+
+ipcMain.handle(
+  'fs:copyFile',
+  async (
+    _evt,
+    { sourcePath, destinationPath }: { sourcePath: string; destinationPath: string },
+  ) => {
+    try {
+      await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+      await fs.copyFile(sourcePath, destinationPath, fsConstants.COPYFILE_EXCL);
+      const stat = await fs.stat(destinationPath);
+      return { ok: true, size: stat.size };
+    } catch (error: any) {
+      return { ok: false, error: error?.code ?? 'COPY_FAILED' };
+    }
   },
 );

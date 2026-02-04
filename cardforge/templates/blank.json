@@ -1,8 +1,15 @@
 {
   "id": "blank",
-  "name": "Blank",
-  "description": "A clean canvas to start from scratch.",
+  "name": {
+    "en": "Blank",
+    "ar": "فارغ"
+  },
+  "description": {
+    "en": "A clean canvas to start from scratch.",
+    "ar": "لوحة نظيفة للبدء من الصفر."
+  },
   "category": "Blank",
+  "thumbnail": "/assets/backgrounds/template-placeholder.svg",
   "size": {
     "w": 750,
     "h": 1050

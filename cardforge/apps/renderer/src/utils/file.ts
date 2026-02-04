@@ -1,3 +1,5 @@
+import { joinPath } from '@cardsmith/storage';
+
 export function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
   const base64 = dataUrl.split(',')[1] ?? '';
   const bin = atob(base64);
@@ -21,13 +23,17 @@ export function toFileUrl(filePath: string) {
   return `file://${normalized}`;
 }
 
-export function resolveImageSrc(value?: string) {
+export function resolveImageSrc(value?: string, projectRoot?: string) {
   if (!value) return '';
+  if (value.startsWith('/assets/')) return value;
   if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('file://')) {
     return value;
   }
   if (/^[a-zA-Z]:\\/.test(value) || value.startsWith('\\\\') || value.startsWith('/')) {
     return toFileUrl(value);
+  }
+  if (projectRoot) {
+    return toFileUrl(joinPath(projectRoot, value));
   }
   return value;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { resolveImageSrc } from './file';
 
-export function useHtmlImage(src?: string) {
+export function useHtmlImage(src?: string, projectRoot?: string) {
   const [img, setImg] = React.useState<HTMLImageElement | null>(null);
   React.useEffect(() => {
     if (!src) {
@@ -11,7 +11,7 @@ export function useHtmlImage(src?: string) {
     const image = new window.Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => setImg(image);
-    image.src = resolveImageSrc(src);
-  }, [src]);
+    image.src = resolveImageSrc(src, projectRoot);
+  }, [src, projectRoot]);
   return img;
 }

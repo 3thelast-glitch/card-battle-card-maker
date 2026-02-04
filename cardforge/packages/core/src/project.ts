@@ -21,6 +21,9 @@ export function createEmptyProject(name = 'Untitled Project'): Project {
     blueprints: [],
     items: [],
     dataTables: [],
+    assets: {
+      images: [],
+    },
   };
 }
 

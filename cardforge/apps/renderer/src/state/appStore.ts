@@ -1,13 +1,14 @@
 import { create } from 'zustand';
-import type { Blueprint, Project } from '@cardsmith/core';
+import type { Project } from '@cardsmith/core';
 import type { RecentProject } from '@cardsmith/storage';
+import type { TemplateDefinition } from '../templates/types';
 
-export type Screen = 'home' | 'dashboard' | 'editor' | 'data' | 'export';
+export type Screen = 'home' | 'dashboard' | 'editor' | 'data' | 'assets' | 'export' | 'templates' | 'settings';
 
 type AppState = {
   screen: Screen;
   project: Project | null;
-  templates: Blueprint[];
+  templates: TemplateDefinition[];
   recents: RecentProject[];
   activeBlueprintId?: string;
   activeSetId?: string;
@@ -19,7 +20,7 @@ type AppActions = {
   setScreen: (screen: Screen) => void;
   setProject: (project: Project | null) => void;
   updateProject: (updater: (project: Project) => Project) => void;
-  setTemplates: (templates: Blueprint[]) => void;
+  setTemplates: (templates: TemplateDefinition[]) => void;
   setRecents: (recents: RecentProject[]) => void;
   setActiveBlueprintId: (id?: string) => void;
   setActiveSetId: (id?: string) => void;

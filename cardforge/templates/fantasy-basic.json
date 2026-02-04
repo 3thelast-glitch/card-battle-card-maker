@@ -1,8 +1,15 @@
 {
   "id": "fantasy-basic",
-  "name": "Fantasy Basic",
-  "description": "Title, cost badge, illustration frame, and rules box.",
+  "name": {
+    "en": "Fantasy Basic",
+    "ar": "أساسي خيالي"
+  },
+  "description": {
+    "en": "Title, cost badge, illustration frame, and rules box.",
+    "ar": "عنوان وشارة تكلفة وإطار صورة وصندوق قواعد."
+  },
   "category": "Fantasy",
+  "thumbnail": "/assets/backgrounds/template-placeholder.svg",
   "size": {
     "w": 750,
     "h": 1050

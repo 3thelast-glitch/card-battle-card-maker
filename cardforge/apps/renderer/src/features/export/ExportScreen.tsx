@@ -1,13 +1,15 @@
 import React, { useRef, useState } from 'react';
 import type { Blueprint, DataRow, Project } from '@cardsmith/core';
 import { ExportService } from '@cardsmith/core';
-import { joinPath } from '@cardsmith/storage';
+import { getParentPath, joinPath } from '@cardsmith/storage';
 import { Button, Panel, Row, Input, Select } from '../../components/ui';
 import { dataUrlToArrayBuffer } from '../../utils/file';
 import { useAppStore } from '../../state/appStore';
 import { ExportCanvas, ExportCanvasHandle } from './ExportCanvas';
+import { useTranslation } from 'react-i18next';
 
 export function ExportScreen(props: { project: Project; onChange: (project: Project) => void }) {
+  const { t } = useTranslation();
   const { project } = props;
   const { activeBlueprintId, activeTableId, setActiveBlueprintId, setActiveTableId, previewRowId } = useAppStore();
   const [outputFolder, setOutputFolder] = useState<string>('');
@@ -22,6 +24,7 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
     project.blueprints.find((bp) => bp.id === activeBlueprintId) ?? project.blueprints[0];
   const dataTable = project.dataTables.find((table) => table.id === activeTableId) ?? project.dataTables[0];
   const rows: DataRow[] = dataTable?.rows ?? [];
+  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
 
   const ready = Boolean(outputFolder && blueprint);
 
@@ -79,15 +82,15 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
   return (
     <div className="screen" style={{ padding: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 14 }}>
-        <Panel title="Export" subtitle="Single or batch export PNG files.">
+        <Panel title={t('export.title')} subtitle={t('export.subtitle')}>
           <div className="list">
             <Row gap={10}>
-              <Button onClick={pickFolder}>Choose Folder</Button>
-              <div className="hint">{outputFolder || 'No folder selected'}</div>
+              <Button onClick={pickFolder}>{t('export.chooseFolder')}</Button>
+              <div className="hint">{outputFolder || t('export.noFolder')}</div>
             </Row>
             <Row gap={10}>
               <div style={{ flex: 1 }}>
-                <div className="hint">Blueprint</div>
+                <div className="hint">{t('export.blueprintLabel')}</div>
                 <Select
                   value={blueprint?.id ?? ''}
                   onChange={(e) => setActiveBlueprintId(e.target.value)}
@@ -98,7 +101,7 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                 </Select>
               </div>
               <div style={{ flex: 1 }}>
-                <div className="hint">Data Table</div>
+                <div className="hint">{t('export.dataTableLabel')}</div>
                 <Select
                   value={dataTable?.id ?? ''}
                   onChange={(e) => setActiveTableId(e.target.value)}
@@ -107,45 +110,45 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                     <option key={table.id} value={table.id}>{table.name}</option>
                   ))}
                 </Select>
-                <div className="hint" style={{ marginTop: 6 }}>Rows: {rows.length}</div>
+                <div className="hint" style={{ marginTop: 6 }}>{t('export.rows', { count: rows.length })}</div>
               </div>
             </Row>
             <Row gap={10}>
               <div style={{ flex: 1 }}>
-                <div className="hint">Pixel Ratio</div>
+                <div className="hint">{t('export.pixelRatio')}</div>
                 <Input type="number" value={pixelRatio} min={1} max={4} step={0.5} onChange={(e) => setPixelRatio(Number(e.target.value))} />
               </div>
               <div style={{ flex: 2 }}>
-                <div className="hint">File Naming Template</div>
+                <div className="hint">{t('export.fileNaming')}</div>
                 <Input value={namingTemplate} onChange={(e) => setNamingTemplate(e.target.value)} />
               </div>
             </Row>
             <Row gap={10}>
-              <Button onClick={exportSingle} disabled={!ready || running || !rows.length}>Export Single</Button>
-              <Button variant="outline" onClick={exportBatch} disabled={!ready || running || !rows.length}>Export Batch</Button>
-              {running ? <Button variant="danger" onClick={cancelExport}>Cancel</Button> : null}
+              <Button onClick={exportSingle} disabled={!ready || running || !rows.length}>{t('export.exportSingle')}</Button>
+              <Button variant="outline" onClick={exportBatch} disabled={!ready || running || !rows.length}>{t('export.exportBatch')}</Button>
+              {running ? <Button variant="danger" onClick={cancelExport}>{t('export.cancel')}</Button> : null}
             </Row>
             {progress ? (
               <div>
-                <div className="hint">Exporting {progress.current}/{progress.total} - {progress.fileName}</div>
+                <div className="hint">{t('export.exporting', { current: progress.current, total: progress.total, file: progress.fileName })}</div>
                 <div className="progress-bar">
                   <div style={{ width: `${Math.round((progress.current / progress.total) * 100)}%` }} />
                 </div>
               </div>
             ) : (
-              <div className="empty">No export running.</div>
+              <div className="empty">{t('export.idle')}</div>
             )}
           </div>
         </Panel>
 
-        <Panel title="Preview" subtitle="Rendered output for batch export.">
+        <Panel title={t('export.previewTitle')} subtitle={t('export.previewSubtitle')}>
           <div className="empty">
-            Preview is generated during export. Use naming templates like <code>{'{{name}}_{{id}}'}</code>.
+            {t('export.previewHint')} <code>{'{{name}}_{{id}}'}</code>.
           </div>
         </Panel>
       </div>
 
-      {blueprint ? <ExportCanvas ref={exportRef} blueprint={blueprint} /> : null}
+      {blueprint ? <ExportCanvas ref={exportRef} blueprint={blueprint} projectRoot={projectRoot} /> : null}
     </div>
   );
 }

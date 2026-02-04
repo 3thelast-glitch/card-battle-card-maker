@@ -256,6 +256,38 @@ code {
   gap: 10px;
 }
 
+.property-section {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.property-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.property-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+}
+
+.property-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.danger-row {
+  border-top: 1px dashed rgba(251, 113, 133, 0.35);
+  padding-top: 12px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .list-item {
   border: 1px solid var(--line);
   background: var(--panel-soft);
@@ -361,4 +393,134 @@ code {
 .hint {
   font-size: 12px;
   color: var(--muted);
+}
+
+.template-filters {
+  display: grid;
+  grid-template-columns: 1fr 220px 220px;
+  gap: 10px;
+  align-items: end;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.asset-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  cursor: grab;
+}
+
+.asset-card:active {
+  cursor: grabbing;
+}
+
+.asset-card-active {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+
+.asset-thumb {
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.asset-meta {
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.asset-name {
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.template-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.template-thumb {
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.template-meta {
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.template-name {
+  font-weight: 600;
+}
+
+.template-actions {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.template-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+html[dir="rtl"] body {
+  font-family: "Cairo", "Tajawal", "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  direction: rtl;
+}
+
+html[dir="rtl"] .panel-title {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+html[dir="rtl"] .panel-title,
+html[dir="rtl"] .panel-subtitle,
+html[dir="rtl"] .hint,
+html[dir="rtl"] .empty,
+html[dir="rtl"] .list-item,
+html[dir="rtl"] .table th,
+html[dir="rtl"] .table td {
+  text-align: right;
+}
+
+html[dir="rtl"] input,
+html[dir="rtl"] select,
+html[dir="rtl"] textarea {
+  text-align: right;
 }

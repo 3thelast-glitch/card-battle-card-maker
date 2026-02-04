@@ -1,32 +1,37 @@
 import React, { useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import type { Blueprint, DataRow, DataTable, Project } from '@cardsmith/core';
-import { createId } from '@cardsmith/core';
+import { createId, resolvePath } from '@cardsmith/core';
 import { Button, Panel, Row, Select } from '../../components/ui';
 import { useAppStore } from '../../state/appStore';
+import { useTranslation } from 'react-i18next';
 
 export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void }) {
+  const { t } = useTranslation();
   const { project, onChange } = props;
   const { activeBlueprintId, activeTableId, setPreviewRowId, setActiveTableId } = useAppStore();
   const [selectedRowId, setSelectedRowId] = useState<string | undefined>();
 
-  const table = project.dataTables.find((t) => t.id === activeTableId) ?? project.dataTables[0];
+  const table = project.dataTables.find((tbl) => tbl.id === activeTableId) ?? project.dataTables[0];
   const blueprint: Blueprint | undefined =
     project.blueprints.find((bp) => bp.id === activeBlueprintId) ?? project.blueprints[0];
 
   const columns = useMemo(() => {
     if (!table) return [];
     if (table.columns?.length) return table.columns;
-    const colSet = new Set<string>();
-    table.rows.forEach((row) => Object.keys(row.data).forEach((k) => colSet.add(k)));
-    return Array.from(colSet);
+    return collectColumns(table.rows.map((row) => row.data));
   }, [table]);
 
   const updateTable = (nextTable: DataTable) => {
     const nextProject = {
       ...project,
       dataTables: [nextTable],
-      items: buildItemsFromTable(nextTable, project, blueprint),
+      items: buildItemsFromTable(
+        nextTable,
+        project,
+        blueprint,
+        (rowId) => t('project.itemFallback', { id: rowId }),
+      ),
     };
     onChange(nextProject);
     setActiveTableId(nextTable.id);
@@ -49,13 +54,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         rows = Array.isArray(parsed) ? parsed : parsed.rows ?? [];
       }
 
-      const dataRows: DataRow[] = rows.map((row) => {
+      const normalizedRows = rows.map((row) => normalizeRowData(row));
+
+      const dataRows: DataRow[] = rows.map((row, index) => {
         const quantity = row.quantity ?? row.qty ?? row.Quantity;
         const setName = row.set ?? row.Set ?? row.setName;
         const setId = findSetIdByName(project, String(setName ?? ''));
         return {
           id: createId('row'),
-          data: row,
+          data: normalizedRows[index],
           quantity: Number(quantity) || 1,
           setId,
           blueprintId: blueprint?.id,
@@ -64,8 +71,8 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
       const nextTable: DataTable = {
         id: createId('table'),
-        name: 'Main Data',
-        columns: collectColumns(rows),
+        name: t('data.mainTable'),
+        columns: collectColumns(normalizedRows),
         rows: dataRows,
       };
       updateTable(nextTable);
@@ -83,17 +90,20 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     };
     const nextTable: DataTable = table
       ? { ...table, rows: [...table.rows, nextRow] }
-      : { id: createId('table'), name: 'Main Data', columns: [], rows: [nextRow] };
+      : { id: createId('table'), name: t('data.mainTable'), columns: [], rows: [nextRow] };
     updateTable(nextTable);
   };
 
   const updateCell = (rowId: string, key: string, value: any) => {
     if (!table) return;
-    const nextColumns = table.columns.includes(key) ? table.columns : [...table.columns, key];
+    const existingColumns = table.columns ?? [];
+    const nextColumns = existingColumns.includes(key) ? existingColumns : [...existingColumns, key];
     const nextTable = {
       ...table,
       columns: nextColumns,
-      rows: table.rows.map((row) => (row.id === rowId ? { ...row, data: { ...row.data, [key]: value } } : row)),
+      rows: table.rows.map((row) =>
+        row.id === rowId ? { ...row, data: setPathValue(row.data, key, value) } : row,
+      ),
     };
     updateTable(nextTable);
   };
@@ -140,26 +150,26 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   return (
     <div className="screen" style={{ padding: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 14, minHeight: 0 }}>
-        <Panel title="Data Table" subtitle="Import, edit, and map data rows.">
+        <Panel title={t('data.title')} subtitle={t('data.subtitle')}>
           <div className="list">
             <Row gap={10}>
-              <Button onClick={importData}>Import CSV/JSON</Button>
-              <Button variant="outline" onClick={addRow}>Add Row</Button>
+              <Button onClick={importData}>{t('data.import')}</Button>
+              <Button variant="outline" onClick={addRow}>{t('data.addRow')}</Button>
             </Row>
             {!table ? (
-              <div className="empty">No data yet. Import a CSV or JSON file to get started.</div>
+              <div className="empty">{t('data.noData')}</div>
             ) : (
               <div style={{ overflow: 'auto', maxHeight: 520 }}>
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Row</th>
+                      <th>{t('data.rowColumn')}</th>
                       {columns.map((col) => (
                         <th key={col}>{col}</th>
                       ))}
-                      <th>Quantity</th>
-                      <th>Set</th>
-                      <th>Actions</th>
+                      <th>{t('data.quantityColumn')}</th>
+                      <th>{t('data.setColumn')}</th>
+                      <th>{t('data.actionsColumn')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -170,7 +180,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                           <td key={col}>
                             <input
                               className="input"
-                              value={row.data[col] ?? ''}
+                              value={resolvePath(row.data, col) ?? ''}
                               onChange={(e) => updateCell(row.id, col, e.target.value)}
                               onFocus={() => { setSelectedRowId(row.id); setPreviewRowId(row.id); }}
                             />
@@ -197,7 +207,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                           </select>
                         </td>
                         <td>
-                          <Button size="sm" variant="danger" onClick={() => removeRow(row.id)}>Delete</Button>
+                          <Button size="sm" variant="danger" onClick={() => removeRow(row.id)}>{t('data.deleteRow')}</Button>
                         </td>
                       </tr>
                     ))}
@@ -208,10 +218,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           </div>
         </Panel>
 
-        <Panel title="Bindings" subtitle="Map data columns to blueprint elements.">
+        <Panel title={t('data.bindingsTitle')} subtitle={t('data.bindingsSubtitle')}>
           <div className="list">
             {bindingElements.length === 0 ? (
-              <div className="empty">Add text or image elements to enable bindings.</div>
+              <div className="empty">{t('data.noBindings')}</div>
             ) : (
               bindingElements.map((el) => (
                 <div key={el.id}>
@@ -220,7 +230,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                     value={el.bindingKey ?? ''}
                     onChange={(e) => updateBinding(el.id, e.target.value)}
                   >
-                    <option value="">(No Binding)</option>
+                    <option value="">{t('data.noBinding')}</option>
                     {columns.map((col) => (
                       <option key={col} value={col}>{col}</option>
                     ))}
@@ -237,8 +247,70 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
 function collectColumns(rows: Record<string, any>[]) {
   const colSet = new Set<string>();
-  rows.forEach((row) => Object.keys(row).forEach((key) => colSet.add(key)));
+  rows.forEach((row) => flattenKeys(row, '', colSet));
   return Array.from(colSet);
+}
+
+function flattenKeys(value: any, prefix: string, colSet: Set<string>) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    if (prefix) colSet.add(prefix);
+    return;
+  }
+  Object.entries(value).forEach(([key, next]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (next && typeof next === 'object' && !Array.isArray(next)) {
+      flattenKeys(next, path, colSet);
+      return;
+    }
+    colSet.add(path);
+  });
+}
+
+function normalizeRowData(row: Record<string, any>) {
+  const output: Record<string, any> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    if (key.includes('.')) {
+      assignPath(output, key, value);
+    } else {
+      output[key] = value;
+    }
+  });
+  return output;
+}
+
+function assignPath(target: Record<string, any>, path: string, value: any) {
+  const parts = path.split('.');
+  let cursor: Record<string, any> = target;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    const next = cursor[part];
+    if (!next || typeof next !== 'object' || Array.isArray(next)) {
+      cursor[part] = {};
+    }
+    cursor = cursor[part];
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function setPathValue(data: Record<string, any>, path: string, value: any) {
+  if (!path.includes('.')) {
+    return { ...data, [path]: value };
+  }
+  const result: Record<string, any> = { ...data };
+  const parts = path.split('.');
+  let cursor: Record<string, any> = result;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    const next = cursor[part];
+    if (next && typeof next === 'object' && !Array.isArray(next)) {
+      cursor[part] = { ...next };
+    } else {
+      cursor[part] = {};
+    }
+    cursor = cursor[part];
+  }
+  cursor[parts[parts.length - 1]] = value;
+  return result;
 }
 
 function findSetIdByName(project: Project, name: string) {
@@ -247,11 +319,16 @@ function findSetIdByName(project: Project, name: string) {
   return found?.id ?? project.sets[0]?.id;
 }
 
-function buildItemsFromTable(table: DataTable, project: Project, blueprint?: Blueprint) {
+function buildItemsFromTable(
+  table: DataTable,
+  project: Project,
+  blueprint: Blueprint | undefined,
+  itemFallback: (rowId: string) => string,
+) {
   const blueprintId = blueprint?.id ?? project.blueprints[0]?.id ?? '';
   return table.rows.map((row) => ({
     id: createId('item'),
-    name: String(row.data.name ?? row.data.title ?? `Item ${row.id}`),
+    name: String(row.data.name ?? row.data.title ?? itemFallback(row.id)),
     setId: row.setId ?? project.sets[0]?.id ?? '',
     blueprintId,
     data: row.data,
