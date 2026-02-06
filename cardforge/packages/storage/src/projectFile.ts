@@ -1,4 +1,4 @@
-import type { Project } from '@cardsmith/core';
+import type { ImageBindingConfig, Project } from '@cardsmith/core';
 import { getProjectVersion, touchProject } from '@cardsmith/core';
 
 export function stringifyProject(project: Project): string {
@@ -21,13 +21,28 @@ export function parseProject(text: string): Project {
     version,
   };
 
+  const defaultImageBinding: ImageBindingConfig = {
+    column: 'art',
+    imagesFolder: '',
+    placeholder: '',
+    copyToAssets: true,
+  };
+
   return {
     ...parsed,
     meta,
     sets: parsed.sets ?? [],
     blueprints: parsed.blueprints ?? [],
     items: parsed.items ?? [],
-    dataTables: parsed.dataTables ?? [],
+    dataTables: (parsed.dataTables ?? []).map((table) => ({
+      ...table,
+      columns: table.columns ?? [],
+      rows: table.rows ?? [],
+      imageBinding: {
+        ...defaultImageBinding,
+        ...(table as any).imageBinding,
+      },
+    })),
     assets: {
       images: parsed.assets?.images ?? [],
     },

@@ -70,6 +70,13 @@ ipcMain.handle('dialog:selectFolder', async () => {
   });
 });
 
+ipcMain.handle('dialog:selectImagesFolder', async () => {
+  return dialog.showOpenDialog({
+    title: 'Choose Images Folder',
+    properties: ['openDirectory'],
+  });
+});
+
 ipcMain.handle('dialog:openImageFiles', async () => {
   return dialog.showOpenDialog({
     title: 'Import Images',
@@ -106,6 +113,15 @@ ipcMain.handle(
     return { ok: false, error: 'Missing write payload' };
   },
 );
+
+ipcMain.handle('fs:exists', async (_evt, { filePath }: { filePath: string }) => {
+  try {
+    await fs.access(filePath, fsConstants.F_OK);
+    return { ok: true, exists: true };
+  } catch {
+    return { ok: true, exists: false };
+  }
+});
 
 ipcMain.handle(
   'fs:copyFile',

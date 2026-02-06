@@ -1,8 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Image as KonvaImage, Group } from 'react-konva';
 import Konva from 'konva';
-import type { Blueprint, ElementModel } from '@cardsmith/core';
-import { applyBindingsToElements } from '@cardsmith/core';
+import type { Blueprint, ElementModel } from '../../../../../packages/core/src/index';
+import { applyBindingsToElements } from '../../../../../packages/core/src/index';
 import { useHtmlImage } from '../../utils/konva';
 import { getImageLayout } from '../../utils/imageFit';
 

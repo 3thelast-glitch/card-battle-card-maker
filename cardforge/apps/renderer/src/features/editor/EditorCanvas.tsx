@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text, Image as KonvaImage, Transformer, Line, Group } from 'react-konva';
 import Konva from 'konva';
-import type { Blueprint, ElementModel } from '@cardsmith/core';
-import { applyBindingsToElements } from '@cardsmith/core';
+import type { Blueprint, ElementModel } from '../../../../../packages/core/src/index';
+import { applyBindingsToElements } from '../../../../../packages/core/src/index';
 import { useHtmlImage } from '../../utils/konva';
 import { getImageLayout } from '../../utils/imageFit';
 
@@ -343,10 +343,10 @@ export function EditorCanvas(props: Props) {
           if (clickedOnEmpty && !selectionRect.visible) props.onSelectIds([]);
         }}
         style={{
-          borderRadius: 14,
-          background: '#0d1424',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
+          borderRadius: 'var(--r-md)',
+          background: 'rgba(0,0,0,0.35)',
+          border: '1px solid var(--stroke)',
+          boxShadow: 'var(--shadow)',
         }}
       >
         <Layer listening={false}>

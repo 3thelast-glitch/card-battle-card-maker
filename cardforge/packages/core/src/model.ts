@@ -29,6 +29,10 @@ export type ImageAsset = {
   addedAt?: string;
 };
 
+export type CardArt =
+  | { kind: 'image'; src: string }
+  | { kind: 'video'; src: string; poster?: string };
+
 export type SetModel = {
   id: Id;
   name: string;
@@ -118,6 +122,7 @@ export type DataRow = {
   quantity?: number;
   setId?: Id;
   blueprintId?: Id;
+  art?: CardArt;
 };
 
 export type DataTable = {
@@ -126,6 +131,14 @@ export type DataTable = {
   setId?: Id;
   columns: string[];
   rows: DataRow[];
+  imageBinding?: ImageBindingConfig;
+};
+
+export type ImageBindingConfig = {
+  column?: string;
+  imagesFolder?: string;
+  placeholder?: string;
+  copyToAssets?: boolean;
 };
 
 export type Item = {
@@ -136,4 +149,5 @@ export type Item = {
   data: Record<string, any>;
   quantity: number;
   sourceRowId?: Id;
+  art?: CardArt;
 };

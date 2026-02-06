@@ -1,0 +1,49 @@
+:root {
+  /* Color system */
+  --bg: #0b0f17;
+  --panel: rgba(255,255,255,0.06);
+  --panel-2: rgba(255,255,255,0.09);
+  --stroke: rgba(255,255,255,0.12);
+  --stroke-2: rgba(255,255,255,0.18);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.66);
+  --faint: rgba(255,255,255,0.42);
+
+  /* Accents */
+  --accent: #9b4dff;     /* epic purple */
+  --accent-2: #2e86ff;   /* rare blue */
+  --good: #27d07d;
+  --warn: #ffb020;
+  --bad:  #ff4d4f;
+
+  /* Shadows / blur */
+  --shadow: 0 14px 40px rgba(0,0,0,0.45);
+  --shadow-soft: 0 10px 24px rgba(0,0,0,0.35);
+  --blur: 14px;
+
+  /* Radius */
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 24px;
+
+  /* Spacing scale */
+  --s-1: 6px;
+  --s-2: 10px;
+  --s-3: 14px;
+  --s-4: 18px;
+  --s-5: 24px;
+  --s-6: 32px;
+
+  /* Typography */
+  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --h1: 18px;
+  --h2: 15px;
+  --p:  13px;
+  --small: 12px;
+
+  /* Focus */
+  --focus: 0 0 0 3px rgba(155,77,255,0.35);
+}

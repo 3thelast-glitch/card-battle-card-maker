@@ -14,7 +14,8 @@ export function applyBindingsToElements(
       const bindingKey = el.bindingKey?.trim();
       if (bindingKey) {
         const v = resolvePath(row, bindingKey);
-        return { ...el, text: v == null ? '' : String(v) };
+        const resolved = resolveLocalizedValue(v, row);
+        return { ...el, text: resolved == null ? '' : String(resolved) };
       }
       const text = el.text ?? '';
       const next = replacePlaceholders(text, row);
@@ -25,7 +26,8 @@ export function applyBindingsToElements(
       const bindingKey = el.bindingKey?.trim();
       if (bindingKey) {
         const v = resolvePath(row, bindingKey);
-        return { ...el, src: v == null ? '' : String(v) };
+        const resolved = resolveImageBindingValue(v);
+        return { ...el, src: resolved == null ? '' : String(resolved) };
       }
       return el;
     }
@@ -34,11 +36,32 @@ export function applyBindingsToElements(
   });
 }
 
+function resolveImageBindingValue(value: any) {
+  if (!value) return value;
+  if (typeof value === 'object' && value.kind && value.src) {
+    if (value.kind === 'video') {
+      return value.poster ?? '';
+    }
+    return value.src;
+  }
+  return value;
+}
+
 export function replacePlaceholders(text: string, row: Record<string, any>) {
   return text.replace(/\{\{\s*([a-zA-Z0-9_\.\-]+)\s*\}\}/g, (_m, key) => {
     const v = resolvePath(row, key);
-    return v == null ? '' : String(v);
+    const resolved = resolveLocalizedValue(v, row);
+    return resolved == null ? '' : String(resolved);
   });
+}
+
+function resolveLocalizedValue(value: any, row: Record<string, any>) {
+  if (!value || typeof value !== 'object') return value;
+  const hasEn = Object.prototype.hasOwnProperty.call(value, 'en');
+  const hasAr = Object.prototype.hasOwnProperty.call(value, 'ar');
+  if (!hasEn && !hasAr) return value;
+  const lang = typeof row.__lang === 'string' ? row.__lang : 'en';
+  return value[lang] ?? value.en ?? value.ar ?? '';
 }
 
 export function resolvePath(obj: any, path: string) {

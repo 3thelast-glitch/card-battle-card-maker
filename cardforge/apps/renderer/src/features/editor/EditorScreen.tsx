@@ -1,18 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Blueprint, ElementModel, Project } from '@cardsmith/core';
-import { clamp, createId } from '@cardsmith/core';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Blueprint, CardArt, DataRow, ElementModel, Project } from '../../../../../packages/core/src/index';
+import { clamp, createId, resolvePath } from '../../../../../packages/core/src/index';
 import { useAppStore } from '../../state/appStore';
-import { addRecentProject, getParentPath, stringifyProject } from '@cardsmith/storage';
-import { Button, Divider, IconButton, Input, Panel, Row, Select, Toggle } from '../../components/ui';
+import { addRecentProject, getParentPath, stringifyProject } from '../../../../../packages/storage/src/index';
+import { Button, Divider, IconButton, Input, Kbd, Row, Select, Toggle } from '../../components/ui';
 import { EditorCanvas } from './EditorCanvas';
 import { useTranslation } from 'react-i18next';
 import { getElementTypeLabel } from '../../utils/labels';
 import { normalizeImageFit } from '../../utils/imageFit';
+import { resolveImageReferenceSync } from '../../utils/imageBinding';
+import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
+import { captureVideoPoster, captureVideoPosterFromUrl } from '../../lib/videoPoster';
 
 const DEFAULT_GRID = 10;
 
 export function EditorScreen(props: { project: Project; onChange: (project: Project) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { project, onChange } = props;
   const { activeBlueprintId, activeTableId, setActiveBlueprintId, previewRowId, setPreviewRowId, setRecents } = useAppStore();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -23,6 +26,8 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const [history, setHistory] = useState<ElementModel[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [dragLayerId, setDragLayerId] = useState<string | null>(null);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   const blueprint = useMemo(() => {
     const byId = project.blueprints.find((bp: Blueprint) => bp.id === activeBlueprintId);
@@ -47,12 +52,61 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const selected = selectedIds.length === 1 ? selectedElements[0] ?? null : null;
 
   const activeTable = project.dataTables.find((table) => table.id === activeTableId) ?? project.dataTables?.[0];
-  const previewRow = useMemo(() => {
+  const activeRow = useMemo(() => {
     if (!activeTable?.rows?.length) return undefined;
-    const row = activeTable.rows.find((r: any) => r.id === previewRowId) ?? activeTable.rows[0];
-    return row?.data;
+    return activeTable.rows.find((r: any) => r.id === previewRowId) ?? activeTable.rows[0];
   }, [activeTable, previewRowId]);
+  const previewData = useMemo(() => {
+    if (!activeRow) return undefined;
+    const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+    const data = activeRow?.data
+      ? { ...activeRow.data, ...(activeRow.art ? { art: activeRow.art } : {}), __lang: lang }
+      : undefined;
+    if (!data || !activeTable) return undefined;
+    const binding = activeTable.imageBinding;
+    if (!binding?.column) return data;
+    const resolved = resolveImageReferenceSync(resolvePath(data, binding.column), binding);
+    if (!resolved) return data;
+    return setPathValue(data, binding.column, resolved);
+  }, [activeRow, activeTable, i18n.language]);
   const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
+  const editorLanguage = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+
+  const updateActiveTableRows = useCallback(
+    (nextRows: DataRow[]) => {
+      if (!activeTable) return;
+      const nextTable = { ...activeTable, rows: nextRows };
+      const nextProject = {
+        ...project,
+        dataTables: project.dataTables.map((table) => (table.id === activeTable.id ? nextTable : table)),
+      };
+      onChange(nextProject);
+    },
+    [activeTable, project, onChange],
+  );
+
+  const updateActiveRow = useCallback(
+    (updater: (row: DataRow) => DataRow) => {
+      if (!activeRow || !activeTable) return;
+      const nextRows = activeTable.rows.map((row) => (row.id === activeRow.id ? updater(row) : row));
+      updateActiveTableRows(nextRows);
+    },
+    [activeRow, activeTable, updateActiveTableRows],
+  );
+
+  const updateActiveRowData = useCallback(
+    (path: string, value: any) => {
+      updateActiveRow((row) => ({ ...row, data: setPathValue(row.data ?? {}, path, value) }));
+    },
+    [updateActiveRow],
+  );
+
+  const updateActiveRowArt = useCallback(
+    (art?: CardArt) => {
+      updateActiveRow((row) => ({ ...row, art }));
+    },
+    [updateActiveRow],
+  );
 
   const filterSelectableIds = useCallback((ids: string[], list: ElementModel[]) => {
     return ids.filter((id) => {
@@ -450,234 +504,507 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
     deleteSelected();
   };
 
-  return (
-    <div className="screen">
-      <div className="workspace">
-        <div className="sidebar">
-          <Panel title={t('editor.toolboxTitle')} subtitle={t('editor.toolboxSubtitle')}>
-            <div className="list">
-              <Button onClick={addText}>{t('editor.addText')}</Button>
-              <Button variant="outline" onClick={addImage}>{t('editor.addImage')}</Button>
-              <Button variant="outline" onClick={addShape}>{t('editor.addShape')}</Button>
-              <Button variant="outline" onClick={addIcon}>{t('editor.addIcon')}</Button>
-              <Divider />
-              <div className="hint">{t('editor.shortcuts')}</div>
-              <div className="tag-row">
-                <span className="kbd">Ctrl</span><span className="kbd">Z</span>
-                <span className="kbd">Ctrl</span><span className="kbd">Y</span>
-                <span className="kbd">Ctrl</span><span className="kbd">D</span>
-                <span className="kbd">Del</span>
-              </div>
-            </div>
-          </Panel>
+  const inspectorData = activeRow?.data ?? {};
+  const inspectorTemplateKey = normalizeTemplateKey(inspectorData.templateKey, 'classic');
+  const inspectorRarity = normalizeRarity(inspectorData.rarity);
+  const inspectorBgColor =
+    inspectorData.bgColor ?? CARD_TEMPLATES[inspectorTemplateKey]?.defaultBgColor ?? '#2b0d16';
+  const getLocalizedValue = (value: any, lang: 'en' | 'ar') => {
+    if (value && typeof value === 'object') {
+      const localized = value as Record<string, any>;
+      return localized[lang] ?? '';
+    }
+    return value == null ? '' : String(value);
+  };
 
-          <Panel title={t('editor.layersTitle')} subtitle={t('editor.layersSubtitle')}>
-            <div className="list">
-              {elements.length === 0 ? (
-                <div className="empty">{t('editor.noElements')}</div>
-              ) : (
-                orderedLayers.map((el) => (
-                    <div
-                      key={el.id}
-                      className="list-item"
-                      style={{ gap: 8, cursor: 'pointer', borderColor: selectedIds.includes(el.id) ? 'rgba(56,189,248,0.6)' : undefined }}
-                      draggable
-                      onDragStart={() => setDragLayerId(el.id)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => {
-                        if (dragLayerId) moveLayer(dragLayerId, el.id);
-                        setDragLayerId(null);
-                      }}
-                      onDragEnd={() => setDragLayerId(null)}
-                      onClick={(e) => {
-                        if (el.locked || el.visible === false) return;
-                        if (e.shiftKey) {
-                          setSelection(
-                            selectedIds.includes(el.id)
-                              ? selectedIds.filter((id) => id !== el.id)
-                              : [...selectedIds, el.id],
-                          );
-                        } else {
-                          setSelection([el.id]);
-                        }
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{el.name}</div>
-                        <div className="hint">{getElementTypeLabel(t, el.type)}</div>
-                      </div>
-                      <IconButton
-                        variant="outline"
-                        title={t('editor.layers.visibility')}
-                        onClick={() => {
-                          const nextVisible = !el.visible;
-                          updateElements(elements.map((e) => (e.id === el.id ? { ...e, visible: nextVisible } : e)));
-                          if (!nextVisible) {
-                            setSelection(selectedIds.filter((id) => id !== el.id));
-                          }
+  const pickInspectorImage = () => {
+    if (!activeRow) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const dataUrl = await fileToDataUrl(file, t('editor.errors.readImage'));
+        updateActiveRowArt({ kind: 'image', src: dataUrl });
+      } catch {
+        alert(t('editor.errors.readImage'));
+      }
+    };
+    input.click();
+  };
+
+  const pickInspectorVideo = () => {
+    if (!activeRow) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const poster = await captureVideoPoster(file);
+        const src = URL.createObjectURL(file);
+        updateActiveRowArt({ kind: 'video', src, poster });
+      } catch (err: any) {
+        alert(err?.message ?? t('data.videoPosterFailed'));
+      }
+    };
+    input.click();
+  };
+
+  const regenerateInspectorPoster = async () => {
+    if (!activeRow?.art || activeRow.art.kind !== 'video') return;
+    try {
+      const poster = await captureVideoPosterFromUrl(activeRow.art.src);
+      updateActiveRowArt({ ...activeRow.art, poster });
+    } catch (err: any) {
+      alert(err?.message ?? t('data.videoPosterFailed'));
+    }
+  };
+
+  return (
+    <div className="screen uiApp">
+      <div className="editorShell">
+        <aside className={`editorPanel editorLeft ${leftDrawerOpen ? 'drawerOpen' : ''}`}>
+          <div className="editorPanelHeader">
+            <div>
+              <div className="uiTitle">{t('editor.toolboxTitle')}</div>
+              <div className="uiSub">{t('editor.toolboxSubtitle')}</div>
+            </div>
+            <Button size="sm" variant="outline" className="panelClose" onClick={() => setLeftDrawerOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </div>
+          <div className="editorPanelBody">
+            <details className="uiCollapse" open>
+              <summary>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{t('editor.toolboxTitle')}</div>
+                  <div className="uiSub">{t('editor.toolboxSubtitle')}</div>
+                </div>
+              </summary>
+              <div className="uiCollapseBody">
+                <div className="editorToolGrid">
+                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addText}>
+                    <span className="toolIcon">+</span>
+                    {t('editor.addText')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addImage}>
+                    <span className="toolIcon">+</span>
+                    {t('editor.addImage')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addShape}>
+                    <span className="toolIcon">+</span>
+                    {t('editor.addShape')}
+                  </Button>
+                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addIcon}>
+                    <span className="toolIcon">+</span>
+                    {t('editor.addIcon')}
+                  </Button>
+                </div>
+              </div>
+            </details>
+
+            <details className="uiCollapse" open>
+              <summary>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{t('editor.layersTitle')}</div>
+                  <div className="uiSub">{t('editor.layersSubtitle')}</div>
+                </div>
+              </summary>
+              <div className="uiCollapseBody">
+                {elements.length === 0 ? (
+                  <div className="empty">{t('editor.noElements')}</div>
+                ) : (
+                  <div className="editorLayerList">
+                    {orderedLayers.map((el) => (
+                      <div
+                        key={el.id}
+                        className={`layerRow ${selectedIds.includes(el.id) ? 'isSelected' : ''}`}
+                        draggable
+                        onDragStart={() => setDragLayerId(el.id)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          if (dragLayerId) moveLayer(dragLayerId, el.id);
+                          setDragLayerId(null);
                         }}
-                      >
-                        {el.visible ? t('editor.layers.visibleShort') : t('editor.layers.hiddenShort')}
-                      </IconButton>
-                      <IconButton
-                        variant="outline"
-                        title={t('editor.layers.lock')}
-                        onClick={() => {
-                          const nextLocked = !el.locked;
-                          updateElements(elements.map((e) => (e.id === el.id ? { ...e, locked: nextLocked } : e)));
-                          if (nextLocked) {
-                            setSelection(selectedIds.filter((id) => id !== el.id));
-                          }
-                        }}
-                      >
-                        {el.locked ? t('editor.layers.lockShort') : t('editor.layers.unlockShort')}
-                      </IconButton>
-                      <IconButton variant="outline" title={t('editor.layers.moveUp')} onClick={() => reorder(el.id, 'up')}>
-                        {t('editor.layers.upShort')}
-                      </IconButton>
-                      <IconButton variant="outline" title={t('editor.layers.moveDown')} onClick={() => reorder(el.id, 'down')}>
-                        {t('editor.layers.downShort')}
-                      </IconButton>
-                      <IconButton
-                        variant="ghost"
-                        title={t('editor.layers.rename')}
-                        onClick={() => {
+                        onDragEnd={() => setDragLayerId(null)}
+                        onDoubleClick={() => {
                           const nextName = window.prompt(t('editor.layers.renamePrompt'), el.name);
                           if (!nextName) return;
                           updateElements(elements.map((e) => (e.id === el.id ? { ...e, name: nextName.trim() } : e)));
                         }}
+                        onClick={(e) => {
+                          if (el.locked || el.visible === false) return;
+                          if (e.shiftKey) {
+                            setSelection(
+                              selectedIds.includes(el.id)
+                                ? selectedIds.filter((id) => id !== el.id)
+                                : [...selectedIds, el.id],
+                            );
+                          } else {
+                            setSelection([el.id]);
+                          }
+                        }}
                       >
-                        {t('editor.layers.renameShort')}
-                      </IconButton>
-                    </div>
-                  ))
-              )}
-            </div>
-          </Panel>
-        </div>
+                        <div className="layerMeta">
+                          <div className="layerName">{el.name}</div>
+                          <div className="layerHint">{getElementTypeLabel(t, el.type)}</div>
+                        </div>
+                        <div className="layerActions">
+                          <IconButton
+                            variant="outline"
+                            title={t('editor.layers.visibility')}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const nextVisible = !el.visible;
+                              updateElements(elements.map((e) => (e.id === el.id ? { ...e, visible: nextVisible } : e)));
+                              if (!nextVisible) {
+                                setSelection(selectedIds.filter((id) => id !== el.id));
+                              }
+                            }}
+                          >
+                            {el.visible ? t('editor.layers.visibleShort') : t('editor.layers.hiddenShort')}
+                          </IconButton>
+                          <IconButton
+                            variant="outline"
+                            title={t('editor.layers.lock')}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              const nextLocked = !el.locked;
+                              updateElements(elements.map((e) => (e.id === el.id ? { ...e, locked: nextLocked } : e)));
+                              if (nextLocked) {
+                                setSelection(selectedIds.filter((id) => id !== el.id));
+                              }
+                            }}
+                          >
+                            {el.locked ? t('editor.layers.lockShort') : t('editor.layers.unlockShort')}
+                          </IconButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </details>
 
-        <Panel title={t('editor.canvasTitle')} subtitle={t('editor.canvasSubtitle')}>
-          <div className="list">
-            <Row gap={10}>
-              <div className="hint">{t('editor.grid')}</div>
+            <Divider />
+            <div className="uiHelp">{t('editor.shortcuts')}</div>
+            <div className="uiRow" style={{ gap: 6, flexWrap: 'wrap' }}>
+              <Kbd>Ctrl</Kbd><Kbd>Z</Kbd>
+              <Kbd>Ctrl</Kbd><Kbd>Y</Kbd>
+              <Kbd>Ctrl</Kbd><Kbd>D</Kbd>
+              <Kbd>Del</Kbd>
+            </div>
+          </div>
+        </aside>
+
+        <main className="editorPanel editorCenter">
+          <div className="editorPanelHeader">
+            <div>
+              <div className="uiTitle">{t('editor.canvasTitle')}</div>
+              <div className="uiSub">{t('editor.canvasSubtitle')}</div>
+            </div>
+            <div className="uiRow" style={{ justifyContent: 'flex-end' }}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="onlySmallLeft"
+                onClick={() => setLeftDrawerOpen(true)}
+              >
+                {t('editor.toolboxTitle')}
+              </Button>
+              <div className="uiRow" style={{ gap: 6 }}>
+                <div className="uiHelp">{t('editor.zoom')}</div>
+                <Input
+                  type="number"
+                  value={zoom}
+                  step={0.1}
+                  onChange={(e) => setZoom(clamp(Number(e.target.value), 0.3, 2.5))}
+                  style={{ width: 70 }}
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="onlySmallRight"
+                onClick={() => setRightDrawerOpen(true)}
+              >
+                {t('cards.inspector')}
+              </Button>
+            </div>
+          </div>
+          <div className="editorPanelBody editorCenterBody">
+            <div className="uiRow" style={{ flexWrap: 'wrap' }}>
+              <div className="uiHelp">{t('editor.grid')}</div>
               <Input
                 type="number"
                 value={gridSize}
                 min={4}
                 max={64}
                 onChange={(e) => setGridSize(clamp(Number(e.target.value), 4, 64))}
-                style={{ width: 120 }}
+                style={{ width: 100 }}
               />
               <Toggle checked={showGrid} onChange={setShowGrid} label={t('editor.showGrid')} />
               <Toggle checked={snapToGrid} onChange={setSnapToGrid} label={t('editor.snap')} />
-              <div className="hint">{t('editor.zoom')}</div>
-              <Input
-                type="number"
-                value={zoom}
-                step={0.1}
-                onChange={(e) => setZoom(clamp(Number(e.target.value), 0.3, 2.5))}
-                style={{ width: 80 }}
+              <Toggle
+                checked={Boolean(previewData)}
+                onChange={(next) => setPreviewRowId(next ? activeTable?.rows?.[0]?.id : undefined)}
+                label={t('editor.livePreview')}
               />
-              <Toggle checked={Boolean(previewRow)} onChange={(next) => setPreviewRowId(next ? activeTable?.rows?.[0]?.id : undefined)} label={t('editor.livePreview')} />
-            </Row>
-
-            <Row gap={8}>
-              <div className="hint">{t('editor.alignLabel')}</div>
+              <div style={{ marginLeft: 'auto' }} className="uiRow">
+                <IconButton variant="outline" title={t('editor.undo')} onClick={undo}>{t('editor.undo')}</IconButton>
+                <IconButton variant="outline" title={t('editor.redo')} onClick={redo}>{t('editor.redo')}</IconButton>
+              </div>
+            </div>
+            <div className="uiRow" style={{ flexWrap: 'wrap' }}>
+              <div className="uiHelp">{t('editor.alignLabel')}</div>
               <IconButton variant="outline" title={t('editor.align.left')} onClick={() => alignSelected('left')}>{t('editor.align.leftShort')}</IconButton>
               <IconButton variant="outline" title={t('editor.align.center')} onClick={() => alignSelected('center')}>{t('editor.align.centerShort')}</IconButton>
               <IconButton variant="outline" title={t('editor.align.right')} onClick={() => alignSelected('right')}>{t('editor.align.rightShort')}</IconButton>
               <IconButton variant="outline" title={t('editor.align.top')} onClick={() => alignSelected('top')}>{t('editor.align.topShort')}</IconButton>
               <IconButton variant="outline" title={t('editor.align.middle')} onClick={() => alignSelected('middle')}>{t('editor.align.middleShort')}</IconButton>
               <IconButton variant="outline" title={t('editor.align.bottom')} onClick={() => alignSelected('bottom')}>{t('editor.align.bottomShort')}</IconButton>
-              <div style={{ marginLeft: 'auto' }}>
-              <IconButton variant="outline" title={t('editor.undo')} onClick={undo}>{t('editor.undo')}</IconButton>
-              <IconButton variant="outline" title={t('editor.redo')} onClick={redo}>{t('editor.redo')}</IconButton>
-              </div>
-            </Row>
-
-            <EditorCanvas
-              blueprint={blueprint}
-              elements={elements}
-              selectedIds={selectedIds}
-              gridSize={gridSize}
-              showGrid={showGrid}
-              snapToGrid={snapToGrid}
-              zoom={zoom}
-              projectRoot={projectRoot}
-              previewData={previewRow}
-              onSelectIds={setSelection}
-              onChange={(next) => updateElements(next)}
-              onZoomChange={setZoom}
-              onDropAsset={handleDropAsset}
-            />
-          </div>
-        </Panel>
-
-                <Panel title={t('editor.propertiesTitle')} subtitle={selectionLabel}>
-          {!hasSelection ? (
-            <div className="empty">
-              {t('editor.propertiesEmpty')} <code>{'{{name}}'}</code>.
             </div>
-          ) : (
-            <div className="list">
-              {selectionTypes.length > 1 ? (
-                <div className="hint">{t('editor.propertiesMultiHint')}</div>
-              ) : null}
+            <div className="editorCenterStage">
+              <EditorCanvas
+                blueprint={blueprint}
+                elements={elements}
+                selectedIds={selectedIds}
+                gridSize={gridSize}
+                showGrid={showGrid}
+                snapToGrid={snapToGrid}
+                zoom={zoom}
+                projectRoot={projectRoot}
+                previewData={previewData}
+                onSelectIds={setSelection}
+                onChange={(next) => updateElements(next)}
+                onZoomChange={setZoom}
+                onDropAsset={handleDropAsset}
+              />
+            </div>
+          </div>
+        </main>
 
-              {selected ? (
-                <div>
-                  <div className="hint">{t('editor.name')}</div>
-                  <Input value={selected.name} onChange={(e) => updateSelectedAll({ name: e.target.value })} />
-                </div>
-              ) : null}
+        <aside className={`editorPanel editorRight ${rightDrawerOpen ? 'drawerOpen' : ''}`}>
+          <div className="editorPanelHeader">
+            <div>
+              <div className="uiTitle">{t('editor.propertiesTitle')}</div>
+              <div className="uiSub">{selectionLabel}</div>
+            </div>
+            <Button size="sm" variant="outline" className="panelClose" onClick={() => setRightDrawerOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </div>
+          <div className="editorPanelBody">
+            {!activeRow ? (
+              <div className="empty">{t('data.noData')}</div>
+            ) : (
+              <details className="uiAccordion" open>
+                <summary className="uiAccordionHeader">{t('editor.inspector.card')}</summary>
+                <div className="uiAccordionBody uiStack">
+                  <div>
+                    <div className="uiHelp">{t('common.row')}</div>
+                    <Select value={activeRow.id} onChange={(e) => setPreviewRowId(e.target.value)}>
+                      {activeTable?.rows?.map((row) => (
+                        <option key={row.id} value={row.id}>{row.id}</option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="uiStack">
+                    <div className="uiSub">{t('editor.inspector.card')}</div>
+                    <div className="uiRow">
+                      <div style={{ minWidth: 200 }}>
+                        <div className="uiHelp">{t('editor.inspector.template')}</div>
+                        <Select
+                          value={inspectorTemplateKey}
+                          onChange={(e) => updateActiveRowData('templateKey', e.target.value)}
+                        >
+                          {Object.values(CARD_TEMPLATES).map((template) => (
+                            <option key={template.key} value={template.key}>
+                              {template.label[editorLanguage] ?? template.label.en}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div style={{ minWidth: 180 }}>
+                        <div className="uiHelp">{t('editor.inspector.rarity')}</div>
+                        <Select
+                          value={inspectorRarity}
+                          onChange={(e) => updateActiveRowData('rarity', e.target.value)}
+                        >
+                          <option value="common">{t('editor.inspector.rarityCommon')}</option>
+                          <option value="rare">{t('editor.inspector.rarityRare')}</option>
+                          <option value="epic">{t('editor.inspector.rarityEpic')}</option>
+                          <option value="legendary">{t('editor.inspector.rarityLegendary')}</option>
+                        </Select>
+                      </div>
+                      <div style={{ minWidth: 180 }}>
+                        <div className="uiHelp">{t('editor.inspector.background')}</div>
+                        <Input
+                          value={inspectorBgColor}
+                          onChange={(e) => updateActiveRowData('bgColor', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="property-section">
-                <div className="property-title">{t('editor.sections.position')}</div>
-                <div className="property-fields">
-                  <Row gap={10}>
-                    <Toggle
-                      checked={allVisible}
-                      onChange={(next) => updateSelectedAll({ visible: next })}
-                      label={`${t('editor.visible')}${anyVisible && !allVisible ? t('common.mixedSuffix') : ''}`}
-                    />
-                    <Toggle
-                      checked={allLocked}
-                      onChange={(next) => updateSelectedAll({ locked: next })}
-                      label={`${t('editor.locked')}${anyLocked && !allLocked ? t('common.mixedSuffix') : ''}`}
-                    />
-                  </Row>
-                  <Row gap={10}>
-                    <div style={{ flex: 1 }}>
-                      <div className="hint">{t('editor.x')}</div>
-                      <Input
-                        type="number"
-                        value={mixedX.mixed ? '' : mixedX.value ?? ''}
-                        placeholder={mixedX.mixed ? t('common.mixed') : undefined}
-                        onChange={(e) => {
-                          if (e.target.value === '') return;
-                          updateSelectedAll({ x: Number(e.target.value) });
-                        }}
-                      />
+                  <div className="uiStack">
+                    <div className="uiSub">{t('editor.inspector.stats')}</div>
+                    <div className="uiRow">
+                      <div style={{ minWidth: 140 }}>
+                        <div className="uiHelp">{t('editor.inspector.attack')}</div>
+                        <Input
+                          type="number"
+                          value={inspectorData.attack ?? ''}
+                          onChange={(e) => {
+                            const next = e.target.value === '' ? '' : Number(e.target.value);
+                            updateActiveRowData('attack', next);
+                          }}
+                        />
+                      </div>
+                      <div style={{ minWidth: 140 }}>
+                        <div className="uiHelp">{t('editor.inspector.defense')}</div>
+                        <Input
+                          type="number"
+                          value={inspectorData.defense ?? ''}
+                          onChange={(e) => {
+                            const next = e.target.value === '' ? '' : Number(e.target.value);
+                            updateActiveRowData('defense', next);
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div className="hint">{t('editor.y')}</div>
-                      <Input
-                        type="number"
-                        value={mixedY.mixed ? '' : mixedY.value ?? ''}
-                        placeholder={mixedY.mixed ? t('common.mixed') : undefined}
-                        onChange={(e) => {
-                          if (e.target.value === '') return;
-                          updateSelectedAll({ y: Number(e.target.value) });
-                        }}
-                      />
+                  </div>
+
+                  <div className="uiStack">
+                    <div className="uiSub">{t('editor.inspector.text')}</div>
+                    <div className="uiRow">
+                      <div style={{ minWidth: 200, flex: 1 }}>
+                        <div className="uiHelp">{t('common.name')} ({t('settings.english')})</div>
+                        <Input
+                          value={getLocalizedValue(inspectorData.name, 'en')}
+                          onChange={(e) => updateActiveRowData('name.en', e.target.value)}
+                        />
+                      </div>
+                      <div style={{ minWidth: 200, flex: 1 }}>
+                        <div className="uiHelp">{t('common.name')} ({t('settings.arabic')})</div>
+                        <Input
+                          value={getLocalizedValue(inspectorData.name, 'ar')}
+                          onChange={(e) => updateActiveRowData('name.ar', e.target.value)}
+                        />
+                      </div>
                     </div>
-                  </Row>
+                    <div className="uiRow">
+                      <div style={{ minWidth: 200, flex: 1 }}>
+                        <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.english')})</div>
+                        <Input
+                          value={getLocalizedValue(inspectorData.desc, 'en')}
+                          onChange={(e) => updateActiveRowData('desc.en', e.target.value)}
+                        />
+                      </div>
+                      <div style={{ minWidth: 200, flex: 1 }}>
+                        <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.arabic')})</div>
+                        <Input
+                          value={getLocalizedValue(inspectorData.desc, 'ar')}
+                          onChange={(e) => updateActiveRowData('desc.ar', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="uiStack">
+                    <div className="uiSub">{t('editor.inspector.media')}</div>
+                    <Row gap={8}>
+                      <Button variant="outline" onClick={pickInspectorImage}>{t('data.uploadImage')}</Button>
+                      <Button variant="outline" onClick={pickInspectorVideo}>{t('data.uploadVideo')}</Button>
+                    </Row>
+                    <div className="uiHelp">
+                      {activeRow.art?.kind === 'video'
+                        ? t('data.videoUsesPoster')
+                        : activeRow.art?.kind === 'image'
+                          ? t('data.imageSelected')
+                          : t('data.noArtwork')}
+                    </div>
+                    <div className="uiHelp">{t('ui.tip.videoPoster')}</div>
+                    <Row gap={8}>
+                      <Button variant="outline" onClick={regenerateInspectorPoster} disabled={!activeRow.art || activeRow.art.kind !== 'video'}>
+                        {t('data.generatePoster')}
+                      </Button>
+                    </Row>
+                  </div>
                 </div>
+              </details>
+            )}
+
+            <Divider />
+
+            {!hasSelection ? (
+              <div className="empty">
+                {t('editor.propertiesEmpty')} <code>{'{{name}}'}</code>.
               </div>
+            ) : (
+              <div className="uiStack">
+                {selectionTypes.length > 1 ? (
+                  <div className="hint">{t('editor.propertiesMultiHint')}</div>
+                ) : null}
 
-              <div className="property-section">
-                <div className="property-title">{t('editor.sections.size')}</div>
-                <div className="property-fields">
+                {selected ? (
+                  <div>
+                    <div className="hint">{t('editor.name')}</div>
+                    <Input value={selected.name} onChange={(e) => updateSelectedAll({ name: e.target.value })} />
+                  </div>
+                ) : null}
+
+                <details className="uiAccordion" open>
+                  <summary className="uiAccordionHeader">{t('editor.sections.position')}</summary>
+                  <div className="uiAccordionBody">
+                    <Row gap={10}>
+                      <Toggle
+                        checked={allVisible}
+                        onChange={(next) => updateSelectedAll({ visible: next })}
+                        label={`${t('editor.visible')}${anyVisible && !allVisible ? t('common.mixedSuffix') : ''}`}
+                      />
+                      <Toggle
+                        checked={allLocked}
+                        onChange={(next) => updateSelectedAll({ locked: next })}
+                        label={`${t('editor.locked')}${anyLocked && !allLocked ? t('common.mixedSuffix') : ''}`}
+                      />
+                    </Row>
+                    <Row gap={10}>
+                      <div style={{ flex: 1 }}>
+                        <div className="hint">{t('editor.x')}</div>
+                        <Input
+                          type="number"
+                          value={mixedX.mixed ? '' : mixedX.value ?? ''}
+                          placeholder={mixedX.mixed ? t('common.mixed') : undefined}
+                          onChange={(e) => {
+                            if (e.target.value === '') return;
+                            updateSelectedAll({ x: Number(e.target.value) });
+                          }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div className="hint">{t('editor.y')}</div>
+                        <Input
+                          type="number"
+                          value={mixedY.mixed ? '' : mixedY.value ?? ''}
+                          placeholder={mixedY.mixed ? t('common.mixed') : undefined}
+                          onChange={(e) => {
+                            if (e.target.value === '') return;
+                            updateSelectedAll({ y: Number(e.target.value) });
+                          }}
+                        />
+                      </div>
+                    </Row>
+                  </div>
+                </details>
+
+              <details className="uiAccordion" open>
+                <summary className="uiAccordionHeader">{t('editor.sections.size')}</summary>
+                <div className="uiAccordionBody">
                   <Row gap={10}>
                     <div style={{ flex: 1 }}>
                       <div className="hint">{t('editor.w')}</div>
@@ -712,11 +1039,11 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                     />
                   ) : null}
                 </div>
-              </div>
+              </details>
 
-              <div className="property-section">
-                <div className="property-title">{t('editor.sections.transform')}</div>
-                <div className="property-fields">
+              <details className="uiAccordion" open>
+                <summary className="uiAccordionHeader">{t('editor.sections.transform')}</summary>
+                <div className="uiAccordionBody">
                   <Row gap={10}>
                     <div style={{ flex: 1 }}>
                       <div className="hint">{t('editor.rotation')}</div>
@@ -747,12 +1074,12 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                     </div>
                   </Row>
                 </div>
-              </div>
+              </details>
 
               {isTextSelection ? (
-                <div className="property-section">
-                  <div className="property-title">{t('editor.sections.text')}</div>
-                  <div className="property-fields">
+                <details className="uiAccordion" open>
+                  <summary className="uiAccordionHeader">{t('editor.sections.text')}</summary>
+                  <div className="uiAccordionBody">
                     <div>
                       <div className="hint">{t('editor.bindingKey')}</div>
                       <Input
@@ -844,13 +1171,13 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                       </div>
                     </Row>
                   </div>
-                </div>
+                </details>
               ) : null}
 
               {isShapeSelection ? (
-                <div className="property-section">
-                  <div className="property-title">{t('editor.sections.shape')}</div>
-                  <div className="property-fields">
+                <details className="uiAccordion" open>
+                  <summary className="uiAccordionHeader">{t('editor.sections.shape')}</summary>
+                  <div className="uiAccordionBody">
                     <Row gap={10}>
                       <div style={{ flex: 1 }}>
                         <div className="hint">{t('editor.fill')}</div>
@@ -896,13 +1223,13 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                       </div>
                     </Row>
                   </div>
-                </div>
+                </details>
               ) : null}
 
               {isImageSelection ? (
-                <div className="property-section">
-                  <div className="property-title">{t('editor.sections.image')}</div>
-                  <div className="property-fields">
+                <details className="uiAccordion" open>
+                  <summary className="uiAccordionHeader">{t('editor.sections.image')}</summary>
+                  <div className="uiAccordionBody">
                     <div>
                       <div className="hint">{t('editor.bindingKey')}</div>
                       <Input
@@ -932,13 +1259,13 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                       </Select>
                     </div>
                   </div>
-                </div>
+                </details>
               ) : null}
 
               {isIconSelection ? (
-                <div className="property-section">
-                  <div className="property-title">{t('editor.sections.icon')}</div>
-                  <div className="property-fields">
+                <details className="uiAccordion" open>
+                  <summary className="uiAccordionHeader">{t('editor.sections.icon')}</summary>
+                  <div className="uiAccordionBody">
                     <div>
                       <div className="hint">{t('editor.iconLabel')}</div>
                       <Input
@@ -948,18 +1275,45 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                       />
                     </div>
                   </div>
-                </div>
+                </details>
               ) : null}
 
-              <div className="danger-row">
-                <Button variant="danger" onClick={confirmDelete}>
-                  {selectedIds.length > 1 ? t('editor.deleteElements') : t('editor.deleteElement')}
-                </Button>
-              </div>
+              <details className="uiAccordion" open>
+                <summary className="uiAccordionHeader">{t('cards.advanced')}</summary>
+                <div className="uiAccordionBody">
+                  <div>
+                    <div className="uiHelp">{t('editor.bindingKey')}</div>
+                    <Input
+                      value={getMixedValue(selectedElements.map((el) => el.bindingKey ?? '')).mixed ? '' : (selectedElements[0]?.bindingKey ?? '')}
+                      placeholder={getMixedValue(selectedElements.map((el) => el.bindingKey ?? '')).mixed ? t('common.mixed') : t('editor.bindingPlaceholder')}
+                      onChange={(e) => updateSelectedAll({ bindingKey: e.target.value })}
+                    />
+                  </div>
+                  {selected ? (
+                    <div>
+                      <div className="uiHelp">ID</div>
+                      <Input value={selected.id} readOnly />
+                    </div>
+                  ) : null}
+                  <div className="danger-row">
+                    <Button variant="danger" onClick={confirmDelete}>
+                      {selectedIds.length > 1 ? t('editor.deleteElements') : t('editor.deleteElement')}
+                    </Button>
+                  </div>
+                </div>
+              </details>
             </div>
           )}
-        </Panel>
+          </div>
+        </aside>
       </div>
+      <div
+        className={`drawerOverlay ${leftDrawerOpen || rightDrawerOpen ? 'open' : ''}`}
+        onClick={() => {
+          setLeftDrawerOpen(false);
+          setRightDrawerOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -970,6 +1324,39 @@ function deepClone<T>(value: T): T {
 
 function normalizeZIndex(elements: ElementModel[]) {
   return elements.map((el, idx) => ({ ...el, zIndex: idx + 1 }));
+}
+
+function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  return fallback;
+}
+
+function normalizeRarity(value: any) {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
+  return 'common';
+}
+
+function setPathValue(data: Record<string, any>, path: string, value: any) {
+  if (!path.includes('.')) {
+    return { ...data, [path]: value };
+  }
+  const result: Record<string, any> = { ...data };
+  const parts = path.split('.');
+  let cursor: Record<string, any> = result;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    const next = cursor[part];
+    if (next && typeof next === 'object' && !Array.isArray(next)) {
+      cursor[part] = { ...next };
+    } else {
+      cursor[part] = {};
+    }
+    cursor = cursor[part];
+  }
+  cursor[parts[parts.length - 1]] = value;
+  return result;
 }
 
 function fileToDataUrl(file: File, errorMessage: string) {

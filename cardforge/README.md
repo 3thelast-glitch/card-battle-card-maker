@@ -93,6 +93,7 @@ Next steps:
 
 New features:
 - CSV/JSON import with dot-path keys (e.g., `stats.attack`) normalized into nested data.
+- Excel (.xlsx) import using the first worksheet.
 - Binding mapper for text/image elements via `bindingKey`.
 - Batch export pipeline with progress UI and cancel.
 - Windows-safe filename templating with `{{name}}_{{id}}` and quantity suffixes.
@@ -166,6 +167,23 @@ Text supports placeholders:
 
 Image elements can bind to a field via `bindingKey`:
 - `bindingKey: "art"` (expects a data URL or local file path)
+
+Excel import:
+- The first worksheet is used.
+- Column headers become data keys (dot-paths supported).
+
+Example Excel columns:
+
+| name | stats.attack | art | quantity | set |
+| --- | --- | --- | --- | --- |
+| Knight | 4 | knight.png | 2 | Base Deck |
+
+Image binding:
+- Choose the image column and an images folder in **Data → Image Binding**.
+- If a cell contains an absolute path or `file://`, it is used directly.
+- Otherwise, the value is resolved inside the selected folder (extensions tried: `.png`, `.jpg`, `.jpeg`, `.webp`).
+- Missing images fall back to a configurable placeholder and are reported after export.
+- Optional “Copy images into project assets” stores files under `assets/images/` for portability.
 
 Assets:
 - Use `/assets/...` URLs (from `apps/renderer/public/assets`) inside templates or data.

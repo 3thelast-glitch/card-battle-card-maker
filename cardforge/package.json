@@ -17,5 +17,8 @@
     "concurrently": "^9.0.0",
     "prettier": "^3.4.2",
     "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
   }
 }

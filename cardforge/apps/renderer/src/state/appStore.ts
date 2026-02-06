@@ -3,7 +3,16 @@ import type { Project } from '@cardsmith/core';
 import type { RecentProject } from '@cardsmith/storage';
 import type { TemplateDefinition } from '../templates/types';
 
-export type Screen = 'home' | 'dashboard' | 'editor' | 'data' | 'assets' | 'export' | 'templates' | 'settings';
+export type Screen =
+  | 'home'
+  | 'dashboard'
+  | 'editor'
+  | 'data'
+  | 'assets'
+  | 'export'
+  | 'simulator'
+  | 'templates'
+  | 'settings';
 
 type AppState = {
   screen: Screen;

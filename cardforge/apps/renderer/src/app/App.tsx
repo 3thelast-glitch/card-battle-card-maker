@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../state/appStore';
 import { loadBuiltInTemplates } from '../templates/loadTemplates';
@@ -11,10 +11,12 @@ import { TemplateGalleryScreen } from '../features/templates/TemplateGalleryScre
 import { SettingsScreen } from '../features/settings/SettingsScreen';
 import { AssetsScreen } from '../features/assets/AssetsScreen';
 import { Button, Row } from '../components/ui';
-import { createProjectFromBlueprint, createEmptyProject } from '@cardsmith/core';
-import { addRecentProject, loadRecentProjects, parseProject, stringifyProject } from '@cardsmith/storage';
+import { createProjectFromBlueprint, createEmptyProject } from '../../../../packages/core/src/index';
+import { addRecentProject, loadRecentProjects, parseProject, stringifyProject } from '../../../../packages/storage/src/index';
 import type { TemplateDefinition } from '../templates/types';
 import { templateToBlueprint } from '../templates/types';
+
+const SimulatorScreen = lazy(() => import('../screens/SimulatorScreen'));
 
 export function App() {
   const { t, i18n } = useTranslation();
@@ -138,6 +140,9 @@ export function App() {
               <Button variant={screen === 'export' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('export')}>
                 {t('app.nav.export')}
               </Button>
+              <Button variant={screen === 'simulator' ? 'primary' : 'ghost'} size="sm" onClick={() => setScreen('simulator')}>
+                {t('app.nav.simulator')}
+              </Button>
               <Button variant="outline" size="sm" onClick={saveProject} title={t('app.saveTooltip')}>
                 {t('app.nav.save')}
               </Button>
@@ -175,6 +180,11 @@ export function App() {
       {screen === 'data' && project ? <DataTableScreen project={project} onChange={setProject} /> : null}
       {screen === 'assets' && project ? <AssetsScreen project={project} onChange={setProject} /> : null}
       {screen === 'export' && project ? <ExportScreen project={project} onChange={setProject} /> : null}
+      {screen === 'simulator' && project ? (
+        <Suspense fallback={<div className="uiHelp">Loading...</div>}>
+          <SimulatorScreen project={project} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
