@@ -1,10 +1,13 @@
 import React from 'react';
-import type { CardArt, DataRow, Project } from '../../../../../packages/core/src/index';
+import { useMemo, useState } from 'react';
+import type { CardArt, CardRace, CardTrait, DataRow, Project } from '../../../../../packages/core/src/index';
 import { resolvePath } from '../../../../../packages/core/src/index';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Row, Select, Toggle, Badge, Divider } from '../../components/ui';
-import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
+import type { TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
+import { TemplatePicker } from '../templates/TemplatePicker';
+import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
 
 type Props = {
   row?: DataRow;
@@ -24,17 +27,19 @@ type Props = {
 };
 
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RACE_OPTIONS: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
+const TRAIT_OPTIONS: TraitKey[] = ['fire', 'ice', 'swordsman', 'archer', 'mage', 'tank', 'poison', 'flying'];
 
 export function CardInspector(props: Props) {
   const { t } = useTranslation();
-  if (!props.row) {
-    return <div className="empty">{t('cards.empty')}</div>;
-  }
-
-  const data = props.row.data ?? {};
-  const art: CardArt | undefined = props.row.art ?? (data as any).art;
+  const [traitQuery, setTraitQuery] = useState('');
+  const row = props.row;
+  const data = row?.data ?? {};
+  const art: CardArt | undefined = row?.art ?? (data as any).art;
   const rarity = normalizeRarity(data.rarity);
   const templateKey = normalizeTemplateKey(data.templateKey ?? data.template);
+  const race = normalizeRace(data.race);
+  const traits = normalizeTraits(data.traits ?? (data as any).trait);
   const bgColor = String(data.bgColor ?? '');
   const attack = normalizeNumber(data.attack ?? data.stats?.attack);
   const defense = normalizeNumber(data.defense ?? data.stats?.defense);
@@ -48,7 +53,44 @@ export function CardInspector(props: Props) {
   const missingFields = !hasLocalizedValue(data.name) || !hasLocalizedValue(data.desc ?? data.ability);
   const total = attack + defense;
 
+  const traitSet = new Set(traits);
+  const normalizedTraitQuery = traitQuery.trim().toLowerCase();
+  const traitSuggestions = useMemo(() => {
+    const list = TRAIT_OPTIONS.filter((trait) => !traitSet.has(trait as CardTrait));
+    if (!normalizedTraitQuery) return list.slice(0, 8);
+    return list
+      .filter((trait) => {
+        const meta = TRAIT_META[trait];
+        const label = t(meta?.labelKey ?? `traits.${trait}`, { defaultValue: trait }).toLowerCase();
+        return trait.includes(normalizedTraitQuery) || label.includes(normalizedTraitQuery);
+      })
+      .slice(0, 8);
+  }, [normalizedTraitQuery, traitSet, t]);
+
+  const addTrait = (trait: string) => {
+    const cleaned = String(trait || '').toLowerCase().trim();
+    if (!cleaned) return;
+    if (traitSet.has(cleaned as CardTrait)) {
+      setTraitQuery('');
+      return;
+    }
+    props.onUpdateData('traits', Array.from(new Set([...traits, cleaned])));
+    setTraitQuery('');
+  };
+
+  const removeTrait = (trait: string) => {
+    const cleaned = String(trait || '').toLowerCase().trim();
+    props.onUpdateData(
+      'traits',
+      traits.filter((item) => String(item).toLowerCase().trim() !== cleaned),
+    );
+  };
+
   const customColumns = props.columns.filter((key) => !isReservedColumn(key));
+
+  if (!row) {
+    return <div className="empty">{t('cards.empty')}</div>;
+  }
 
   return (
     <div className="uiStack">
@@ -57,16 +99,89 @@ export function CardInspector(props: Props) {
         <div className="uiAccordionBody uiStack">
           <div>
             <div className="uiHelp">{t('editor.inspector.template')}</div>
-            <Select
+            <TemplatePicker
               value={templateKey}
-              onChange={(e) => props.onUpdateData('templateKey', e.target.value)}
+              language={props.language}
+              onChange={(next) => props.onUpdateData('templateKey', next)}
+            />
+          </div>
+          <div>
+            <div className="uiHelp">{t('cards.meta.race')}</div>
+            <Select
+              value={race}
+              onChange={(e) => props.onUpdateData('race', e.target.value || undefined)}
             >
-              {Object.values(CARD_TEMPLATES).map((template) => (
-                <option key={template.key} value={template.key}>
-                  {template.label[props.language] ?? template.label.en}
+              <option value="">{t('common.none')}</option>
+              {RACE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t(`races.${option}`)}
                 </option>
               ))}
             </Select>
+          </div>
+          <div>
+            <div className="uiHelp">{t('cards.meta.traits')}</div>
+            <div className="uiStack" style={{ gap: 8 }}>
+              <Input
+                placeholder={t('cards.search')}
+                value={traitQuery}
+                onChange={(e) => setTraitQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (traitSuggestions.length) {
+                      addTrait(traitSuggestions[0]);
+                    } else {
+                      addTrait(traitQuery);
+                    }
+                  }
+                }}
+              />
+              {traitSuggestions.length ? (
+                <div className="traitsChips">
+                  {traitSuggestions.map((trait) => {
+                    const meta = TRAIT_META[trait];
+                    const label = t(meta?.labelKey ?? `traits.${trait}`, { defaultValue: trait });
+                    return (
+                      <button
+                        key={trait}
+                        type="button"
+                        className={`chip chip--suggestion ${meta ? `chip--${meta.tintClass}` : ''}`}
+                        onClick={() => addTrait(trait)}
+                      >
+                        <span className="chipIcon">
+                          <TraitIcon trait={trait} size={14} />
+                        </span>
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+              <div className="traitsChips">
+                {traits.map((trait) => {
+                  const key = String(trait);
+                  const meta = TRAIT_META[key];
+                  const label = t(meta?.labelKey ?? `traits.${key}`, { defaultValue: key });
+                  return (
+                    <span key={key} className={`chip ${meta ? `chip--${meta.tintClass}` : ''}`}>
+                      <span className="chipIcon">
+                        <TraitIcon trait={key} size={14} />
+                      </span>
+                      <span>{label}</span>
+                      <button
+                        type="button"
+                        className="chipRemove"
+                        onClick={() => removeTrait(key)}
+                        aria-label={t('common.delete')}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <div>
             <div className="uiHelp">{t('editor.inspector.rarity')}</div>
@@ -268,6 +383,24 @@ function normalizeRarity(value: any): Rarity {
   return 'common';
 }
 
+function normalizeRace(value: any) {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (!cleaned) return '';
+  return cleaned as CardRace;
+}
+
+function normalizeTraits(value: any) {
+  if (Array.isArray(value)) {
+    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean) as CardTrait[];
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [] as CardTrait[];
+  return raw
+    .split(/[,|]/g)
+    .map((trait) => trait.trim().toLowerCase())
+    .filter(Boolean) as CardTrait[];
+}
+
 function normalizeNumber(value: any) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -295,6 +428,8 @@ function isReservedColumn(key: string) {
     'templateKey',
     'bgColor',
     'cost',
+    'race',
+    'traits',
     'tags',
     'stats',
     'id',

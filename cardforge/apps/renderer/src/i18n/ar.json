@@ -94,6 +94,9 @@
   "templates": {
     "title": "معرض القوالب",
     "subtitle": "اختر قالبًا لبدء مشروع جديد.",
+    "search": "ابحث عن القوالب",
+    "change": "تغيير",
+    "select": "اختر قالبًا",
     "searchPlaceholder": "ابحث في القوالب",
     "categoryLabel": "الفئة",
     "allCategories": "كل الفئات",
@@ -102,7 +105,16 @@
     "noTemplates": "لم يتم العثور على قوالب.",
     "templateCount": "عدد القوالب: {{count}}",
     "categoryFallback": "عام",
-    "descriptionFallback": "قالب"
+    "descriptionFallback": "قالب",
+    "classic": {
+      "desc": "تخطيط متوازن بإطار نظيف."
+    },
+    "moon": {
+      "desc": "ألوان باردة مع شارة أنيقة."
+    },
+    "sand": {
+      "desc": "لوحة دافئة بلمسات ريفية."
+    }
   },
   "data": {
     "title": "جدول البيانات",
@@ -383,13 +395,48 @@
     "advanced": "متقدم",
     "count": "البطاقات: {{count}}",
     "openEditor": "فتح المحرر",
+    "meta": {
+      "race": "العرق",
+      "traits": "السمات"
+    },
     "deck": {
       "title": "توزيع الندرة",
       "sub": "نِسب تحدد مزيج المجموعة.",
       "total": "المجموع",
       "normalize": "ضبط النسب",
-      "rarityHint": "نسبة من الدِك"
+      "rarityHint": "نسبة من الدِك",
+      "ranges": {
+        "title": "النطاقات",
+        "enable": "تفعيل النطاقات",
+        "lowDuplicate": "تقليل التكرار",
+        "duplicateBudget": "حد التكرار",
+        "seed": "البذرة",
+        "attack": "الهجوم",
+        "defense": "الدفاع",
+        "cost": "التكلفة",
+        "includeRarity": "تضمين الندرة",
+        "min": "أدنى",
+        "max": "أقصى"
+      }
     }
+  },
+  "races": {
+    "human": "إنسان",
+    "beast": "وحوش",
+    "elf": "إلف",
+    "demon": "شيطان",
+    "animal": "حيوان",
+    "amphibian": "برمائي"
+  },
+  "traits": {
+    "swordsman": "مبارز",
+    "fire": "نار",
+    "ice": "جليد",
+    "archer": "رامي",
+    "mage": "ساحر",
+    "tank": "دبابة",
+    "poison": "سم",
+    "flying": "طائر"
   },
   "ui": {
     "bulkImport": {

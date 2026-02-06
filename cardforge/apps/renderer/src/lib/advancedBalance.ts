@@ -16,6 +16,7 @@ export function generateAdvancedStats(opts: {
   abilityKey?: AbilityKey;
   abilityTextEn?: string;
   abilityTextAr?: string;
+  rng?: () => number;
 }) {
   const { rarity } = opts;
   const range = BALANCE_RANGES[rarity];
@@ -46,7 +47,8 @@ export function generateAdvancedStats(opts: {
   const pivotMin = 1;
   const pivotMax = total - 1;
 
-  let attack = Math.floor(Math.random() * (pivotMax - pivotMin + 1)) + pivotMin;
+  const rand = opts.rng ?? Math.random;
+  let attack = Math.floor(rand() * (pivotMax - pivotMin + 1)) + pivotMin;
   let defense = total - attack;
 
   if (prefersDefense && defense < attack) {

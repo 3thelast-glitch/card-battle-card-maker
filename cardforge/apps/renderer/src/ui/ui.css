@@ -173,13 +173,36 @@
   gap: var(--s-3);
 }
 
+.workspace,
+.dataShell,
+.editorShell {
+  min-width: 0;
+}
+
+.workspace > *,
+.dataShell > *,
+.editorShell > * {
+  min-width: 0;
+}
+
+.panel,
+.editorPanel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panelBody,
+.panel-body,
+.editorPanelBody {
+  overflow: auto;
+}
+
 .editorShell {
   height: calc(100vh - 56px);
   display: grid;
   grid-template-columns: 280px minmax(520px, 1fr) 340px;
   gap: 14px;
   padding: 14px;
-  overflow: hidden;
 }
 
 .editorPanel {
@@ -362,12 +385,23 @@
   display: flex;
   align-items: center;
   padding: 0 var(--s-5);
-  border-bottom: 1px solid var(--stroke);
-  background: rgba(10, 12, 18, 0.85);
-  backdrop-filter: blur(var(--blur));
+  border-bottom: none;
+  background: none;
+  backdrop-filter: none;
   position: sticky;
   top: 0;
   z-index: 6;
+}
+
+.topBar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 12, 18, 0.85);
+  border-bottom: 1px solid var(--stroke);
+  backdrop-filter: blur(var(--blur));
+  pointer-events: none;
+  z-index: 0;
 }
 
 .topBarContent {
@@ -377,6 +411,8 @@
   justify-content: space-between;
   gap: var(--s-3);
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .topBarGroup {
@@ -424,8 +460,23 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  background: none;
+  backdrop-filter: none;
+}
+
+.panelHeaderSticky::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: linear-gradient(180deg, rgba(12, 16, 24, 0.96), rgba(12, 16, 24, 0.86));
   backdrop-filter: blur(var(--blur));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.panelHeaderSticky > * {
+  position: relative;
+  z-index: 1;
 }
 
 .panelScroll {
@@ -512,6 +563,317 @@
   color: var(--muted);
 }
 
+.templatePickerField {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.templatePickerField:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.templatePickerThumb {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+}
+
+.templatePickerMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.templatePickerTitle {
+  font-size: var(--p);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.templatePickerDesc {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.templatePickerCta {
+  flex: 0 0 auto;
+}
+
+.templateModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 18px;
+}
+
+.templateModal {
+  width: min(900px, 94vw);
+  max-height: min(80vh, 820px);
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--panel-2), rgba(255, 255, 255, 0.04));
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--blur));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.templateModalHeader {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--stroke);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.templateModalBody {
+  padding: 14px 16px;
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+}
+
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.templateCard {
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.templateCard:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.templateCard.isSelected {
+  border-color: rgba(155, 77, 255, 0.5);
+  background: rgba(155, 77, 255, 0.12);
+}
+
+.templateCardThumb {
+  width: 100%;
+  height: 120px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.templateCardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.templateCardTitle {
+  font-size: var(--p);
+  font-weight: 600;
+}
+
+.templateCardDesc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.templateCardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.traitChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.traitChip {
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.traitChip:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.traitChip.isActive {
+  border-color: rgba(155, 77, 255, 0.5);
+  background: rgba(155, 77, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.traitsChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+}
+
+.chip--suggestion {
+  cursor: pointer;
+}
+
+.chipIcon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chipRemove {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.chip--fire {
+  background: rgba(255, 107, 53, 0.18);
+}
+
+.chip--ice {
+  background: rgba(107, 198, 255, 0.18);
+}
+
+.chip--swordsman {
+  background: rgba(220, 220, 220, 0.12);
+}
+
+.chip--archer {
+  background: rgba(106, 168, 79, 0.16);
+}
+
+.chip--mage {
+  background: rgba(168, 85, 247, 0.16);
+}
+
+.chip--tank {
+  background: rgba(122, 122, 122, 0.18);
+}
+
+.chip--poison {
+  background: rgba(140, 255, 140, 0.14);
+}
+
+.chip--flying {
+  background: rgba(56, 189, 248, 0.16);
+}
+
+.traitBadge {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.traitBadge--more {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+  width: auto;
+}
+
+.traitBadge--fire {
+  background: rgba(255, 107, 53, 0.22);
+}
+
+.traitBadge--ice {
+  background: rgba(107, 198, 255, 0.22);
+}
+
+.traitBadge--swordsman {
+  background: rgba(220, 220, 220, 0.18);
+}
+
+.traitBadge--archer {
+  background: rgba(106, 168, 79, 0.22);
+}
+
+.traitBadge--mage {
+  background: rgba(168, 85, 247, 0.22);
+}
+
+.traitBadge--tank {
+  background: rgba(122, 122, 122, 0.22);
+}
+
+.traitBadge--poison {
+  background: rgba(140, 255, 140, 0.18);
+}
+
+.traitBadge--flying {
+  background: rgba(56, 189, 248, 0.22);
+}
 .previewPanel {
   display: flex;
   flex-direction: column;

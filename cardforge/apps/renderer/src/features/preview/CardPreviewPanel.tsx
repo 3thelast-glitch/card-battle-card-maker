@@ -25,6 +25,8 @@ export function CardPreviewPanel(props: {
   const bgColor = data.bgColor ?? CARD_TEMPLATES[templateKey]?.defaultBgColor;
   const title = data.name ?? data.title ?? data.character_name ?? data.character_name_en ?? data.character_name_ar ?? props.row.id;
   const desc = data.desc ?? data.ability ?? data.ability_en ?? data.ability_ar ?? '';
+  const race = data.race;
+  const traits = normalizeTraits(data.traits ?? data.trait);
 
   return (
     <div className="previewPanel">
@@ -35,6 +37,8 @@ export function CardPreviewPanel(props: {
           templateKey={templateKey}
           title={title}
           description={desc}
+          race={race}
+          traits={traits}
           bgColor={bgColor}
           posterWarning={props.posterWarning}
           showControls={props.showControls}
@@ -68,6 +72,18 @@ function normalizeRarity(value: any) {
   const cleaned = String(value || '').toLowerCase().trim();
   if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
   return 'common';
+}
+
+function normalizeTraits(value: any) {
+  if (Array.isArray(value)) {
+    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,|]/g)
+    .map((trait) => trait.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function getLocalizedValue(value: any, language: 'en' | 'ar') {

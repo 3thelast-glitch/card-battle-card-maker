@@ -61,6 +61,11 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
 
     const bgColor = getValue(normalized, ['bgcolor', 'bg_color', 'background', 'bg']) || CARD_TEMPLATES[templateKey].defaultBgColor;
 
+    const raceRaw = getValue(normalized, ['race']);
+    const race = normalizeRace(raceRaw);
+    const traitsRaw = getValue(normalized, ['traits', 'trait']);
+    const traits = parseTraits(traitsRaw);
+
     const idRaw = getValue(normalized, ['id']);
     const fallbackId = slugify(nameEn || nameAr || 'card');
     const id = ensureUniqueId(idRaw || `${fallbackId || 'card'}_${index + 1}`, usedIds);
@@ -88,6 +93,12 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
       templateKey,
       bgColor,
     };
+    if (race) {
+      data.race = race;
+    }
+    if (traits.length) {
+      data.traits = traits;
+    }
 
     cards.push({ id, data, art, quantity, setName, warnings });
   });
@@ -153,6 +164,23 @@ function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
   if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
   return fallback;
+}
+
+function normalizeRace(value: any) {
+  const cleaned = String(value || '').toLowerCase().trim();
+  return cleaned || '';
+}
+
+function parseTraits(value: any) {
+  if (Array.isArray(value)) {
+    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,|]/g)
+    .map((trait) => trait.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function buildArt(kindRaw: any, srcRaw: any, posterRaw: any): CardArt | undefined {

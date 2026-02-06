@@ -94,6 +94,9 @@
   "templates": {
     "title": "Template Gallery",
     "subtitle": "Choose a template to start a new project.",
+    "search": "Search templates",
+    "change": "Change",
+    "select": "Select a template",
     "searchPlaceholder": "Search templates",
     "categoryLabel": "Category",
     "allCategories": "All Categories",
@@ -102,7 +105,16 @@
     "noTemplates": "No templates found.",
     "templateCount": "Templates: {{count}}",
     "categoryFallback": "General",
-    "descriptionFallback": "Template"
+    "descriptionFallback": "Template",
+    "classic": {
+      "desc": "Balanced layout with clean framing."
+    },
+    "moon": {
+      "desc": "Cool tones with a sleek badge accent."
+    },
+    "sand": {
+      "desc": "Warm palette with rustic highlights."
+    }
   },
   "data": {
     "title": "Data Table",
@@ -383,13 +395,48 @@
     "advanced": "Advanced",
     "count": "Cards: {{count}}",
     "openEditor": "Open Editor",
+    "meta": {
+      "race": "Race",
+      "traits": "Traits"
+    },
     "deck": {
       "title": "Rarity Distribution",
       "sub": "Percentages that define the deck mix.",
       "total": "Total",
       "normalize": "Normalize",
-      "rarityHint": "Percent of deck"
+      "rarityHint": "Percent of deck",
+      "ranges": {
+        "title": "Ranges",
+        "enable": "Enable ranges",
+        "lowDuplicate": "Low repetition",
+        "duplicateBudget": "Duplicate budget",
+        "seed": "Seed",
+        "attack": "Attack",
+        "defense": "Defense",
+        "cost": "Cost",
+        "includeRarity": "Include rarity",
+        "min": "Min",
+        "max": "Max"
+      }
     }
+  },
+  "races": {
+    "human": "Human",
+    "beast": "Beast",
+    "elf": "Elf",
+    "demon": "Demon",
+    "animal": "Animal",
+    "amphibian": "Amphibian"
+  },
+  "traits": {
+    "swordsman": "Swordsman",
+    "fire": "Fire",
+    "ice": "Ice",
+    "archer": "Archer",
+    "mage": "Mage",
+    "tank": "Tank",
+    "poison": "Poison",
+    "flying": "Flying"
   },
   "ui": {
     "bulkImport": {

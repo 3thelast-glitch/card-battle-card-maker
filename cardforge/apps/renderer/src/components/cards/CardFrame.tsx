@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RARITY_COLORS, Rarity } from '../../shared/cardRarityColors';
-import type { CardArt } from '../../../../../packages/core/src/model';
+import type { CardArt, CardRace, CardTrait } from '../../../../../packages/core/src/index';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
+import { RaceIcon } from '../../ui/icons/raceIcons';
+import { TraitIcon, TRAIT_META } from '../../ui/icons/traitIcons';
 
 type Props = {
   rarity: Rarity;
@@ -12,6 +14,8 @@ type Props = {
   title?: string | { en?: string; ar?: string };
   description?: string | { en?: string; ar?: string };
   badgeText?: string;
+  race?: CardRace;
+  traits?: CardTrait[];
   posterWarning?: string;
   showControls?: boolean;
   width?: number;
@@ -47,12 +51,14 @@ export function CardFrame({
   title,
   description,
   badgeText,
+  race,
+  traits = [],
   posterWarning,
   showControls,
   width = 280,
   height = 360,
 }: Props) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const tint = RARITY_COLORS[rarity];
   const isRare = rarity === 'rare';
   const isEpic = rarity === 'epic';
@@ -65,6 +71,20 @@ export function CardFrame({
   const resolvedDesc = resolveLocalized(description, language);
   const badge = badgeText ?? template.badge?.text;
   const badgePos = template.badge ?? { x: width - 44, y: 12 };
+  const badgeTop = resolvedTitle
+    ? template.title.y + template.title.size + 6
+    : template.artRect.top + 6;
+  const badgeStyle: CSSProperties = {
+    left: template.title.x,
+    right: template.title.x,
+    top: badgeTop,
+  };
+  const traitList = Array.isArray(traits) ? traits.filter(Boolean) : [];
+  const trimmedTraits = traitList.map((trait) => String(trait));
+  const maxVisibleTraits = 6;
+  const visibleTraits = trimmedTraits.slice(0, maxVisibleTraits);
+  const extraTraitCount = Math.max(0, trimmedTraits.length - visibleTraits.length);
+  const raceKey = race ? String(race).toLowerCase() : '';
 
   const glow = useMemo(() => {
     if (!isRare && !isEpic && !isLegendary) return 'none';
@@ -88,7 +108,7 @@ export function CardFrame({
     height,
     '--frame-tint': tint,
     '--frame-bg': resolvedBg,
-  } as React.CSSProperties;
+  } as CSSProperties;
 
   const frameStyle = {
     WebkitMaskImage: `url(${FRAME_SRC})`,
@@ -98,11 +118,11 @@ export function CardFrame({
     WebkitMaskSize: '100% 100%',
     maskSize: '100% 100%',
     boxShadow: glow,
-  } as React.CSSProperties;
+  } as CSSProperties;
 
   const controlsEnabled = showControls ? true : hovered;
 
-  const artRectStyle: React.CSSProperties = {
+  const artRectStyle: CSSProperties = {
     left: template.artRect.left,
     right: template.artRect.right,
     top: template.artRect.top,
@@ -110,7 +130,7 @@ export function CardFrame({
     borderRadius: template.artRect.radius,
   };
 
-  const titleStyle: React.CSSProperties = {
+  const titleStyle: CSSProperties = {
     left: template.title.x,
     right: template.title.x,
     top: template.title.y,
@@ -118,7 +138,7 @@ export function CardFrame({
     letterSpacing: template.title.letterSpacing ?? 0,
   };
 
-  const descStyle: React.CSSProperties = {
+  const descStyle: CSSProperties = {
     left: template.desc.x,
     right: template.desc.x,
     top: template.desc.y,
@@ -160,6 +180,37 @@ export function CardFrame({
       {badge ? (
         <div className="card-frame__badge" style={{ left: badgePos.x, top: badgePos.y }}>
           {badge}
+        </div>
+      ) : null}
+      {raceKey || trimmedTraits.length ? (
+        <div className="metaBadges" style={badgeStyle}>
+          {raceKey ? (
+            <span
+              className={`metaBadge metaBadge--race metaBadge--${raceKey}`}
+              title={t(`races.${raceKey}`, { defaultValue: raceKey })}
+            >
+              <RaceIcon race={raceKey as CardRace} size={14} />
+            </span>
+          ) : null}
+          {visibleTraits.map((trait, index) => {
+            const key = trait.toLowerCase();
+            const meta = TRAIT_META[key];
+            const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''}`;
+            return (
+              <span
+                key={`${key}-${index}`}
+                className={className}
+                title={t(`traits.${key}`, { defaultValue: trait })}
+              >
+                <TraitIcon trait={key} size={12} />
+              </span>
+            );
+          })}
+          {extraTraitCount > 0 ? (
+            <span className="traitBadge traitBadge--more" title={t('cards.meta.traits')}>
+              +{extraTraitCount}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {resolvedDesc ? (

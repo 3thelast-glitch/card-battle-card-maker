@@ -618,6 +618,140 @@ html[dir="rtl"] textarea {
   z-index: 3;
 }
 
+.cardBadges {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  margin-top: 6px;
+  z-index: 3;
+}
+
+.cardBadges .badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cardBadges .badge.race.elf {
+  background: #3fa66a55;
+}
+
+.cardBadges .badge.race.demon {
+  background: #b03a3a55;
+}
+
+.cardBadges .badge.race.human {
+  background: #4a7bd055;
+}
+
+.cardBadges .badge.race.beast {
+  background: #8b6b3555;
+}
+
+.cardBadges .badge.race.animal {
+  background: #6b8b5555;
+}
+
+.cardBadges .badge.race.amphibian {
+  background: #2aa8a855;
+}
+
+.cardBadges .badge.trait.fire {
+  background: #ff6b3555;
+}
+
+.cardBadges .badge.trait.ice {
+  background: #6bc6ff55;
+}
+
+.cardBadges .badge.trait.swordsman {
+  background: #cfcfcf55;
+}
+
+.cardBadges .badge.trait.archer {
+  background: #6aa84f55;
+}
+
+.cardBadges .badge.trait.tank {
+  background: #7a7a7a55;
+}
+
+.cardBadges .badge.trait.poison {
+  background: #6d28d955;
+}
+
+.cardBadges .badge.trait.flying {
+  background: #38bdf855;
+}
+
+.metaBadges {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  z-index: 3;
+}
+
+.metaBadge {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.metaBadge svg {
+  display: block;
+}
+
+.metaBadge--human {
+  background: rgba(74, 123, 208, 0.28);
+}
+
+.metaBadge--elf {
+  background: rgba(63, 166, 106, 0.28);
+}
+
+.metaBadge--demon {
+  background: rgba(176, 58, 58, 0.28);
+}
+
+.metaBadge--beast {
+  background: rgba(139, 107, 53, 0.28);
+}
+
+.metaBadge--animal {
+  background: rgba(160, 160, 160, 0.22);
+}
+
+.metaBadge--amphibian {
+  background: rgba(42, 168, 168, 0.28);
+}
+
+.metaBadge--trait {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.traitDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.85);
+  opacity: 0.7;
+}
+
 .card-frame__warning {
   position: absolute;
   left: 12px;

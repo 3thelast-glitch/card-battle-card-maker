@@ -1,3 +1,5 @@
+import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
+
 export type AbilityKey =
   | 'none'
   | 'shield_loss_to_draw'
@@ -24,4 +26,26 @@ export function inferAbilityKeyFromText(text?: string): AbilityKey {
   if (t.includes('steal') && t.includes('attack')) return 'steal_attack';
   if (t.includes('heal') || t.includes('defense')) return 'heal_defense';
   return 'none';
+}
+
+export type TargetFilter = {
+  race?: CardRace;
+  hasTrait?: CardTrait;
+  hasTraitsAll?: CardTrait[];
+  hasTraitsAny?: CardTrait[];
+};
+
+export type TargetCard = {
+  race?: CardRace;
+  traits?: CardTrait[];
+};
+
+export function matchesTarget(card: TargetCard, filter?: TargetFilter) {
+  if (!filter) return true;
+  if (filter.race && card.race !== filter.race) return false;
+  const traits = new Set(card.traits ?? []);
+  if (filter.hasTrait && !traits.has(filter.hasTrait)) return false;
+  if (filter.hasTraitsAll && !filter.hasTraitsAll.every((trait) => traits.has(trait))) return false;
+  if (filter.hasTraitsAny && !filter.hasTraitsAny.some((trait) => traits.has(trait))) return false;
+  return true;
 }

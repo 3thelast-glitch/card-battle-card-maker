@@ -11,10 +11,11 @@
   "dependencies": {
     "@cardsmith/core": "file:../../packages/core",
     "@cardsmith/storage": "file:../../packages/storage",
+    "@google/generative-ai": "^0.24.1",
     "cardsmith-studio": "file:../..",
     "i18next": "^23.12.2",
-    "konva": "^9.3.16",
     "jszip": "^3.10.1",
+    "konva": "^9.3.16",
     "nanoid": "^5.1.6",
     "papaparse": "^5.4.1",
     "react": "^18.3.1",

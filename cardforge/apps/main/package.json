@@ -10,6 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "cardsmith-studio": "file:../..",
     "electron": "^30.0.0"
   },
   "devDependencies": {

@@ -18,7 +18,7 @@ import {
   resolveImageReferenceSync,
 } from '../../utils/imageBinding';
 import { generateAdvancedStats } from '../../lib/advancedBalance';
-import { generateDeck } from '../../lib/deckGenerator';
+import { createDefaultRangesConfig, generateDeck } from '../../lib/deckGenerator';
 import { type AbilityKey } from '../../lib/abilityRegistry';
 import type { Rarity } from '../../lib/balanceRules';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
@@ -71,6 +71,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [dist, setDist] = useState({ common: 60, rare: 25, epic: 10, legendary: 5 });
   const [deckAutoBalanced, setDeckAutoBalanced] = useState(false);
   const [advancedBalance, setAdvancedBalance] = useState(false);
+  const [rangesConfig, setRangesConfig] = useState(() => createDefaultRangesConfig());
   const [defaultCost, setDefaultCost] = useState(1);
   const [defaultAbility, setDefaultAbility] = useState<AbilityKey>('none');
   const [showVideoControls, setShowVideoControls] = useState(false);
@@ -470,6 +471,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       advancedBalance,
       cost: defaultCost,
       abilityKey: defaultAbility,
+      rangesConfig,
     });
 
     const existingIds = new Set(rows.map((row) => row.id));
@@ -499,10 +501,50 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const total = dist.common + dist.rare + dist.epic + dist.legendary;
   const totalDisplay = Math.round(total);
   const zeroRarity = Object.values(dist).some((value) => Number(value) === 0);
+  const enabledRarities = rangesConfig.enabled
+    ? RARITY_OPTIONS.filter((rarity) => rangesConfig.perRarity[rarity]?.enabled)
+    : RARITY_OPTIONS;
+  const enabledTotal = enabledRarities.reduce((sum, rarity) => sum + Number(dist[rarity] || 0), 0);
+  const rangesZeroWarning = rangesConfig.enabled && Math.round(enabledTotal) === 0;
   const balancePreview = useMemo(() => {
     if (!advancedBalance) return null;
     return generateAdvancedStats({ rarity: 'rare', cost: defaultCost, abilityKey: defaultAbility });
   }, [advancedBalance, defaultCost, defaultAbility]);
+  const clampRangeValue = (value: number) => Math.max(0, Math.min(999, Math.floor(Number(value) || 0)));
+  const updateRangeValue = (rarity: Rarity, field: 'attack' | 'defense' | 'cost', bound: 'min' | 'max', value: number) => {
+    setRangesConfig((prev) => {
+      const current = prev.perRarity[rarity];
+      const nextRange = { ...(current[field] ?? { min: 0, max: 0 }) };
+      nextRange[bound] = clampRangeValue(value);
+      if (nextRange.max < nextRange.min) {
+        const swap = nextRange.min;
+        nextRange.min = nextRange.max;
+        nextRange.max = swap;
+      }
+      return {
+        ...prev,
+        perRarity: {
+          ...prev.perRarity,
+          [rarity]: {
+            ...current,
+            [field]: nextRange,
+          },
+        },
+      };
+    });
+  };
+  const updateRangeToggle = (rarity: Rarity, enabled: boolean) => {
+    setRangesConfig((prev) => ({
+      ...prev,
+      perRarity: {
+        ...prev.perRarity,
+        [rarity]: {
+          ...prev.perRarity[rarity],
+          enabled,
+        },
+      },
+    }));
+  };
   const normalizeDistribution = () => {
     if (total <= 0) {
       setDist({ common: 60, rare: 25, epic: 10, legendary: 5 });
@@ -547,10 +589,39 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         </Button>
         <Button size="sm" onClick={handleGenerateDeck}>{t('data.generateDeck')}</Button>
       </div>
-      <div className="topBarGroup topBarFilters">
-        <div className="topBarField">
-          <div className="uiHelp">{t('cards.filters')}</div>
-          <div className="uiRow">
+      <div className="topBarGroup">
+        <Button size="sm" variant="outline" onClick={() => setScreen('export')}>
+          {t('app.nav.export')}
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setScreen('simulator')}>
+          {t('app.nav.simulator')}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="onlySmallRight"
+          onClick={() => setRightDrawerOpen(true)}
+        >
+          {t('cards.openInspector')}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const leftPanel = (
+    <div className="panelShell">
+      <div className="panelHeaderSticky uiPanelHeader">
+        <div>
+          <div className="uiTitle">{t('cards.title')}</div>
+          <div className="uiSub">{t('cards.count', { count: filteredRows.length })}</div>
+        </div>
+        <Button size="sm" variant="outline" className="panelClose" onClick={() => setLeftDrawerOpen(false)}>
+          {t('common.close')}
+        </Button>
+      </div>
+      <div className="panelScroll uiPanelBody">
+        <ToolSection title={t('cards.filters')} defaultOpen>
+          <div className="uiStack">
             <Input
               placeholder={t('cards.search')}
               value={filters.query}
@@ -590,39 +661,8 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               ))}
             </Select>
           </div>
-        </div>
-      </div>
-      <div className="topBarGroup">
-        <Button size="sm" variant="outline" onClick={() => setScreen('export')}>
-          {t('app.nav.export')}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => setScreen('simulator')}>
-          {t('app.nav.simulator')}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="onlySmallRight"
-          onClick={() => setRightDrawerOpen(true)}
-        >
-          {t('cards.openInspector')}
-        </Button>
-      </div>
-    </div>
-  );
-
-  const leftPanel = (
-    <div className="panelShell">
-      <div className="panelHeaderSticky uiPanelHeader">
-        <div>
-          <div className="uiTitle">{t('cards.title')}</div>
-          <div className="uiSub">{t('cards.count', { count: filteredRows.length })}</div>
-        </div>
-        <Button size="sm" variant="outline" className="panelClose" onClick={() => setLeftDrawerOpen(false)}>
-          {t('common.close')}
-        </Button>
-      </div>
-      <div className="panelScroll uiPanelBody">
+        </ToolSection>
+        <Divider />
         <CardList
           cards={rows}
           selectedId={selectedRow?.id}
@@ -802,6 +842,150 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   ) : null}
                 </div>
               ) : null}
+              <details className="uiCollapse">
+                <summary>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{t('cards.deck.ranges.title')}</div>
+                    <div className="uiSub">{t('cards.deck.ranges.enable')}</div>
+                  </div>
+                </summary>
+                <div className="uiCollapseBody">
+                  <div className="uiStack">
+                    <Toggle
+                      checked={rangesConfig.enabled}
+                      onChange={(next) => setRangesConfig((prev) => ({ ...prev, enabled: next }))}
+                      label={t('cards.deck.ranges.enable')}
+                    />
+                    <Row gap={12} align="end">
+                      <Toggle
+                        checked={rangesConfig.lowDuplicate}
+                        onChange={(next) => setRangesConfig((prev) => ({ ...prev, lowDuplicate: next }))}
+                        label={t('cards.deck.ranges.lowDuplicate')}
+                      />
+                      <div style={{ minWidth: 140 }}>
+                        <div className="uiHelp">{t('cards.deck.ranges.duplicateBudget')}</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={999}
+                          value={rangesConfig.duplicateBudget}
+                          onChange={(e) =>
+                            setRangesConfig((prev) => ({
+                              ...prev,
+                              duplicateBudget: clampRangeValue(Number(e.target.value)),
+                            }))
+                          }
+                        />
+                      </div>
+                      <div style={{ minWidth: 180 }}>
+                        <div className="uiHelp">{t('cards.deck.ranges.seed')}</div>
+                        <Input
+                          value={rangesConfig.seed ?? ''}
+                          onChange={(e) => setRangesConfig((prev) => ({ ...prev, seed: e.target.value }))}
+                        />
+                      </div>
+                    </Row>
+                    {rangesZeroWarning ? <Badge variant="warn">{t('data.zeroRarityWarning')}</Badge> : null}
+                    <div className="rarityGrid">
+                      {RARITY_OPTIONS.map((rarity) => {
+                        const range = rangesConfig.perRarity[rarity];
+                        return (
+                          <div key={rarity} className="rarityField" style={{ alignItems: 'flex-start' }}>
+                            <div className="rarityLabel">
+                              <div className="name">{t(`cards.rarity.${rarity}`)}</div>
+                              <div className="hint">{t('cards.deck.ranges.includeRarity')}</div>
+                            </div>
+                            <div className="uiStack" style={{ gap: 8 }}>
+                              <Toggle
+                                checked={range.enabled}
+                                onChange={(next) => updateRangeToggle(rarity, next)}
+                                label={t('cards.deck.ranges.includeRarity')}
+                              />
+                              <div className="uiRow" style={{ gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                <div className="uiStack" style={{ gap: 4 }}>
+                                  <div className="uiHelp">{t('cards.deck.ranges.attack')}</div>
+                                  <div className="uiRow" style={{ gap: 6 }}>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.attack.min}
+                                      onChange={(e) => updateRangeValue(rarity, 'attack', 'min', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.attack')} ${t('cards.deck.ranges.min')}`}
+                                      title={t('cards.deck.ranges.min')}
+                                      style={{ width: 74 }}
+                                    />
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.attack.max}
+                                      onChange={(e) => updateRangeValue(rarity, 'attack', 'max', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.attack')} ${t('cards.deck.ranges.max')}`}
+                                      title={t('cards.deck.ranges.max')}
+                                      style={{ width: 74 }}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="uiStack" style={{ gap: 4 }}>
+                                  <div className="uiHelp">{t('cards.deck.ranges.defense')}</div>
+                                  <div className="uiRow" style={{ gap: 6 }}>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.defense.min}
+                                      onChange={(e) => updateRangeValue(rarity, 'defense', 'min', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.defense')} ${t('cards.deck.ranges.min')}`}
+                                      title={t('cards.deck.ranges.min')}
+                                      style={{ width: 74 }}
+                                    />
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.defense.max}
+                                      onChange={(e) => updateRangeValue(rarity, 'defense', 'max', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.defense')} ${t('cards.deck.ranges.max')}`}
+                                      title={t('cards.deck.ranges.max')}
+                                      style={{ width: 74 }}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="uiStack" style={{ gap: 4 }}>
+                                  <div className="uiHelp">{t('cards.deck.ranges.cost')}</div>
+                                  <div className="uiRow" style={{ gap: 6 }}>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.cost?.min ?? 0}
+                                      onChange={(e) => updateRangeValue(rarity, 'cost', 'min', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.cost')} ${t('cards.deck.ranges.min')}`}
+                                      title={t('cards.deck.ranges.min')}
+                                      style={{ width: 74 }}
+                                    />
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      max={999}
+                                      value={range.cost?.max ?? 0}
+                                      onChange={(e) => updateRangeValue(rarity, 'cost', 'max', Number(e.target.value))}
+                                      aria-label={`${t('cards.deck.ranges.cost')} ${t('cards.deck.ranges.max')}`}
+                                      title={t('cards.deck.ranges.max')}
+                                      style={{ width: 74 }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </details>
             </div>
           </ToolSection>
 

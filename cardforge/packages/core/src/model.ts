@@ -33,6 +33,26 @@ export type CardArt =
   | { kind: 'image'; src: string }
   | { kind: 'video'; src: string; poster?: string };
 
+export type CardRace =
+  | 'human'
+  | 'beast'
+  | 'elf'
+  | 'demon'
+  | 'animal'
+  | 'amphibian'
+  | (string & {});
+
+export type CardTrait =
+  | 'swordsman'
+  | 'fire'
+  | 'ice'
+  | 'archer'
+  | 'mage'
+  | 'tank'
+  | 'poison'
+  | 'flying'
+  | (string & {});
+
 export type SetModel = {
   id: Id;
   name: string;
@@ -123,6 +143,8 @@ export type DataRow = {
   setId?: Id;
   blueprintId?: Id;
   art?: CardArt;
+  race?: CardRace;
+  traits?: CardTrait[];
 };
 
 export type DataTable = {
@@ -150,4 +172,6 @@ export type Item = {
   quantity: number;
   sourceRowId?: Id;
   art?: CardArt;
+  race?: CardRace;
+  traits?: CardTrait[];
 };
