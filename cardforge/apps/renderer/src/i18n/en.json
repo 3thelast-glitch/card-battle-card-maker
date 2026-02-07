@@ -27,6 +27,7 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "save": "Save",
+    "reset": "Reset",
     "close": "Close",
     "import": "Import",
     "export": "Export",
@@ -178,6 +179,15 @@
     "uploadImage": "Upload Image",
     "uploadVideo": "Upload Video",
     "videoUsesPoster": "Video (uses poster on export).",
+    "videoDetails": "Video details",
+    "keepVideoAudio": "Keep audio",
+    "videoProcessing": "Processing video…",
+    "videoCompressing": "Compressing video…",
+    "videoGeneratingPoster": "Generating poster…",
+    "videoLargeWarning": "Large video detected; compressing for cards.",
+    "videoProbeFailed": "Video probe failed.",
+    "videoTranscodeFailed": "Video transcode failed.",
+    "videoTranscodeUnavailable": "Video tools unavailable. Install FFmpeg to enable compression.",
     "generatePoster": "Generate Poster",
     "showVideoControls": "Show controls",
     "noArtwork": "No artwork selected.",
@@ -355,15 +365,23 @@
     "subtitle": "Quick battle balance checks.",
     "runs": "Runs",
     "run": "Run Simulation",
+    "stop": "Stop",
     "winRate": "Win Rate",
     "drawRate": "Draw Rate",
     "deckA": "Deck A",
     "deckB": "Deck B",
+    "filters": "Filters",
+    "results": "Results",
+    "details": "Details",
     "cards": "Cards: {{count}}",
     "rarity": "Rarity",
+    "race": "Race",
+    "trait": "Trait",
     "template": "Template",
     "tag": "Tag",
     "readyHint": "Select two decks to compare.",
+    "advanced": "Advanced",
+    "advancedHint": "More simulation controls coming soon.",
     "emptyDeck": "No cards match this filter."
   },
   "cards": {
@@ -398,6 +416,9 @@
     "meta": {
       "race": "Race",
       "traits": "Traits"
+    },
+    "art": {
+      "dragHint": "Drag artwork in preview to move."
     },
     "deck": {
       "title": "Rarity Distribution",

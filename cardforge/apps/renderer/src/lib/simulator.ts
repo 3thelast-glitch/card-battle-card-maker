@@ -2,8 +2,6 @@ import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
 import type { Rarity } from './balanceRules';
 import { matchesTarget, type TargetFilter } from './abilityRegistry';
 
-import type { Rarity } from './balanceRules';
-
 type Card = {
   id: string;
   attack: number;

@@ -1,6 +1,5 @@
-import React from 'react';
 import { useMemo, useState } from 'react';
-import type { CardArt, CardRace, CardTrait, DataRow, Project } from '../../../../../packages/core/src/index';
+import type { ArtTransform, CardArt, CardArtVideoMeta, CardRace, CardTrait, DataRow, Project } from '../../../../../packages/core/src/index';
 import { resolvePath } from '../../../../../packages/core/src/index';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Row, Select, Toggle, Badge, Divider } from '../../components/ui';
@@ -16,6 +15,8 @@ type Props = {
   language: 'en' | 'ar';
   showVideoControls: boolean;
   onToggleVideoControls: (next: boolean) => void;
+  keepVideoAudio: boolean;
+  onToggleKeepVideoAudio: (next: boolean) => void;
   onUpdateData: (path: string, value: any) => void;
   onUpdateStat: (key: 'attack' | 'defense', value: number) => void;
   onUpdateRow: (patch: Partial<DataRow>) => void;
@@ -36,6 +37,7 @@ export function CardInspector(props: Props) {
   const row = props.row;
   const data = row?.data ?? {};
   const art: CardArt | undefined = row?.art ?? (data as any).art;
+  const artTransform = normalizeArtTransform(art?.transform);
   const rarity = normalizeRarity(data.rarity);
   const templateKey = normalizeTemplateKey(data.templateKey ?? data.template);
   const race = normalizeRace(data.race);
@@ -49,6 +51,7 @@ export function CardInspector(props: Props) {
   const abilityEn = getLocalizedValue(data.desc ?? data.ability ?? data.ability_en, 'en');
   const abilityAr = getLocalizedValue(data.desc ?? data.ability ?? data.ability_ar, 'ar');
   const tagsValue = Array.isArray(data.tags) ? data.tags.join(', ') : String(data.tags ?? '');
+  const videoMeta = art?.kind === 'video' ? art.meta : undefined;
   const missingPoster = art?.kind === 'video' && !art.poster;
   const missingFields = !hasLocalizedValue(data.name) || !hasLocalizedValue(data.desc ?? data.ability);
   const total = attack + defense;
@@ -84,6 +87,16 @@ export function CardInspector(props: Props) {
       'traits',
       traits.filter((item) => String(item).toLowerCase().trim() !== cleaned),
     );
+  };
+
+  const updateArtTransform = (patch: Partial<ArtTransform>) => {
+    if (!art) return;
+    const next = normalizeArtTransform({ ...artTransform, ...patch });
+    props.onUpdateRow({ art: { ...art, transform: next } });
+  };
+
+  const resetArtTransform = () => {
+    updateArtTransform({ x: 0, y: 0, scale: 1, fit: 'cover' });
   };
 
   const customColumns = props.columns.filter((key) => !isReservedColumn(key));
@@ -275,6 +288,11 @@ export function CardInspector(props: Props) {
                 ? t('data.imageSelected')
                 : t('data.noArtwork')}
           </div>
+          {videoMeta ? (
+            <div className="uiHelp">
+              {t('data.videoDetails')}: {formatVideoMeta(videoMeta)}
+            </div>
+          ) : null}
           <div className="uiHelp">{t('ui.tip.videoPoster')}</div>
           <Row gap={8}>
             <Button variant="outline" size="sm" onClick={props.onRegeneratePoster} disabled={!art || art.kind !== 'video'}>
@@ -285,7 +303,59 @@ export function CardInspector(props: Props) {
               onChange={props.onToggleVideoControls}
               label={t('data.showVideoControls')}
             />
+            <Toggle
+              checked={props.keepVideoAudio}
+              onChange={props.onToggleKeepVideoAudio}
+              label={t('data.keepVideoAudio')}
+            />
           </Row>
+          {art ? (
+            <div className="uiStack" style={{ gap: 10 }}>
+              <div className="uiHelp">{t('cards.art.dragHint')}</div>
+              <Row gap={10} align="end" style={{ flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 120 }}>
+                  <div className="uiHelp">{t('editor.fit')}</div>
+                  <Select
+                    value={artTransform.fit}
+                    onChange={(e) => updateArtTransform({ fit: e.target.value as ArtTransform['fit'] })}
+                  >
+                    <option value="cover">{t('fit.cover')}</option>
+                    <option value="contain">{t('fit.contain')}</option>
+                  </Select>
+                </div>
+                <div style={{ minWidth: 160 }}>
+                  <div className="uiHelp">{t('editor.zoom')}</div>
+                  <Input
+                    type="range"
+                    min={0.6}
+                    max={2.5}
+                    step={0.05}
+                    value={artTransform.scale}
+                    onChange={(e) => updateArtTransform({ scale: Number(e.target.value) || 1 })}
+                  />
+                </div>
+                <div style={{ minWidth: 90 }}>
+                  <div className="uiHelp">X</div>
+                  <Input
+                    type="number"
+                    value={Math.round(artTransform.x)}
+                    onChange={(e) => updateArtTransform({ x: Number(e.target.value) || 0 })}
+                  />
+                </div>
+                <div style={{ minWidth: 90 }}>
+                  <div className="uiHelp">Y</div>
+                  <Input
+                    type="number"
+                    value={Math.round(artTransform.y)}
+                    onChange={(e) => updateArtTransform({ y: Number(e.target.value) || 0 })}
+                  />
+                </div>
+                <Button size="sm" variant="outline" onClick={resetArtTransform}>
+                  {t('common.reset')}
+                </Button>
+              </Row>
+            </div>
+          ) : null}
         </div>
       </details>
 
@@ -435,4 +505,41 @@ function isReservedColumn(key: string) {
     'id',
   ];
   return reserved.some((field) => key === field || key.startsWith(`${field}.`));
+}
+
+function formatVideoMeta(meta?: CardArtVideoMeta) {
+  if (!meta) return '';
+  const codec = meta.videoCodec ? normalizeCodec(meta.videoCodec) : '';
+  const resolution = meta.width && meta.height ? `${Math.round(meta.width)}x${Math.round(meta.height)}` : '';
+  const duration = meta.duration ? `${meta.duration.toFixed(1)}s` : '';
+  const size = meta.size ? formatBytes(meta.size) : '';
+  const parts = [codec, resolution, duration, size].filter(Boolean);
+  return parts.join(' • ');
+}
+
+function normalizeCodec(codec: string) {
+  const cleaned = codec.toLowerCase();
+  if (cleaned === 'h264') return 'H.264';
+  if (cleaned === 'hevc' || cleaned === 'h265') return 'H.265';
+  if (cleaned === 'vp9') return 'VP9';
+  if (cleaned === 'av1') return 'AV1';
+  return codec.toUpperCase();
+}
+
+function formatBytes(size: number) {
+  if (!Number.isFinite(size)) return '';
+  const mb = size / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(1)}MB`;
+  const kb = size / 1024;
+  return `${kb.toFixed(0)}KB`;
+}
+
+function normalizeArtTransform(value?: ArtTransform): ArtTransform {
+  const scale = Number.isFinite(value?.scale) ? value!.scale : 1;
+  return {
+    x: Number.isFinite(value?.x) ? value!.x : 0,
+    y: Number.isFinite(value?.y) ? value!.y : 0,
+    scale: Math.min(2.5, Math.max(0.6, scale)),
+    fit: value?.fit === 'contain' ? 'contain' : 'cover',
+  };
 }

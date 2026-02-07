@@ -69,6 +69,7 @@ export async function exportToGameZip(opts: {
           src: art.kind === 'video' ? (art.poster || art.src) : art.src,
           videoSrc: art.kind === 'video' ? art.src : undefined,
           poster: art.kind === 'video' ? art.poster : undefined,
+          transform: art.transform,
         }
         : undefined,
       tags: data.tags ?? card?.tags,

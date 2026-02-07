@@ -1,9 +1,23 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import ffmpeg = require('fluent-ffmpeg');
+import ffmpegPath = require('ffmpeg-static');
+import ffprobePath = require('ffprobe-static');
 
 const isDev = !app.isPackaged;
+
+const resolvedFfmpegPath = typeof ffmpegPath === 'string' ? ffmpegPath : '';
+const resolvedFfprobePath = (ffprobePath as any)?.path || (ffprobePath as string | undefined);
+if (resolvedFfmpegPath) {
+  ffmpeg.setFfmpegPath(resolvedFfmpegPath);
+}
+if (resolvedFfprobePath) {
+  ffmpeg.setFfprobePath(resolvedFfprobePath);
+}
 
 // ✅ Fix: force Chromium cache directories to a writable location (userData)
 const userData = app.getPath('userData');
@@ -46,6 +60,81 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+type VideoProbeResult =
+  | {
+      ok: true;
+      container?: string;
+      duration?: number;
+      width?: number;
+      height?: number;
+      videoCodec?: string;
+      audioCodec?: string;
+      hasAudio?: boolean;
+      bitrate?: number;
+      size?: number;
+    }
+  | { ok: false; error: string };
+
+const toNumber = (value: any) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const sanitizeId = (value: string) => value.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+
+const resolveMediaRoot = (projectPath?: string) => {
+  if (projectPath) {
+    return path.join(path.dirname(projectPath), 'media');
+  }
+  return path.join(app.getPath('userData'), 'media');
+};
+
+const resolveMediaPaths = (projectPath?: string, assetId?: string) => {
+  const root = resolveMediaRoot(projectPath);
+  const base = sanitizeId(assetId || randomUUID()) || randomUUID();
+  const videosDir = path.join(root, 'videos');
+  const postersDir = path.join(root, 'posters');
+  return {
+    videosDir,
+    postersDir,
+    videoPath: path.join(videosDir, `${base}.mp4`),
+    posterPath: path.join(postersDir, `${base}.png`),
+  };
+};
+
+const probeVideo = async (filePath: string): Promise<VideoProbeResult> => {
+  if (!resolvedFfmpegPath || !resolvedFfprobePath) {
+    return { ok: false, error: 'FFMPEG_UNAVAILABLE' };
+  }
+  try {
+    const stat = await fs.stat(filePath);
+    const metadata = await new Promise<any>((resolve, reject) => {
+      ffmpeg.ffprobe(filePath, (error: any, data: any) => {
+        if (error) reject(error);
+        else resolve(data);
+      });
+    });
+    const format = metadata?.format ?? {};
+    const streams = metadata?.streams ?? [];
+    const videoStream = streams.find((stream: any) => stream.codec_type === 'video');
+    const audioStream = streams.find((stream: any) => stream.codec_type === 'audio');
+    return {
+      ok: true,
+      container: String(format.format_name || '').split(',')[0] || undefined,
+      duration: toNumber(format.duration),
+      width: toNumber(videoStream?.width),
+      height: toNumber(videoStream?.height),
+      videoCodec: videoStream?.codec_name,
+      audioCodec: audioStream?.codec_name,
+      hasAudio: Boolean(audioStream),
+      bitrate: toNumber(format.bit_rate),
+      size: stat.size,
+    };
+  } catch (error: any) {
+    return { ok: false, error: error?.message ?? 'PROBE_FAILED' };
+  }
+};
 
 ipcMain.handle('dialog:openFile', async () => {
   return dialog.showOpenDialog({
@@ -136,6 +225,132 @@ ipcMain.handle(
       return { ok: true, size: stat.size };
     } catch (error: any) {
       return { ok: false, error: error?.code ?? 'COPY_FAILED' };
+    }
+  },
+);
+
+ipcMain.handle('video:probe', async (_evt, { filePath }: { filePath: string }) => {
+  return probeVideo(filePath);
+});
+
+ipcMain.handle(
+  'video:transcode',
+  async (
+    event,
+    {
+      filePath,
+      projectPath,
+      keepAudio,
+      requestId,
+      assetId,
+      copyOnly,
+    }: {
+      filePath: string;
+      projectPath?: string;
+      keepAudio?: boolean;
+      requestId?: string;
+      assetId?: string;
+      copyOnly?: boolean;
+    },
+  ) => {
+    if (!resolvedFfmpegPath || !resolvedFfprobePath) {
+      return { ok: false, error: 'FFMPEG_UNAVAILABLE' };
+    }
+    try {
+      const { videosDir, videoPath } = resolveMediaPaths(projectPath, assetId);
+      await fs.mkdir(videosDir, { recursive: true });
+      if (copyOnly) {
+        await fs.copyFile(filePath, videoPath);
+        const stat = await fs.stat(videoPath);
+        return { ok: true, outPath: videoPath, stats: { size: stat.size } };
+      }
+      return await new Promise<{ ok: true; outPath: string; stats?: { size?: number } } | { ok: false; error?: string }>(
+        (resolve) => {
+          const command = ffmpeg(filePath)
+            .outputOptions([
+              '-y',
+              '-movflags +faststart',
+              '-pix_fmt yuv420p',
+              '-preset veryfast',
+              '-crf 30',
+              "-vf scale='if(gte(iw,ih),min(iw,720),-2)':'if(gte(iw,ih),-2,min(ih,720))'",
+            ])
+            .videoCodec('libx264')
+            .format('mp4');
+
+          if (keepAudio) {
+            command.audioCodec('aac').audioBitrate('96k');
+          } else {
+            command.noAudio();
+          }
+
+          command
+            .on('progress', (progress: any) => {
+              event.sender.send('video:transcode:progress', {
+                requestId,
+                pct: progress?.percent ?? 0,
+                fps: progress?.currentFps ?? 0,
+                time: progress?.timemark ?? '',
+              });
+            })
+            .on('end', async () => {
+              const stat = await fs.stat(videoPath);
+              resolve({ ok: true, outPath: videoPath, stats: { size: stat.size } });
+            })
+            .on('error', (error: any) => {
+              resolve({ ok: false, error: error?.message ?? 'TRANSCODE_FAILED' });
+            })
+            .save(videoPath);
+        },
+      );
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'TRANSCODE_FAILED' };
+    }
+  },
+);
+
+ipcMain.handle(
+  'video:poster',
+  async (
+    _evt,
+    {
+      filePath,
+      projectPath,
+      assetId,
+      timeSec,
+      size,
+    }: { filePath: string; projectPath?: string; assetId?: string; timeSec?: number; size?: number },
+  ) => {
+    if (!resolvedFfmpegPath || !resolvedFfprobePath) {
+      return { ok: false, error: 'FFMPEG_UNAVAILABLE' };
+    }
+    try {
+      const { postersDir, posterPath } = resolveMediaPaths(projectPath, assetId);
+      await fs.mkdir(postersDir, { recursive: true });
+      const probe = await probeVideo(filePath);
+      const duration = probe.ok ? probe.duration ?? 0 : 0;
+      const targetTime =
+        typeof timeSec === 'number'
+          ? timeSec
+          : duration
+            ? Math.min(Math.max(duration * 0.2, 0.2), Math.max(duration - 0.1, 0.2))
+            : 1;
+      const targetSize = typeof size === 'number' && size > 0 ? Math.floor(size) : 720;
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(filePath)
+          .seekInput(targetTime)
+          .outputOptions([
+            '-y',
+            '-frames:v 1',
+            `-vf scale=${targetSize}:${targetSize}:force_original_aspect_ratio=increase,crop=${targetSize}:${targetSize}`,
+          ])
+          .on('end', () => resolve())
+          .on('error', (error: any) => reject(error))
+          .save(posterPath);
+      });
+      return { ok: true, posterPath };
+    } catch (error: any) {
+      return { ok: false, error: error?.message ?? 'POSTER_FAILED' };
     }
   },
 );

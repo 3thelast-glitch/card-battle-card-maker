@@ -181,7 +181,7 @@ export function App() {
       {screen === 'assets' && project ? <AssetsScreen project={project} onChange={setProject} /> : null}
       {screen === 'export' && project ? <ExportScreen project={project} onChange={setProject} /> : null}
       {screen === 'simulator' && project ? (
-        <Suspense fallback={<div className="uiHelp">Loading...</div>}>
+        <Suspense fallback={<div className="uiHelp">Loading Simulator...</div>}>
           <SimulatorScreen project={project} />
         </Suspense>
       ) : null}

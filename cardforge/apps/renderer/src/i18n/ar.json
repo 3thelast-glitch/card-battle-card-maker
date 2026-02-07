@@ -27,6 +27,7 @@
     "delete": "حذف",
     "cancel": "إلغاء",
     "save": "حفظ",
+    "reset": "إعادة ضبط",
     "close": "إغلاق",
     "import": "استيراد",
     "export": "تصدير",
@@ -153,6 +154,15 @@
     "uploadImage": "رفع صورة",
     "uploadVideo": "رفع فيديو",
     "videoUsesPoster": "فيديو (يستخدم الملصق عند التصدير).",
+    "videoDetails": "تفاصيل الفيديو",
+    "keepVideoAudio": "الإبقاء على الصوت",
+    "videoProcessing": "جارٍ معالجة الفيديو…",
+    "videoCompressing": "جارٍ ضغط الفيديو…",
+    "videoGeneratingPoster": "جارٍ إنشاء الملصق…",
+    "videoLargeWarning": "فيديو كبير؛ سيتم ضغطه لملاءمة البطاقات.",
+    "videoProbeFailed": "فشل فحص الفيديو.",
+    "videoTranscodeFailed": "فشل تحويل الفيديو.",
+    "videoTranscodeUnavailable": "أدوات الفيديو غير متاحة. ثبّت FFmpeg لتفعيل الضغط.",
     "generatePoster": "توليد ملصق",
     "showVideoControls": "إظهار عناصر التحكم",
     "noArtwork": "لا يوجد عمل فني محدد.",
@@ -355,15 +365,23 @@
     "subtitle": "فحص سريع لتوازن المعارك.",
     "runs": "عدد الجولات",
     "run": "تشغيل المحاكاة",
+    "stop": "إيقاف",
     "winRate": "نسبة الفوز",
     "drawRate": "نسبة التعادل",
     "deckA": "المجموعة أ",
     "deckB": "المجموعة ب",
+    "filters": "المرشحات",
+    "results": "النتائج",
+    "details": "التفاصيل",
     "cards": "البطاقات: {{count}}",
     "rarity": "الندرة",
+    "race": "الفصيلة",
+    "trait": "السمة",
     "template": "القالب",
     "tag": "الوسم",
     "readyHint": "اختر مجموعتين للمقارنة.",
+    "advanced": "متقدم",
+    "advancedHint": "مزيد من أدوات المحاكاة قريبًا.",
     "emptyDeck": "لا توجد بطاقات تطابق هذا الفلتر."
   },
   "cards": {
@@ -398,6 +416,9 @@
     "meta": {
       "race": "العرق",
       "traits": "السمات"
+    },
+    "art": {
+      "dragHint": "اسحب العمل الفني داخل المعاينة للتحريك."
     },
     "deck": {
       "title": "توزيع الندرة",

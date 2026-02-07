@@ -8,11 +8,18 @@ import { EditorCanvas } from './EditorCanvas';
 import { useTranslation } from 'react-i18next';
 import { getElementTypeLabel } from '../../utils/labels';
 import { normalizeImageFit } from '../../utils/imageFit';
-import { resolveImageReferenceSync } from '../../utils/imageBinding';
+import { fileUrlToPath, resolveImageReferenceSync } from '../../utils/imageBinding';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
-import { captureVideoPoster, captureVideoPosterFromUrl } from '../../lib/videoPoster';
+import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
 
 const DEFAULT_GRID = 10;
+
+type VideoJob = {
+  title: string;
+  detail?: string;
+  pct?: number;
+  requestId?: string;
+};
 
 export function EditorScreen(props: { project: Project; onChange: (project: Project) => void }) {
   const { t, i18n } = useTranslation();
@@ -28,6 +35,8 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const [dragLayerId, setDragLayerId] = useState<string | null>(null);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  const [keepVideoAudio, setKeepVideoAudio] = useState(false);
+  const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
 
   const blueprint = useMemo(() => {
     const byId = project.blueprints.find((bp: Blueprint) => bp.id === activeBlueprintId);
@@ -509,6 +518,7 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const inspectorRarity = normalizeRarity(inspectorData.rarity);
   const inspectorBgColor =
     inspectorData.bgColor ?? CARD_TEMPLATES[inspectorTemplateKey]?.defaultBgColor ?? '#2b0d16';
+  const inspectorVideoMeta = activeRow?.art?.kind === 'video' ? activeRow.art.meta : undefined;
   const getLocalizedValue = (value: any, lang: 'en' | 'ar') => {
     if (value && typeof value === 'object') {
       const localized = value as Record<string, any>;
@@ -540,16 +550,114 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'video/*';
-    input.onchange = async () => {
+    input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      try {
-        const poster = await captureVideoPoster(file);
+      const rowId = activeRow.id;
+      const filePath = (file as any).path as string | undefined;
+      const videoApi = window.cardsmith?.video;
+      const projectPath = project.meta.filePath;
+      const requestId = createId('video');
+      const isLarge = file.size > 3 * 1024 * 1024;
+
+      const fallbackToLocal = () => {
         const src = URL.createObjectURL(file);
-        updateActiveRowArt({ kind: 'video', src, poster });
-      } catch (err: any) {
-        alert(err?.message ?? t('data.videoPosterFailed'));
+        setVideoJob({ title: t('data.videoProcessing') });
+        captureVideoPosterFromUrl(src)
+          .then((poster) => updateActiveRowArt({ kind: 'video', src, poster }))
+          .catch(() => updateActiveRowArt({ kind: 'video', src }))
+          .finally(() => setVideoJob(null));
+      };
+
+      if (!filePath || !videoApi) {
+        fallbackToLocal();
+        return;
       }
+
+      let unsubscribe: (() => void) | undefined;
+      if (videoApi.onTranscodeProgress) {
+        unsubscribe = videoApi.onTranscodeProgress((payload) => {
+          if (payload?.requestId !== requestId) return;
+          setVideoJob((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  pct: typeof payload.pct === 'number' ? Math.max(0, Math.min(100, payload.pct)) : prev.pct,
+                  detail: payload.time ? `${payload.time}` : prev.detail,
+                }
+              : prev,
+          );
+        });
+      }
+
+      (async () => {
+        try {
+          setVideoJob({ title: t('data.videoProcessing') });
+          const probe = await videoApi.probe(filePath);
+          if (!probe.ok) {
+            setVideoJob(null);
+            if (probe.error === 'FFMPEG_UNAVAILABLE') {
+              alert(t('data.videoTranscodeUnavailable'));
+              fallbackToLocal();
+              return;
+            }
+            alert(probe.error ?? t('data.videoProbeFailed'));
+            return;
+          }
+          if (isLarge) {
+            alert(t('data.videoLargeWarning'));
+          }
+
+          const container = String(probe.container || '').toLowerCase();
+          const videoCodec = String(probe.videoCodec || '').toLowerCase();
+          const audioCodec = String(probe.audioCodec || '').toLowerCase();
+          const supportsContainer = container.includes('mp4') || container.includes('mov');
+          const supportsVideo = videoCodec === 'h264';
+          const supportsAudio = !keepVideoAudio || !probe.hasAudio || audioCodec === 'aac';
+          const needsTranscode = isLarge || !supportsContainer || !supportsVideo || !supportsAudio;
+
+          setVideoJob({
+            title: needsTranscode ? t('data.videoCompressing') : t('data.videoProcessing'),
+            pct: 0,
+            requestId,
+          });
+
+          const transcode = await videoApi.transcode(filePath, {
+            projectPath,
+            keepAudio: keepVideoAudio,
+            requestId,
+            assetId: rowId,
+            copyOnly: !needsTranscode,
+          });
+
+          if (!transcode.ok) {
+            setVideoJob(null);
+            if (transcode.error === 'FFMPEG_UNAVAILABLE') {
+              alert(t('data.videoTranscodeUnavailable'));
+              fallbackToLocal();
+              return;
+            }
+            alert(transcode.error ?? t('data.videoTranscodeFailed'));
+            return;
+          }
+
+          const outPath = transcode.outPath;
+          const reprobe = await videoApi.probe(outPath);
+          const meta = reprobe.ok ? stripProbeOk(reprobe) : stripProbeOk(probe);
+
+          setVideoJob({ title: t('data.videoGeneratingPoster') });
+          const posterRes = await videoApi.poster(outPath, { projectPath, assetId: rowId });
+          const posterUrl = posterRes.ok ? toFileUrl(posterRes.posterPath) : undefined;
+          const srcUrl = toFileUrl(outPath);
+          updateActiveRowArt({ kind: 'video', src: srcUrl, poster: posterUrl, meta });
+          setVideoJob(null);
+        } catch (err: any) {
+          setVideoJob(null);
+          alert(err?.message ?? t('data.videoPosterFailed'));
+        } finally {
+          if (unsubscribe) unsubscribe();
+        }
+      })();
     };
     input.click();
   };
@@ -557,6 +665,15 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const regenerateInspectorPoster = async () => {
     if (!activeRow?.art || activeRow.art.kind !== 'video') return;
     try {
+      const videoApi = window.cardsmith?.video;
+      if (videoApi) {
+        const sourcePath = activeRow.art.src.startsWith('file://') ? fileUrlToPath(activeRow.art.src) : activeRow.art.src;
+        const result = await videoApi.poster(sourcePath, { projectPath: project.meta.filePath, assetId: activeRow.id });
+        if (result.ok) {
+          updateActiveRowArt({ ...activeRow.art, poster: toFileUrl(result.posterPath) });
+          return;
+        }
+      }
       const poster = await captureVideoPosterFromUrl(activeRow.art.src);
       updateActiveRowArt({ ...activeRow.art, poster });
     } catch (err: any) {
@@ -928,11 +1045,21 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                           ? t('data.imageSelected')
                           : t('data.noArtwork')}
                     </div>
+                    {inspectorVideoMeta ? (
+                      <div className="uiHelp">
+                        {t('data.videoDetails')}: {formatVideoMeta(inspectorVideoMeta)}
+                      </div>
+                    ) : null}
                     <div className="uiHelp">{t('ui.tip.videoPoster')}</div>
                     <Row gap={8}>
                       <Button variant="outline" onClick={regenerateInspectorPoster} disabled={!activeRow.art || activeRow.art.kind !== 'video'}>
                         {t('data.generatePoster')}
                       </Button>
+                      <Toggle
+                        checked={keepVideoAudio}
+                        onChange={setKeepVideoAudio}
+                        label={t('data.keepVideoAudio')}
+                      />
                     </Row>
                   </div>
                 </div>
@@ -1314,6 +1441,17 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
           setRightDrawerOpen(false);
         }}
       />
+      {videoJob ? (
+        <div className="videoJobOverlay">
+          <div className="videoJobPanel uiPanel">
+            <div className="uiTitle">{videoJob.title}</div>
+            {videoJob.detail ? <div className="uiSub">{videoJob.detail}</div> : null}
+            <div className="videoJobBar">
+              <div className="videoJobBarFill" style={{ width: `${Math.round(videoJob.pct ?? 0)}%` }} />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1366,4 +1504,45 @@ function fileToDataUrl(file: File, errorMessage: string) {
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
   });
+}
+
+function stripProbeOk(result: any) {
+  if (!result || !result.ok) return undefined;
+  const { ok, ...meta } = result;
+  return meta;
+}
+
+function toFileUrl(filePath: string) {
+  const normalized = String(filePath || '').replace(/\\/g, '/');
+  if (!normalized) return '';
+  if (normalized.startsWith('file://')) return normalized;
+  if (normalized.startsWith('/')) return `file://${normalized}`;
+  return `file:///${normalized}`;
+}
+
+function formatVideoMeta(meta?: { videoCodec?: string; width?: number; height?: number; duration?: number; size?: number }) {
+  if (!meta) return '';
+  const codec = meta.videoCodec ? normalizeCodec(meta.videoCodec) : '';
+  const resolution = meta.width && meta.height ? `${Math.round(meta.width)}x${Math.round(meta.height)}` : '';
+  const duration = meta.duration ? `${meta.duration.toFixed(1)}s` : '';
+  const size = meta.size ? formatBytes(meta.size) : '';
+  const parts = [codec, resolution, duration, size].filter(Boolean);
+  return parts.join(' • ');
+}
+
+function normalizeCodec(codec: string) {
+  const cleaned = codec.toLowerCase();
+  if (cleaned === 'h264') return 'H.264';
+  if (cleaned === 'hevc' || cleaned === 'h265') return 'H.265';
+  if (cleaned === 'vp9') return 'VP9';
+  if (cleaned === 'av1') return 'AV1';
+  return codec.toUpperCase();
+}
+
+function formatBytes(size: number) {
+  if (!Number.isFinite(size)) return '';
+  const mb = size / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(1)}MB`;
+  const kb = size / 1024;
+  return `${kb.toFixed(0)}KB`;
 }

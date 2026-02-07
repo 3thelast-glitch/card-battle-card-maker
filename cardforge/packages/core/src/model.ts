@@ -29,9 +29,30 @@ export type ImageAsset = {
   addedAt?: string;
 };
 
+export type CardArtVideoMeta = {
+  container?: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  videoCodec?: string;
+  audioCodec?: string;
+  hasAudio?: boolean;
+  bitrate?: number;
+  size?: number;
+};
+
+export type ArtFit = 'cover' | 'contain';
+
+export type ArtTransform = {
+  x: number;
+  y: number;
+  scale: number;
+  fit: ArtFit;
+};
+
 export type CardArt =
-  | { kind: 'image'; src: string }
-  | { kind: 'video'; src: string; poster?: string };
+  | { kind: 'image'; src: string; transform?: ArtTransform }
+  | { kind: 'video'; src: string; poster?: string; meta?: CardArtVideoMeta; transform?: ArtTransform };
 
 export type CardRace =
   | 'human'

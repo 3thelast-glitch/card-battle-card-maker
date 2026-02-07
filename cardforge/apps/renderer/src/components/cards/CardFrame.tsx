@@ -1,7 +1,7 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RARITY_COLORS, Rarity } from '../../shared/cardRarityColors';
-import type { CardArt, CardRace, CardTrait } from '../../../../../packages/core/src/index';
+import type { ArtTransform, CardArt, CardRace, CardTrait } from '../../../../../packages/core/src/index';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
 import { RaceIcon } from '../../ui/icons/raceIcons';
 import { TraitIcon, TRAIT_META } from '../../ui/icons/traitIcons';
@@ -20,6 +20,11 @@ type Props = {
   showControls?: boolean;
   width?: number;
   height?: number;
+  artInteractive?: boolean;
+  onArtPointerDown?: (event: PointerEvent<HTMLDivElement>) => void;
+  onArtPointerMove?: (event: PointerEvent<HTMLDivElement>) => void;
+  onArtPointerUp?: (event: PointerEvent<HTMLDivElement>) => void;
+  onArtPointerLeave?: (event: PointerEvent<HTMLDivElement>) => void;
 };
 
 const FRAME_SRC = new URL('../../assets/images/card-frames/frame_base.png', import.meta.url).href;
@@ -57,6 +62,11 @@ export function CardFrame({
   showControls,
   width = 280,
   height = 360,
+  artInteractive,
+  onArtPointerDown,
+  onArtPointerMove,
+  onArtPointerUp,
+  onArtPointerLeave,
 }: Props) {
   const { i18n, t } = useTranslation();
   const tint = RARITY_COLORS[rarity];
@@ -129,6 +139,8 @@ export function CardFrame({
     bottom: template.artRect.bottom,
     borderRadius: template.artRect.radius,
   };
+  const artTransform = normalizeArtTransform(art?.transform);
+  const artMaskClass = `card-frame__art cardArtMask${artInteractive ? ' cardArtMask--interactive' : ''}`;
 
   const titleStyle: CSSProperties = {
     left: template.title.x,
@@ -150,77 +162,96 @@ export function CardFrame({
     <div className={`card-frame card-frame--${rarity} card-frame--${template.key}`} style={frameVars}>
       <div className="card-frame__bg" />
       <div
-        className="card-frame__art"
+        className={artMaskClass}
         style={artRectStyle}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        onPointerDown={onArtPointerDown}
+        onPointerMove={onArtPointerMove}
+        onPointerUp={onArtPointerUp}
+        onPointerLeave={onArtPointerLeave}
       >
-        {art?.kind === 'image' ? (
-          <img className="card-frame__media" src={art.src} alt="" draggable={false} />
+        <div
+          className="cardArtInner"
+          style={{ transform: `translate(${artTransform.x}px, ${artTransform.y}px) scale(${artTransform.scale})` }}
+        >
+          {art?.kind === 'image' ? (
+            <img
+              className="card-frame__media cardArtMedia"
+              src={art.src}
+              alt=""
+              draggable={false}
+              style={{ objectFit: artTransform.fit }}
+            />
+          ) : null}
+          {art?.kind === 'video' ? (
+            <video
+              className="card-frame__media cardArtMedia"
+              src={art.src}
+              poster={art.poster}
+              playsInline
+              muted
+              loop
+              autoPlay
+              preload="metadata"
+              onError={() => console.warn('Video failed:', art.src)}
+              controls={controlsEnabled}
+              style={{ objectFit: artTransform.fit }}
+            />
+          ) : null}
+        </div>
+      </div>
+      <div className="cardOverlays">
+        {resolvedTitle ? (
+          <div className="card-frame__title" style={titleStyle}>
+            {resolvedTitle}
+          </div>
         ) : null}
-        {art?.kind === 'video' ? (
-          <video
-            className="card-frame__media"
-            src={art.src}
-            poster={art.poster}
-            playsInline
-            muted
-            loop
-            autoPlay
-            preload="metadata"
-            controls={controlsEnabled}
-          />
+        {badge ? (
+          <div className="card-frame__badge" style={{ left: badgePos.x, top: badgePos.y }}>
+            {badge}
+          </div>
+        ) : null}
+        {raceKey || trimmedTraits.length ? (
+          <div className="metaBadges" style={badgeStyle}>
+            {raceKey ? (
+              <span
+                className={`metaBadge metaBadge--race metaBadge--${raceKey}`}
+                title={t(`races.${raceKey}`, { defaultValue: raceKey })}
+              >
+                <RaceIcon race={raceKey as CardRace} size={14} />
+              </span>
+            ) : null}
+            {visibleTraits.map((trait, index) => {
+              const key = trait.toLowerCase();
+              const meta = TRAIT_META[key];
+              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''}`;
+              return (
+                <span
+                  key={`${key}-${index}`}
+                  className={className}
+                  title={t(`traits.${key}`, { defaultValue: trait })}
+                >
+                  <TraitIcon trait={key} size={12} />
+                </span>
+              );
+            })}
+            {extraTraitCount > 0 ? (
+              <span className="traitBadge traitBadge--more" title={t('cards.meta.traits')}>
+                +{extraTraitCount}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {resolvedDesc ? (
+          <div className="card-frame__desc" style={descStyle}>
+            {resolvedDesc}
+          </div>
+        ) : null}
+        {posterWarning && art?.kind === 'video' && !art.poster ? (
+          <div className="card-frame__warning">{posterWarning}</div>
         ) : null}
       </div>
-      {resolvedTitle ? (
-        <div className="card-frame__title" style={titleStyle}>
-          {resolvedTitle}
-        </div>
-      ) : null}
-      {badge ? (
-        <div className="card-frame__badge" style={{ left: badgePos.x, top: badgePos.y }}>
-          {badge}
-        </div>
-      ) : null}
-      {raceKey || trimmedTraits.length ? (
-        <div className="metaBadges" style={badgeStyle}>
-          {raceKey ? (
-            <span
-              className={`metaBadge metaBadge--race metaBadge--${raceKey}`}
-              title={t(`races.${raceKey}`, { defaultValue: raceKey })}
-            >
-              <RaceIcon race={raceKey as CardRace} size={14} />
-            </span>
-          ) : null}
-          {visibleTraits.map((trait, index) => {
-            const key = trait.toLowerCase();
-            const meta = TRAIT_META[key];
-            const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''}`;
-            return (
-              <span
-                key={`${key}-${index}`}
-                className={className}
-                title={t(`traits.${key}`, { defaultValue: trait })}
-              >
-                <TraitIcon trait={key} size={12} />
-              </span>
-            );
-          })}
-          {extraTraitCount > 0 ? (
-            <span className="traitBadge traitBadge--more" title={t('cards.meta.traits')}>
-              +{extraTraitCount}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-      {resolvedDesc ? (
-        <div className="card-frame__desc" style={descStyle}>
-          {resolvedDesc}
-        </div>
-      ) : null}
-      {posterWarning && art?.kind === 'video' && !art.poster ? (
-        <div className="card-frame__warning">{posterWarning}</div>
-      ) : null}
       <div className="card-frame__frame" style={frameStyle} />
       {(isEpic || isLegendary) && <div className="card-frame__sweep" />}
       {isLegendary
@@ -240,4 +271,13 @@ function resolveLocalized(value: Props['title'], language: 'en' | 'ar') {
   if (!value) return '';
   if (typeof value === 'string') return value;
   return value[language] ?? value.en ?? value.ar ?? '';
+}
+
+function normalizeArtTransform(value?: ArtTransform): ArtTransform {
+  return {
+    x: Number.isFinite(value?.x) ? value!.x : 0,
+    y: Number.isFinite(value?.y) ? value!.y : 0,
+    scale: Number.isFinite(value?.scale) ? Math.min(3, Math.max(0.5, value!.scale)) : 1,
+    fit: value?.fit === 'contain' ? 'contain' : 'cover',
+  };
 }

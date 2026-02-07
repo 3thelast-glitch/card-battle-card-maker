@@ -6,7 +6,7 @@ import { useAppStore } from '../../state/appStore';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
 import { parseCsvFile, parseXlsxFile, mapRowsToCards } from '../../lib/bulkImport';
-import { captureVideoPoster, captureVideoPosterFromUrl } from '../../lib/videoPoster';
+import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
 import {
   copyImageToProjectAssets,
   fileUrlToPath,
@@ -50,6 +50,13 @@ type CopySummary = {
   failed: number;
 };
 
+type VideoJob = {
+  title: string;
+  detail?: string;
+  pct?: number;
+  requestId?: string;
+};
+
 export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void }) {
   const { t, i18n } = useTranslation();
   const { project, onChange } = props;
@@ -75,11 +82,13 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [defaultCost, setDefaultCost] = useState(1);
   const [defaultAbility, setDefaultAbility] = useState<AbilityKey>('none');
   const [showVideoControls, setShowVideoControls] = useState(false);
+  const [keepVideoAudio, setKeepVideoAudio] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [copySummary, setCopySummary] = useState<CopySummary | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   const table = project.dataTables.find((tbl) => tbl.id === activeTableId) ?? project.dataTables[0];
@@ -127,6 +136,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const previewRow = selectedRow && previewArt && selectedRow.art !== previewArt
     ? { ...selectedRow, art: previewArt }
     : selectedRow;
+  const resolvedArt = resolveRowArt(selectedRow, previewArt);
 
   const posterWarning = previewArt?.kind === 'video' && !previewArt.poster ? t('data.posterRequired') : undefined;
 
@@ -374,16 +384,114 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'video/*';
-    input.onchange = async () => {
+    input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      try {
-        const poster = await captureVideoPoster(file);
+      const rowId = selectedRow.id;
+      const filePath = (file as any).path as string | undefined;
+      const videoApi = window.cardsmith?.video;
+      const projectPath = project.meta.filePath;
+      const requestId = createId('video');
+      const isLarge = file.size > 3 * 1024 * 1024;
+
+      const fallbackToLocal = () => {
         const src = URL.createObjectURL(file);
-        updateRowArt(selectedRow.id, { kind: 'video', src, poster });
-      } catch (err: any) {
-        alert(err?.message ?? t('data.videoPosterFailed'));
+        setVideoJob({ title: t('data.videoProcessing') });
+        captureVideoPosterFromUrl(src)
+          .then((poster) => updateRowArt(rowId, { kind: 'video', src, poster }))
+          .catch(() => updateRowArt(rowId, { kind: 'video', src }))
+          .finally(() => setVideoJob(null));
+      };
+
+      if (!filePath || !videoApi) {
+        fallbackToLocal();
+        return;
       }
+
+      let unsubscribe: (() => void) | undefined;
+      if (videoApi.onTranscodeProgress) {
+        unsubscribe = videoApi.onTranscodeProgress((payload) => {
+          if (payload?.requestId !== requestId) return;
+          setVideoJob((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  pct: typeof payload.pct === 'number' ? Math.max(0, Math.min(100, payload.pct)) : prev.pct,
+                  detail: payload.time ? `${payload.time}` : prev.detail,
+                }
+              : prev,
+          );
+        });
+      }
+
+      (async () => {
+        try {
+          setVideoJob({ title: t('data.videoProcessing') });
+          const probe = await videoApi.probe(filePath);
+          if (!probe.ok) {
+            setVideoJob(null);
+            if (probe.error === 'FFMPEG_UNAVAILABLE') {
+              alert(t('data.videoTranscodeUnavailable'));
+              fallbackToLocal();
+              return;
+            }
+            alert(probe.error ?? t('data.videoProbeFailed'));
+            return;
+          }
+          if (isLarge) {
+            alert(t('data.videoLargeWarning'));
+          }
+
+          const container = String(probe.container || '').toLowerCase();
+          const videoCodec = String(probe.videoCodec || '').toLowerCase();
+          const audioCodec = String(probe.audioCodec || '').toLowerCase();
+          const supportsContainer = container.includes('mp4') || container.includes('mov');
+          const supportsVideo = videoCodec === 'h264';
+          const supportsAudio = !keepVideoAudio || !probe.hasAudio || audioCodec === 'aac';
+          const needsTranscode = isLarge || !supportsContainer || !supportsVideo || !supportsAudio;
+
+          setVideoJob({
+            title: needsTranscode ? t('data.videoCompressing') : t('data.videoProcessing'),
+            pct: 0,
+            requestId,
+          });
+
+          const transcode = await videoApi.transcode(filePath, {
+            projectPath,
+            keepAudio: keepVideoAudio,
+            requestId,
+            assetId: rowId,
+            copyOnly: !needsTranscode,
+          });
+
+          if (!transcode.ok) {
+            setVideoJob(null);
+            if (transcode.error === 'FFMPEG_UNAVAILABLE') {
+              alert(t('data.videoTranscodeUnavailable'));
+              fallbackToLocal();
+              return;
+            }
+            alert(transcode.error ?? t('data.videoTranscodeFailed'));
+            return;
+          }
+
+          const outPath = transcode.outPath;
+          const reprobe = await videoApi.probe(outPath);
+          const meta = reprobe.ok ? stripProbeOk(reprobe) : stripProbeOk(probe);
+
+          setVideoJob({ title: t('data.videoGeneratingPoster') });
+          const posterRes = await videoApi.poster(outPath, { projectPath, assetId: rowId });
+          const posterUrl = posterRes.ok ? toFileUrl(posterRes.posterPath) : undefined;
+          const srcUrl = toFileUrl(outPath);
+          updateRowArt(rowId, { kind: 'video', src: srcUrl, poster: posterUrl, meta });
+          setVideoJob(null);
+        } catch (err: any) {
+          setVideoJob(null);
+          alert(err?.message ?? t('data.videoPosterFailed'));
+        } finally {
+          if (unsubscribe) unsubscribe();
+        }
+      })();
     };
     input.click();
   };
@@ -391,6 +499,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const regeneratePoster = async () => {
     if (!selectedRow?.art || selectedRow.art.kind !== 'video') return;
     try {
+      const videoApi = window.cardsmith?.video;
+      if (videoApi) {
+        const sourcePath = isFileUrl(selectedRow.art.src) ? fileUrlToPath(selectedRow.art.src) : selectedRow.art.src;
+        const result = await videoApi.poster(sourcePath, { projectPath: project.meta.filePath, assetId: selectedRow.id });
+        if (result.ok) {
+          updateRowArt(selectedRow.id, { ...selectedRow.art, poster: toFileUrl(result.posterPath) });
+          return;
+        }
+      }
       const poster = await captureVideoPosterFromUrl(selectedRow.art.src);
       updateRowArt(selectedRow.id, { ...selectedRow.art, poster });
     } catch (err: any) {
@@ -1078,6 +1195,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           posterWarning={posterWarning}
           showControls={showVideoControls}
           onToggleControls={setShowVideoControls}
+          onUpdateArtTransform={(next) => {
+            if (!selectedRow || !resolvedArt) return;
+            updateRowArt(selectedRow.id, { ...resolvedArt, transform: next });
+          }}
         />
       </div>
     </div>
@@ -1102,6 +1223,8 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           language={language}
           showVideoControls={showVideoControls}
           onToggleVideoControls={setShowVideoControls}
+          keepVideoAudio={keepVideoAudio}
+          onToggleKeepVideoAudio={setKeepVideoAudio}
           onUpdateData={(path, value) => selectedRow && updateRowData(selectedRow.id, path, value)}
           onUpdateStat={(key, value) => selectedRow && updateRowStats(selectedRow.id, key, value)}
           onUpdateRow={(patch) => selectedRow && updateRowMeta(selectedRow.id, patch)}
@@ -1132,6 +1255,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           setRightDrawerOpen(false);
         }}
       />
+      {videoJob ? (
+        <div className="videoJobOverlay">
+          <div className="videoJobPanel uiPanel">
+            <div className="uiTitle">{videoJob.title}</div>
+            {videoJob.detail ? <div className="uiSub">{videoJob.detail}</div> : null}
+            <div className="videoJobBar">
+              <div className="videoJobBarFill" style={{ width: `${Math.round(videoJob.pct ?? 0)}%` }} />
+            </div>
+          </div>
+        </div>
+      ) : null}
       <Dialog
         open={confirmDeleteOpen}
         title={t('cards.delete.title')}
@@ -1236,6 +1370,15 @@ function isCardArt(value: any): value is CardArt {
   );
 }
 
+function resolveRowArt(row?: DataRow, fallback?: CardArt) {
+  if (!row) return undefined;
+  if (isCardArt(row.art)) return row.art;
+  const dataArt = (row.data as any)?.art;
+  if (isCardArt(dataArt)) return dataArt;
+  if (fallback && isCardArt(fallback)) return fallback;
+  return undefined;
+}
+
 function ensureUniqueRowId(baseId: string, existing: Set<string>) {
   const cleaned = String(baseId || '').trim() || createId('row');
   let next = cleaned;
@@ -1255,6 +1398,20 @@ function fileToDataUrl(file: File, errorMessage: string) {
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
   });
+}
+
+function stripProbeOk(result: any) {
+  if (!result || !result.ok) return undefined;
+  const { ok, ...meta } = result;
+  return meta;
+}
+
+function toFileUrl(filePath: string) {
+  const normalized = String(filePath || '').replace(/\\/g, '/');
+  if (!normalized) return '';
+  if (normalized.startsWith('file://')) return normalized;
+  if (normalized.startsWith('/')) return `file://${normalized}`;
+  return `file:///${normalized}`;
 }
 
 function collectTags(rows: DataRow[]) {

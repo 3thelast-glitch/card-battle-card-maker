@@ -1,14 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { DataRow, Project } from '../../../../packages/core/src/index';
 import { useTranslation } from 'react-i18next';
-import { Panel, Row, Input, Select, Button, Badge, Divider } from '../components/ui';
+import { Row, Input, Select, Button, Badge, Divider } from '../components/ui';
 import { useAppStore } from '../state/appStore';
-import { simulate } from '../lib/simulator';
+import { simulate, type SimResult } from '../lib/simulator';
 import type { Rarity } from '../lib/balanceRules';
 import { CARD_TEMPLATES, type TemplateKey } from '../templates/cardTemplates';
 
 type DeckFilter = {
   rarity: '' | Rarity;
+  race: string;
+  trait: string;
   template: string;
   tag: string;
 };
@@ -19,6 +21,8 @@ type SimCard = {
   defense: number;
   rarity: Rarity;
   abilityKey?: string;
+  race?: string;
+  traits?: string[];
 };
 
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
@@ -28,16 +32,20 @@ export function SimulatorScreen(props: { project: Project }) {
   const { activeTableId } = useAppStore();
   const { project } = props;
   const [runs, setRuns] = useState(1000);
-  const [filtersA, setFiltersA] = useState<DeckFilter>({ rarity: '', template: '', tag: '' });
-  const [filtersB, setFiltersB] = useState<DeckFilter>({ rarity: '', template: '', tag: '' });
-  const [result, setResult] = useState<{ runs: number; p1Wins: number; p2Wins: number; draws: number } | null>(null);
+  const [filtersA, setFiltersA] = useState<DeckFilter>({ rarity: '', race: '', trait: '', template: '', tag: '' });
+  const [filtersB, setFiltersB] = useState<DeckFilter>({ rarity: '', race: '', trait: '', template: '', tag: '' });
+  const [result, setResult] = useState<SimResult | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
-  const dataTable = project.dataTables.find((table) => table.id === activeTableId) ?? project.dataTables[0];
+  const dataTables = project.dataTables ?? [];
+  const dataTable = dataTables.find((table) => table.id === activeTableId) ?? dataTables[0];
   const rows: DataRow[] = dataTable?.rows ?? [];
 
   const tagOptions = useMemo(() => collectTags(rows), [rows]);
   const templateOptions = useMemo(() => collectTemplates(rows), [rows]);
+  const raceOptions = useMemo(() => collectRaces(rows), [rows]);
+  const traitOptions = useMemo(() => collectTraits(rows), [rows]);
 
   const deckA = useMemo(() => buildDeck(rows, filtersA), [rows, filtersA]);
   const deckB = useMemo(() => buildDeck(rows, filtersB), [rows, filtersB]);
@@ -53,7 +61,13 @@ export function SimulatorScreen(props: { project: Project }) {
       setResult(null);
       return;
     }
+    setIsRunning(true);
     setResult(simulate(safeRuns, deckA, deckB));
+    setIsRunning(false);
+  };
+
+  const handleStop = () => {
+    setIsRunning(false);
   };
 
   const winRateA = result ? (result.p1Wins / result.runs) * 100 : 0;
@@ -67,65 +81,152 @@ export function SimulatorScreen(props: { project: Project }) {
     legendary: t('editor.inspector.rarityLegendary'),
   };
 
+  if (!dataTable) {
+    return (
+      <div className="screen uiApp">
+        <div className="uiPanel simPanel">
+          <div className="uiPanelHeader">
+            <div>
+              <div className="uiTitle">{t('simulator.title')}</div>
+              <div className="uiSub">{t('simulator.subtitle')}</div>
+            </div>
+          </div>
+          <div className="uiPanelBody simPanelBody">
+            <div className="uiHelp">{t('cards.empty')}</div>
+            <div className="uiHelp">{t('cards.emptyHint')}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="screen uiApp" style={{ padding: 16 }}>
-      <div className="uiStack">
-        <Panel title={t('simulator.title')} subtitle={t('simulator.subtitle')}>
-          <div className="uiStack">
-            <Row gap={10} align="end">
-              <div style={{ minWidth: 160 }}>
-                <div className="uiHelp">{t('simulator.runs')}</div>
-                <Input
-                  type="number"
-                  min={1}
-                  value={runs}
-                  onChange={(e) => setRuns(Math.max(1, Number(e.target.value) || 1))}
+    <div className="screen uiApp">
+      <div className="simShell">
+        <aside className="uiPanel simPanel">
+          <div className="uiPanelHeader">
+            <div>
+              <div className="uiTitle">{t('simulator.filters')}</div>
+              <div className="uiSub">{t('simulator.subtitle')}</div>
+            </div>
+          </div>
+          <div className="uiPanelBody simPanelBody">
+            <details className="uiCollapse" open>
+              <summary>
+                <div style={{ fontWeight: 600 }}>{t('simulator.deckA')}</div>
+              </summary>
+              <div className="uiCollapseBody">
+                <DeckFilterControls
+                  filters={filtersA}
+                  onChange={setFiltersA}
+                  templateOptions={templateOptions}
+                  tagOptions={tagOptions}
+                  raceOptions={raceOptions}
+                  traitOptions={traitOptions}
+                  language={language}
+                  rarityLabels={rarityLabels}
+                  count={deckA.length}
                 />
               </div>
-              <Button onClick={handleRun} disabled={!canRun}>
+            </details>
+            <details className="uiCollapse" open>
+              <summary>
+                <div style={{ fontWeight: 600 }}>{t('simulator.deckB')}</div>
+              </summary>
+              <div className="uiCollapseBody">
+                <DeckFilterControls
+                  filters={filtersB}
+                  onChange={setFiltersB}
+                  templateOptions={templateOptions}
+                  tagOptions={tagOptions}
+                  raceOptions={raceOptions}
+                  traitOptions={traitOptions}
+                  language={language}
+                  rarityLabels={rarityLabels}
+                  count={deckB.length}
+                />
+              </div>
+            </details>
+          </div>
+        </aside>
+
+        <main className="uiPanel simPanel">
+          <div className="uiPanelHeader">
+            <div>
+              <div className="uiTitle">{t('simulator.results')}</div>
+              <div className="uiSub">{t('simulator.readyHint')}</div>
+            </div>
+            <Row gap={8}>
+              <Button onClick={handleRun} disabled={!canRun || isRunning}>
                 {t('simulator.run')}
               </Button>
+              <Button variant="outline" onClick={handleStop} disabled={!isRunning}>
+                {t('simulator.stop')}
+              </Button>
             </Row>
+          </div>
+          <div className="uiPanelBody simPanelBody">
+            <div className="uiStack">
+              <Row gap={10} align="end">
+                <div style={{ minWidth: 160 }}>
+                  <div className="uiHelp">{t('simulator.runs')}</div>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={runs}
+                    onChange={(e) => setRuns(Math.max(1, Number(e.target.value) || 1))}
+                  />
+                </div>
+              </Row>
+              {result ? (
+                <div className="uiRow">
+                  <Badge variant={winRateA >= winRateB ? 'good' : undefined}>
+                    {t('simulator.winRate')} A: {formatPercent(winRateA)}
+                  </Badge>
+                  <Badge variant={winRateB > winRateA ? 'good' : undefined}>
+                    {t('simulator.winRate')} B: {formatPercent(winRateB)}
+                  </Badge>
+                  <Badge>{t('simulator.drawRate')}: {formatPercent(drawRate)}</Badge>
+                </div>
+              ) : (
+                <div className="uiHelp">{t('simulator.readyHint')}</div>
+              )}
+              <Divider />
+              <details className="uiCollapse">
+                <summary>
+                  <div style={{ fontWeight: 600 }}>{t('simulator.advanced')}</div>
+                </summary>
+                <div className="uiCollapseBody">
+                  <div className="uiHelp">{t('simulator.advancedHint')}</div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </main>
+
+        <aside className="uiPanel simPanel">
+          <div className="uiPanelHeader">
+            <div>
+              <div className="uiTitle">{t('simulator.details')}</div>
+              <div className="uiSub">{t('simulator.title')}</div>
+            </div>
+          </div>
+          <div className="uiPanelBody simPanelBody">
             {result ? (
-              <div className="uiRow">
-                <Badge variant={winRateA >= winRateB ? 'good' : undefined}>
-                  {t('simulator.winRate')} A: {formatPercent(winRateA)}
-                </Badge>
-                <Badge variant={winRateB > winRateA ? 'good' : undefined}>
-                  {t('simulator.winRate')} B: {formatPercent(winRateB)}
-                </Badge>
-                <Badge>{t('simulator.drawRate')}: {formatPercent(drawRate)}</Badge>
+              <div className="uiStack">
+                <Badge>{t('simulator.runs')}: {result.runs}</Badge>
+                <Badge>{t('simulator.deckA')}: {deckA.length}</Badge>
+                <Badge>{t('simulator.deckB')}: {deckB.length}</Badge>
+                <Divider />
+                <div className="uiHelp">{t('simulator.winRate')} A: {formatPercent(winRateA)}</div>
+                <div className="uiHelp">{t('simulator.winRate')} B: {formatPercent(winRateB)}</div>
+                <div className="uiHelp">{t('simulator.drawRate')}: {formatPercent(drawRate)}</div>
               </div>
             ) : (
               <div className="uiHelp">{t('simulator.readyHint')}</div>
             )}
           </div>
-        </Panel>
-
-        <div className="uiGrid two">
-          <Panel title={t('simulator.deckA')}>
-            <DeckFilterControls
-              filters={filtersA}
-              onChange={setFiltersA}
-              templateOptions={templateOptions}
-              tagOptions={tagOptions}
-              language={language}
-              rarityLabels={rarityLabels}
-              count={deckA.length}
-            />
-          </Panel>
-          <Panel title={t('simulator.deckB')}>
-            <DeckFilterControls
-              filters={filtersB}
-              onChange={setFiltersB}
-              templateOptions={templateOptions}
-              tagOptions={tagOptions}
-              language={language}
-              rarityLabels={rarityLabels}
-              count={deckB.length}
-            />
-          </Panel>
-        </div>
+        </aside>
       </div>
     </div>
   );
@@ -136,6 +237,8 @@ function DeckFilterControls(props: {
   onChange: (next: DeckFilter) => void;
   templateOptions: string[];
   tagOptions: string[];
+  raceOptions: string[];
+  traitOptions: string[];
   language: 'en' | 'ar';
   rarityLabels: Record<Rarity, string>;
   count: number;
@@ -144,50 +247,83 @@ function DeckFilterControls(props: {
   const { filters, onChange } = props;
   return (
     <div className="uiStack">
-      <div className="uiRow">
-        <div style={{ minWidth: 180 }}>
-          <div className="uiHelp">{t('simulator.rarity')}</div>
-          <Select
-            value={filters.rarity}
-            onChange={(e) => onChange({ ...filters, rarity: e.target.value as DeckFilter['rarity'] })}
-          >
-            <option value="">{t('common.all')}</option>
-            {RARITY_OPTIONS.map((rarity) => (
-              <option key={rarity} value={rarity}>
-                {props.rarityLabels[rarity]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div style={{ minWidth: 200 }}>
-          <div className="uiHelp">{t('simulator.template')}</div>
-          <Select
-            value={filters.template}
-            onChange={(e) => onChange({ ...filters, template: e.target.value })}
-          >
-            <option value="">{t('common.all')}</option>
-            {props.templateOptions.map((key) => (
-              <option key={key} value={key}>
-                {getTemplateLabel(key, props.language)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div style={{ minWidth: 180 }}>
-          <div className="uiHelp">{t('simulator.tag')}</div>
-          <Select
-            value={filters.tag}
-            onChange={(e) => onChange({ ...filters, tag: e.target.value })}
-          >
-            <option value="">{t('common.all')}</option>
-            {props.tagOptions.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
-              </option>
-            ))}
-          </Select>
-        </div>
+      <div>
+        <div className="uiHelp">{t('simulator.rarity')}</div>
+        <Select
+          value={filters.rarity}
+          onChange={(e) => onChange({ ...filters, rarity: e.target.value as DeckFilter['rarity'] })}
+        >
+          <option value="">{t('common.all')}</option>
+          {RARITY_OPTIONS.map((rarity) => (
+            <option key={rarity} value={rarity}>
+              {props.rarityLabels[rarity]}
+            </option>
+          ))}
+        </Select>
       </div>
+      <div>
+        <div className="uiHelp">{t('simulator.race')}</div>
+        <Select
+          value={filters.race}
+          onChange={(e) => onChange({ ...filters, race: e.target.value })}
+        >
+          <option value="">{t('common.all')}</option>
+          {props.raceOptions.map((race) => (
+            <option key={race} value={race}>
+              {t(`races.${race}`, { defaultValue: race })}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div>
+        <div className="uiHelp">{t('simulator.trait')}</div>
+        <Select
+          value={filters.trait}
+          onChange={(e) => onChange({ ...filters, trait: e.target.value })}
+        >
+          <option value="">{t('common.all')}</option>
+          {props.traitOptions.map((trait) => (
+            <option key={trait} value={trait}>
+              {t(`traits.${trait}`, { defaultValue: trait })}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <details className="uiCollapse">
+        <summary>
+          <div style={{ fontWeight: 600 }}>{t('simulator.advanced')}</div>
+        </summary>
+        <div className="uiCollapseBody uiStack">
+          <div>
+            <div className="uiHelp">{t('simulator.template')}</div>
+            <Select
+              value={filters.template}
+              onChange={(e) => onChange({ ...filters, template: e.target.value })}
+            >
+              <option value="">{t('common.all')}</option>
+              {props.templateOptions.map((key) => (
+                <option key={key} value={key}>
+                  {getTemplateLabel(key, props.language)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <div className="uiHelp">{t('simulator.tag')}</div>
+            <Select
+              value={filters.tag}
+              onChange={(e) => onChange({ ...filters, tag: e.target.value })}
+            >
+              <option value="">{t('common.all')}</option>
+              {props.tagOptions.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </details>
       <Divider />
       <div className="uiRow">
         <Badge>{t('simulator.cards', { count: props.count })}</Badge>
@@ -210,6 +346,14 @@ function matchesFilters(row: DataRow, filters: DeckFilter) {
     const rarity = normalizeRarity(data.rarity);
     if (rarity !== filters.rarity) return false;
   }
+  if (filters.race) {
+    const race = normalizeRace(data.race);
+    if (race !== filters.race) return false;
+  }
+  if (filters.trait) {
+    const traits = normalizeTraits(data.traits ?? data.trait);
+    if (!traits.includes(filters.trait)) return false;
+  }
   if (filters.template) {
     const template = resolveTemplate(data);
     if (template !== filters.template) return false;
@@ -226,12 +370,16 @@ function rowToCard(row: DataRow): SimCard | null {
   const attack = normalizeNumber(data.attack ?? data.stats?.attack);
   const defense = normalizeNumber(data.defense ?? data.stats?.defense);
   const rarity = normalizeRarity(data.rarity);
+  const race = normalizeRace(data.race);
+  const traits = normalizeTraits(data.traits ?? data.trait);
   return {
     id: row.id,
     attack,
     defense,
     rarity,
     abilityKey: data.ability_id ?? data.abilityKey,
+    race: race || undefined,
+    traits: traits.length ? traits : undefined,
   };
 }
 
@@ -244,6 +392,22 @@ function normalizeRarity(value: any): Rarity {
   const cleaned = String(value || '').toLowerCase().trim();
   if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
   return 'common';
+}
+
+function normalizeRace(value: any) {
+  return String(value || '').toLowerCase().trim();
+}
+
+function normalizeTraits(value: any) {
+  if (Array.isArray(value)) {
+    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,|]/g)
+    .map((trait) => trait.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function resolveTemplate(data: Record<string, any>) {
@@ -283,6 +447,23 @@ function collectTemplates(rows: DataRow[]) {
     Object.keys(CARD_TEMPLATES).forEach((key) => set.add(key));
   }
   return Array.from(set.values());
+}
+
+function collectRaces(rows: DataRow[]) {
+  const set = new Set<string>();
+  rows.forEach((row) => {
+    const race = normalizeRace((row.data ?? {}).race);
+    if (race) set.add(race);
+  });
+  return Array.from(set.values()).sort((a, b) => a.localeCompare(b));
+}
+
+function collectTraits(rows: DataRow[]) {
+  const set = new Set<string>();
+  rows.forEach((row) => {
+    normalizeTraits((row.data ?? {}).traits ?? (row.data ?? {}).trait).forEach((trait) => set.add(trait));
+  });
+  return Array.from(set.values()).sort((a, b) => a.localeCompare(b));
 }
 
 function getTemplateLabel(key: string, language: 'en' | 'ar') {

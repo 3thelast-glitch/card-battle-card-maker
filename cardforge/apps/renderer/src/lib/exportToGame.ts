@@ -34,7 +34,7 @@ export function buildGameExport(cards: DataRow[]): GameExport {
       defense: normalizeNumber(data.defense),
       name: normalizeLocalized(data.name),
       ability: normalizeLocalized(data.desc ?? data.ability),
-      art: art ? { kind: art.kind, src: art.src, poster: art.poster } : undefined,
+      art: art ? { kind: art.kind, src: art.src, poster: art.poster, transform: art.transform } : undefined,
     };
   });
 
