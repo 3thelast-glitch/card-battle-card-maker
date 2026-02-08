@@ -27,3 +27,8 @@ contextBridge.exposeInMainWorld('cardsmith', {
     },
   },
 });
+
+contextBridge.exposeInMainWorld('ai', {
+  generate: (payload: { prompt: string; model?: string; temperature?: number; maxOutputTokens?: number }) =>
+    ipcRenderer.invoke('gemini:generate', payload),
+});

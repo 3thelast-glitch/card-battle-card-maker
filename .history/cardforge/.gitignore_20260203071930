@@ -3,4 +3,3 @@ dist
 apps/main/dist
 apps/renderer/dist
 .DS_Store
-.history/

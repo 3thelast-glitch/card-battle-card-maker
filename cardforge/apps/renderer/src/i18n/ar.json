@@ -1,4 +1,4 @@
-{
+﻿{
   "app": {
     "title": "CardSmith Studio",
     "subtitle": "مصمم مكونات ألعاب الطاولة بنظام ويندوز أولاً",
@@ -108,13 +108,40 @@
     "categoryFallback": "عام",
     "descriptionFallback": "قالب",
     "classic": {
+      "title": "كلاسيكي",
       "desc": "تخطيط متوازن بإطار نظيف."
     },
     "moon": {
+      "title": "قمري",
       "desc": "ألوان باردة مع شارة أنيقة."
     },
     "sand": {
+      "title": "صحراوي",
       "desc": "لوحة دافئة بلمسات ريفية."
+    },
+    "obsidian": {
+      "title": "سبج",
+      "desc": "مظهر داكن فاخر بتباين عميق."
+    },
+    "royal": {
+      "title": "ملكي",
+      "desc": "نغمات مزخرفة بعمق نبيل."
+    },
+    "forest": {
+      "title": "غابة",
+      "desc": "خضرة طبيعية وظلال ناعمة."
+    },
+    "ember": {
+      "title": "جمرة",
+      "desc": "دفء متوهج بلمعان ناري."
+    },
+    "frost": {
+      "title": "صقيع",
+      "desc": "برودة صافية بلمسات حادة."
+    },
+    "storm": {
+      "title": "عاصفة",
+      "desc": "أزرق مشحون بطاقة كهربائية."
     }
   },
   "data": {
@@ -160,6 +187,9 @@
     "videoCompressing": "جارٍ ضغط الفيديو…",
     "videoGeneratingPoster": "جارٍ إنشاء الملصق…",
     "videoLargeWarning": "فيديو كبير؛ سيتم ضغطه لملاءمة البطاقات.",
+    "videoSizeWarning": "يفضّل فيديو أقل من 20 ميجابايت",
+    "videoDurationWarning": "يفضّل فيديو أقل من 10 ثوانٍ",
+    "videoUnsupportedCodec": "صيغة الفيديو غير مدعومة (Codec غير متوافق)",
     "videoProbeFailed": "فشل فحص الفيديو.",
     "videoTranscodeFailed": "فشل تحويل الفيديو.",
     "videoTranscodeUnavailable": "أدوات الفيديو غير متاحة. ثبّت FFmpeg لتفعيل الضغط.",
@@ -192,7 +222,10 @@
     "importSummary": "تم الاستيراد: {{created}} جديد، {{updated}} محدّث، {{errors}} أخطاء، {{warnings}} تحذيرات",
     "posterRequired": "الملصق مطلوب للتصدير",
     "previewTitle": "بطاقة نموذجية",
-    "previewDesc": "نص معاينة للقالب المحدد."
+    "previewDesc": "نص معاينة للقالب المحدد.",
+    "preview": "معاينة",
+    "edit": "تحرير",
+    "selectCardHint": "اختر بطاقة لعرضها هنا."
   },
   "assets": {
     "title": "الأصول",
@@ -413,6 +446,11 @@
     "advanced": "متقدم",
     "count": "البطاقات: {{count}}",
     "openEditor": "فتح المحرر",
+    "atk": "هجوم",
+    "def": "دفاع",
+    "selectPreview": "اختر بطاقة للمعاينة.",
+    "generatorPreviewEmpty": "اختر إعدادات ثم اضغط \"توليد المجموعة\" لعرض المعاينة هنا.",
+    "element": "العنصر",
     "meta": {
       "race": "العرق",
       "traits": "السمات"
@@ -449,6 +487,41 @@
     "animal": "حيوان",
     "amphibian": "برمائي"
   },
+  "elements": {
+    "ice": "ثلج",
+    "fire": "نار",
+    "nature": "طبيعة",
+    "water": "ماء",
+    "electric": "كهرباء",
+    "shadow": "ظل",
+    "weakTo": "ضعيف أمام",
+    "strongAgainst": "قوي ضد",
+    "resist": "مقاومة"
+  },
+  "ai": {
+    "title": "مساعد الذكاء",
+    "generateName": "توليد اسم",
+    "generateDesc": "توليد وصف",
+    "suggestBalance": "اقتراح توازن",
+    "generateSmart": "توليد ذكي",
+    "working": "جارٍ المعالجة...",
+    "errorMissingKey": "مفتاح Gemini غير موجود. أضف VITE_GEMINI_API_KEY في الواجهة.",
+    "errorFailed": "فشل طلب الذكاء. حاول مرة أخرى.",
+    "confirmBalanceTitle": "تطبيق اقتراح التوازن؟",
+    "confirmBalanceDesc": "تطبيق هجوم {{attack}}، دفاع {{defense}}؟",
+    "confirm": "تطبيق",
+    "cancel": "إلغاء"
+  },
+  "traitSystem": {
+    "title": "نظام السمات",
+    "baseTitle": "سمات أساسية",
+    "derivedTitle": "سمات مشتقة",
+    "previewTitle": "المعاينة"
+  },
+  "stats": {
+    "atk": "هجوم",
+    "def": "دفاع"
+  },
   "traits": {
     "swordsman": "مبارز",
     "fire": "نار",
@@ -457,7 +530,14 @@
     "mage": "ساحر",
     "tank": "دبابة",
     "poison": "سم",
-    "flying": "طائر"
+    "flying": "طائر",
+    "holy": "مقدس",
+    "shadow": "ظل",
+    "human": "إنسان",
+    "animal": "حيوان",
+    "tactical": "تكتيكي",
+    "ferocious": "شرس",
+    "swift": "سريع"
   },
   "ui": {
     "bulkImport": {

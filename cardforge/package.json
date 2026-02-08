@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "cardsmith-studio",
   "private": true,
   "version": "0.1.0",
@@ -8,6 +8,10 @@
     "dev:main": "wait-on tcp:5173 && npm --prefix apps/main run dev",
     "dev:renderer": "npm --prefix apps/renderer run dev",
     "build": "npm --prefix packages/core run build && npm --prefix packages/storage run build && npm --prefix apps/renderer run build && npm --prefix apps/main run build",
+    "doctor": "npm run doctor:renderer && npm run doctor:main && npm run doctor:audit",
+    "doctor:renderer": "npm --prefix apps/renderer run build",
+    "doctor:main": "npm --prefix apps/main run build",
+    "doctor:audit":"powershell -NoProfile -Command \"npm --prefix apps/renderer audit; exit 0\"",
     "dist": "npm run build && npm --prefix apps/main run dist",
     "lint": "npm --prefix apps/renderer run lint",
     "test": "npm --prefix packages/core run test",
@@ -22,3 +26,4 @@
     "xlsx": "^0.18.5"
   }
 }
+

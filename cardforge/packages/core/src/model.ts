@@ -47,6 +47,7 @@ export type ArtTransform = {
   x: number;
   y: number;
   scale: number;
+  rotate: number;
   fit: ArtFit;
 };
 
@@ -72,6 +73,17 @@ export type CardTrait =
   | 'tank'
   | 'poison'
   | 'flying'
+  | 'holy'
+  | 'shadow'
+  | (string & {});
+
+export type ElementKey =
+  | 'ice'
+  | 'fire'
+  | 'nature'
+  | 'water'
+  | 'electric'
+  | 'shadow'
   | (string & {});
 
 export type SetModel = {
@@ -166,6 +178,7 @@ export type DataRow = {
   art?: CardArt;
   race?: CardRace;
   traits?: CardTrait[];
+  element?: ElementKey;
 };
 
 export type DataTable = {
@@ -195,4 +208,5 @@ export type Item = {
   art?: CardArt;
   race?: CardRace;
   traits?: CardTrait[];
+  element?: ElementKey;
 };

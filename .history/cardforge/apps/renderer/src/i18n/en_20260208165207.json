@@ -11,11 +11,11 @@
       "home": "Home",
       "dashboard": "Dashboard",
       "blueprint": "Blueprint",
-      "data": "Data",
-      "assets": "Assets",
-      "export": "Export",
-      "simulator": "Simulator",
-      "templates": "Templates",
+    "data": "Data",
+    "assets": "Assets",
+    "export": "Export",
+    "simulator": "Simulator",
+    "templates": "Templates",
       "settings": "Settings",
       "save": "Save"
     }
@@ -494,11 +494,11 @@
     "water": "Water",
     "electric": "Electric",
     "shadow": "Shadow",
-    "human": "Human",
-    "animal": "Animal",
-    "tactical": "Tactical",
-    "ferocious": "Ferocious",
-    "swift": "Swift",
+    ,"human": "Human"
+    ,"animal": "Animal"
+    ,"tactical": "Tactical"
+    ,"ferocious": "Ferocious"
+    ,"swift": "Swift"
     "weakTo": "Weak to",
     "strongAgainst": "Strong vs",
     "resist": "Resist"

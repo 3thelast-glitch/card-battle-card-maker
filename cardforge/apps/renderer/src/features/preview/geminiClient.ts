@@ -1,20 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-export async function fetchAIData(prompt: string) {
-  if (!API_KEY) {
-    throw new Error('Gemini API Key is missing. Please set VITE_GEMINI_API_KEY in your .env file.');
+export async function generateCardData(prompt: string) {
+  if (!window.ai?.generate) {
+    throw new Error('Gemini API Key is missing. Please set GEMINI_API_KEY in the main process.');
   }
-
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-    },
-  });
 
   const generationPrompt = `Generate a trading card based on the theme: "${prompt}".
 Return a JSON object with the following keys:
@@ -24,9 +13,20 @@ Return a JSON object with the following keys:
 - attack: number
 - hp: number`;
 
-  const result = await model.generateContent(generationPrompt);
-  const response = result.response;
-  const text = response.text();
+  const result = await window.ai.generate({
+    prompt: generationPrompt,
+    model: 'gemini-1.5-flash',
+    temperature: 0.7,
+  });
 
-  return JSON.parse(text);
+  if (!result?.ok || !result.text) {
+    throw new Error(result?.error ?? 'Gemini request failed.');
+  }
+
+  const cleaned = result.text.replace(/```(?:json)?/g, '').replace(/```/g, '').trim();
+  return JSON.parse(cleaned);
+}
+
+export async function fetchAIData(prompt: string) {
+  return generateCardData(prompt);
 }

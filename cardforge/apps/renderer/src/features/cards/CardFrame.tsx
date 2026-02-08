@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import { useMemo, type FC } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import { getElementGradient } from '../../utils/elementStyles';
 import { TraitBadges } from './TraitBadges';
+import { StatBadge } from './StatBadge';
+
+export { CardFrame } from '../../components/cards/CardFrame';
 
 interface CardFrameProps {
   width: number;
@@ -11,9 +14,10 @@ interface CardFrameProps {
   traits?: string[];
   rarity?: string;
   title?: string;
+  stats?: { attack: number; hp: number };
 }
 
-export const CardFrame: React.FC<CardFrameProps> = ({
+export const KonvaCardFrame: FC<CardFrameProps> = ({
   width,
   height,
   mainElement,
@@ -21,6 +25,7 @@ export const CardFrame: React.FC<CardFrameProps> = ({
   traits = [],
   rarity = 'Common',
   title = '',
+  stats,
 }) => {
   const gradientConfig = useMemo(
     () => getElementGradient(mainElement, width, height),
@@ -83,6 +88,26 @@ export const CardFrame: React.FC<CardFrameProps> = ({
       )}
 
       <TraitBadges traits={traits} x={badgesX} y={padding} iconSize={badgeIconSize} padding={badgePadding} />
+
+      {/* Stats Badges */}
+      {stats && (
+        <>
+          <StatBadge
+            value={stats.attack}
+            type="attack"
+            x={35}
+            y={height - 35}
+            radius={24}
+          />
+          <StatBadge
+            value={stats.hp}
+            type="hp"
+            x={width - 35}
+            y={height - 35}
+            radius={24}
+          />
+        </>
+      )}
     </Group>
   );
 };

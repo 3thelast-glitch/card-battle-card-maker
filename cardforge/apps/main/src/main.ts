@@ -1,14 +1,46 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+﻿import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
-import { constants as fsConstants } from 'node:fs';
+import { constants as fsConstants, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import ffmpeg = require('fluent-ffmpeg');
 import ffmpegPath = require('ffmpeg-static');
 import ffprobePath = require('ffprobe-static');
 
 const isDev = !app.isPackaged;
+
+const loadEnvValue = (content: string, key: string) => {
+  const lines = content.split(/\r?\n/);
+  for (const line of lines) {
+    if (!line || line.trim().startsWith('#')) continue;
+    const [rawKey, ...rest] = line.split('=');
+    if (rawKey?.trim() !== key) continue;
+    return rest.join('=').trim();
+  }
+  return '';
+};
+
+const ensureGeminiKey = () => {
+  if (process.env.GEMINI_API_KEY) return;
+  const candidates = [
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), '..', 'renderer', '.env'),
+  ];
+  for (const envPath of candidates) {
+    try {
+      const text = readFileSync(envPath, 'utf-8');
+      const value = loadEnvValue(text, 'GEMINI_API_KEY');
+      if (value) {
+        process.env.GEMINI_API_KEY = value;
+        break;
+      }
+    } catch {
+      // ignore missing env file
+    }
+  }
+};
+
+ensureGeminiKey();
 
 const resolvedFfmpegPath = typeof ffmpegPath === 'string' ? ffmpegPath : '';
 const resolvedFfprobePath = (ffprobePath as any)?.path || (ffprobePath as string | undefined);
@@ -19,7 +51,7 @@ if (resolvedFfprobePath) {
   ffmpeg.setFfprobePath(resolvedFfprobePath);
 }
 
-// ✅ Fix: force Chromium cache directories to a writable location (userData)
+// âœ… Fix: force Chromium cache directories to a writable location (userData)
 const userData = app.getPath('userData');
 app.commandLine.appendSwitch('disk-cache-dir', path.join(userData, 'Cache'));
 app.commandLine.appendSwitch('gpu-disk-cache-dir', path.join(userData, 'GPUCache'));
@@ -136,6 +168,13 @@ const probeVideo = async (filePath: string): Promise<VideoProbeResult> => {
   }
 };
 
+type GeminiPayload = {
+  prompt: string;
+  model?: string;
+  temperature?: number;
+  maxOutputTokens?: number;
+};
+
 ipcMain.handle('dialog:openFile', async () => {
   return dialog.showOpenDialog({
     title: 'Open CardSmith Project',
@@ -228,6 +267,51 @@ ipcMain.handle(
     }
   },
 );
+
+ipcMain.handle('gemini:generate', async (_evt, payload: GeminiPayload) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: 'MISSING_API_KEY' };
+  }
+  const prompt = String(payload?.prompt ?? '').trim();
+  if (!prompt) {
+    return { ok: false, error: 'EMPTY_PROMPT' };
+  }
+  const model = payload?.model ?? 'gemini-1.5-flash';
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: payload?.temperature ?? 0.7,
+            maxOutputTokens: payload?.maxOutputTokens ?? 512,
+          },
+        }),
+      },
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      return { ok: false, error: data?.error?.message ?? 'API_ERROR' };
+    }
+
+    const text =
+      data?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text ?? '').join('') ?? '';
+    if (!text) {
+      return { ok: false, error: 'EMPTY_RESPONSE' };
+    }
+    return { ok: true, text };
+  } catch (error: any) {
+    return { ok: false, error: error?.message ?? 'REQUEST_FAILED' };
+  }
+});
 
 ipcMain.handle('video:probe', async (_evt, { filePath }: { filePath: string }) => {
   return probeVideo(filePath);

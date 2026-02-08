@@ -4,6 +4,7 @@ import { clamp, createId, resolvePath } from '../../../../../packages/core/src/i
 import { useAppStore } from '../../state/appStore';
 import { addRecentProject, getParentPath, stringifyProject } from '../../../../../packages/storage/src/index';
 import { Button, Divider, IconButton, Input, Kbd, Row, Select, Toggle } from '../../components/ui';
+import { Dialog } from '../../ui/Dialog';
 import { EditorCanvas } from './EditorCanvas';
 import { useTranslation } from 'react-i18next';
 import { getElementTypeLabel } from '../../utils/labels';
@@ -11,6 +12,11 @@ import { normalizeImageFit } from '../../utils/imageFit';
 import { fileUrlToPath, resolveImageReferenceSync } from '../../utils/imageBinding';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
 import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
+import { applyTraitsToData } from '../../lib/card.logic';
+import type { BaseTraitKey } from '../../lib/traits/traits.types';
+import { TraitSelector } from '../../components/editor/TraitSelector';
+import { CardPreview } from '../../components/editor/CardPreview';
+import { generateCardContent } from '../../services/gemini.service';
 
 const DEFAULT_GRID = 10;
 
@@ -37,6 +43,10 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [keepVideoAudio, setKeepVideoAudio] = useState(false);
   const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<{ atk: number; def: number; note?: string } | null>(null);
+  const [aiConfirmOpen, setAiConfirmOpen] = useState(false);
 
   const blueprint = useMemo(() => {
     const byId = project.blueprints.find((bp: Blueprint) => bp.id === activeBlueprintId);
@@ -116,6 +126,90 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
     },
     [updateActiveRow],
   );
+
+  const toNumber = (value: any) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const updateTraits = useCallback(
+    (nextBaseTraits: BaseTraitKey[]) => {
+      if (!activeRow) return;
+      const { nextData } = applyTraitsToData({ ...activeRow.data, baseTraits: nextBaseTraits });
+      updateActiveRow((row) => ({ ...row, data: nextData }));
+    },
+    [activeRow, updateActiveRow],
+  );
+
+  const updateBaseStats = useCallback(
+    (patch: { attack?: number; defense?: number }) => {
+      if (!activeRow) return;
+      const baseAttack = patch.attack ?? toNumber(activeRow.data?.baseAttack ?? activeRow.data?.attack ?? 0);
+      const baseDefense = patch.defense ?? toNumber(activeRow.data?.baseDefense ?? activeRow.data?.defense ?? 0);
+      const { nextData } = applyTraitsToData({ ...activeRow.data, baseAttack, baseDefense });
+      updateActiveRow((row) => ({ ...row, data: nextData }));
+    },
+    [activeRow, updateActiveRow],
+  );
+
+  const applyAiBalance = useCallback(() => {
+    if (!aiSuggestion) return;
+    updateBaseStats({ attack: aiSuggestion.atk, defense: aiSuggestion.def });
+    setAiConfirmOpen(false);
+  }, [aiSuggestion, updateBaseStats]);
+
+  const handleGenerateSmart = useCallback(async () => {
+    if (!activeRow) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
+      const result = await generateCardContent({
+        lang,
+        traits: traitState.baseTraits,
+        derivedTraits: traitState.derivedTraits,
+        cardType: inspectorData.type ?? inspectorData.templateKey ?? inspectorData.rarity ?? '',
+        attack: traitState.attack ?? inspectorData.attack ?? 0,
+        defense: traitState.defense ?? inspectorData.defense ?? 0,
+        relations: {
+          human: 'tactical (+1 DEF)',
+          animal: 'ferocious (+2 ATK)',
+          swordsman: 'swift (+1 ATK, -1 DEF)',
+        },
+      });
+      if (result.name) {
+        updateActiveRowData(`name.${lang}`, result.name);
+      }
+      if (result.description) {
+        updateActiveRowData(`desc.${lang}`, result.description);
+      }
+      if (result.balance) {
+        setAiSuggestion(result.balance);
+        setAiConfirmOpen(true);
+      }
+    } catch (err) {
+      const message = err instanceof Error && err.message === 'MISSING_API_KEY'
+        ? t('ai.errorMissingKey')
+        : t('ai.errorFailed');
+      setAiError(message);
+    } finally {
+      setAiLoading(false);
+    }
+  }, [
+    activeRow,
+    i18n.language,
+    inspectorData.attack,
+    inspectorData.defense,
+    inspectorData.rarity,
+    inspectorData.templateKey,
+    inspectorData.type,
+    t,
+    traitState.attack,
+    traitState.baseTraits,
+    traitState.defense,
+    traitState.derivedTraits,
+    updateActiveRowData,
+  ]);
 
   const filterSelectableIds = useCallback((ids: string[], list: ElementModel[]) => {
     return ids.filter((id) => {
@@ -519,6 +613,7 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const inspectorBgColor =
     inspectorData.bgColor ?? CARD_TEMPLATES[inspectorTemplateKey]?.defaultBgColor ?? '#2b0d16';
   const inspectorVideoMeta = activeRow?.art?.kind === 'video' ? activeRow.art.meta : undefined;
+  const traitState = useMemo(() => applyTraitsToData(inspectorData), [inspectorData]);
   const getLocalizedValue = (value: any, lang: 'en' | 'ar') => {
     if (value && typeof value === 'object') {
       const localized = value as Record<string, any>;
@@ -975,10 +1070,10 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                         <div className="uiHelp">{t('editor.inspector.attack')}</div>
                         <Input
                           type="number"
-                          value={inspectorData.attack ?? ''}
+                          value={inspectorData.baseAttack ?? inspectorData.attack ?? 0}
                           onChange={(e) => {
-                            const next = e.target.value === '' ? '' : Number(e.target.value);
-                            updateActiveRowData('attack', next);
+                            const next = e.target.value === '' ? 0 : Number(e.target.value);
+                            updateBaseStats({ attack: next });
                           }}
                         />
                       </div>
@@ -986,14 +1081,45 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                         <div className="uiHelp">{t('editor.inspector.defense')}</div>
                         <Input
                           type="number"
-                          value={inspectorData.defense ?? ''}
+                          value={inspectorData.baseDefense ?? inspectorData.defense ?? 0}
                           onChange={(e) => {
-                            const next = e.target.value === '' ? '' : Number(e.target.value);
-                            updateActiveRowData('defense', next);
+                            const next = e.target.value === '' ? 0 : Number(e.target.value);
+                            updateBaseStats({ defense: next });
                           }}
                         />
                       </div>
                     </div>
+                  </div>
+
+                  <div className="uiStack">
+                    <div className="uiSub">{t('traitSystem.title')}</div>
+                    <TraitSelector
+                      baseTraits={traitState.baseTraits}
+                      derivedTraits={traitState.derivedTraits}
+                      onChange={updateTraits}
+                    />
+                    <div className="uiHelp">{t('traitSystem.previewTitle')}</div>
+                    <CardPreview
+                      attack={traitState.attack}
+                      defense={traitState.defense}
+                      traits={traitState.allTraits}
+                    />
+                  </div>
+
+                  <div className="uiStack">
+                    <div className="uiSub">{t('ai.title')}</div>
+                    <div className="uiRow">
+                      <Button variant="outline" onClick={handleGenerateSmart} disabled={aiLoading}>
+                        {aiLoading ? t('ai.working') : t('ai.generateSmart')}
+                      </Button>
+                      {aiSuggestion ? (
+                        <span className="uiBadge uiBadgeWarn">
+                          ATK {aiSuggestion.atk} / DEF {aiSuggestion.def}
+                        </span>
+                      ) : null}
+                    </div>
+                    {aiSuggestion?.note ? <div className="uiHelp">{aiSuggestion.note}</div> : null}
+                    {aiError ? <div className="uiHelp" style={{ color: 'var(--bad)' }}>{aiError}</div> : null}
                   </div>
 
                   <div className="uiStack">
@@ -1452,6 +1578,18 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
           </div>
         </div>
       ) : null}
+      <Dialog
+        open={aiConfirmOpen}
+        title={t('ai.confirmBalanceTitle')}
+        description={t('ai.confirmBalanceDesc', {
+          attack: aiSuggestion?.atk ?? 0,
+          defense: aiSuggestion?.def ?? 0,
+        })}
+        confirmText={t('ai.confirm')}
+        cancelText={t('ai.cancel')}
+        onConfirm={applyAiBalance}
+        onClose={() => setAiConfirmOpen(false)}
+      />
     </div>
   );
 }
@@ -1466,7 +1604,9 @@ function normalizeZIndex(elements: ElementModel[]) {
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
   return fallback;
 }
 

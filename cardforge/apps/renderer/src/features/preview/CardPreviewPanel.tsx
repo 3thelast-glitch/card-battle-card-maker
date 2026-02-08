@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent } from 'react';
 import type { ArtTransform, CardArt, DataRow } from '../../../../../packages/core/src/index';
-import { CardFrame } from '../../components/cards/CardFrame';
+import { ProfessionalCard } from '../cards/ProfessionalCard';
 import { useTranslation } from 'react-i18next';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import { Toggle } from '../../components/ui';
@@ -23,7 +23,7 @@ export function CardPreviewPanel(props: {
   } | null>(null);
 
   if (!props.row) {
-    return <div className="empty">{t('cards.empty')}</div>;
+    return <div className="empty">{t('cards.selectPreview')}</div>;
   }
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
@@ -32,8 +32,11 @@ export function CardPreviewPanel(props: {
   const rarity = normalizeRarity(data.rarity);
   const templateKey = normalizeTemplateKey(data.templateKey ?? data.template, props.defaultTemplate);
   const bgColor = data.bgColor ?? CARD_TEMPLATES[templateKey]?.defaultBgColor;
+  const attack = normalizeNumber(data.attack ?? data.stats?.attack);
+  const defense = normalizeNumber(data.defense ?? data.stats?.defense);
   const title = data.name ?? data.title ?? data.character_name ?? data.character_name_en ?? data.character_name_ar ?? props.row.id;
   const desc = data.desc ?? data.ability ?? data.ability_en ?? data.ability_ar ?? '';
+  const element = data.element;
   const race = data.race;
   const traits = normalizeTraits(data.traits ?? data.trait);
   const artTransform = normalizeArtTransform(art?.transform);
@@ -82,24 +85,16 @@ export function CardPreviewPanel(props: {
   return (
     <div className="previewPanel">
       <div className="previewCanvas">
-        <CardFrame
-          rarity={rarity}
-          art={art}
-          templateKey={templateKey}
-          title={title}
-          description={desc}
-          race={race}
-          traits={traits}
-          bgColor={bgColor}
-          posterWarning={props.posterWarning}
-          showControls={props.showControls}
+        <ProfessionalCard
+          data={{
+            name: title,
+            main_element: element || 'Normal',
+            traits: traits,
+            attack: attack,
+            hp: defense,
+          }}
           width={previewWidth}
           height={previewHeight}
-          artInteractive={dragEnabled}
-          onArtPointerDown={handlePointerDown}
-          onArtPointerMove={handlePointerMove}
-          onArtPointerUp={handlePointerUp}
-          onArtPointerLeave={handlePointerUp}
         />
       </div>
       {art?.kind === 'video' ? (
@@ -120,7 +115,9 @@ export function CardPreviewPanel(props: {
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
   return fallback;
 }
 
@@ -128,6 +125,11 @@ function normalizeRarity(value: any) {
   const cleaned = String(value || '').toLowerCase().trim();
   if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
   return 'common';
+}
+
+function normalizeNumber(value: any) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function normalizeTraits(value: any) {
@@ -154,6 +156,7 @@ function normalizeArtTransform(value?: ArtTransform): ArtTransform {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
     scale: Number.isFinite(value?.scale) ? value!.scale : 1,
+    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }

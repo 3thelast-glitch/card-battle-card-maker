@@ -1,5 +1,5 @@
 import type { CardArt, DataRow } from '../../../../packages/core/src/index';
-import type { TemplateKey } from '../templates/cardTemplates';
+import { CARD_TEMPLATES, type TemplateKey } from '../templates/cardTemplates';
 
 export type GameAsset = {
   kind: 'poster' | 'image';
@@ -93,7 +93,9 @@ function normalizeRarity(value: any) {
 
 function normalizeTemplateKey(value: any): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
   return 'classic';
 }
 

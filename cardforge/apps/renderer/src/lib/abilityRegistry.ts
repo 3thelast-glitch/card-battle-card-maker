@@ -1,5 +1,7 @@
 import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
 
+import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
+
 export type AbilityKey =
   | 'none'
   | 'shield_loss_to_draw'
@@ -29,10 +31,8 @@ export function inferAbilityKeyFromText(text?: string): AbilityKey {
 }
 
 export type TargetFilter = {
-  race?: CardRace;
-  hasTrait?: CardTrait;
-  hasTraitsAll?: CardTrait[];
-  hasTraitsAny?: CardTrait[];
+  races?: CardRace[];
+  traits?: CardTrait[];
 };
 
 export type TargetCard = {
@@ -42,10 +42,15 @@ export type TargetCard = {
 
 export function matchesTarget(card: TargetCard, filter?: TargetFilter) {
   if (!filter) return true;
-  if (filter.race && card.race !== filter.race) return false;
-  const traits = new Set(card.traits ?? []);
-  if (filter.hasTrait && !traits.has(filter.hasTrait)) return false;
-  if (filter.hasTraitsAll && !filter.hasTraitsAll.every((trait) => traits.has(trait))) return false;
-  if (filter.hasTraitsAny && !filter.hasTraitsAny.some((trait) => traits.has(trait))) return false;
+  const cardRace = String(card.race ?? '').toLowerCase().trim();
+  const cardTraits = new Set((card.traits ?? []).map((trait) => String(trait).toLowerCase().trim()));
+  if (filter.races?.length) {
+    const allowed = filter.races.map((race) => String(race).toLowerCase().trim());
+    if (!allowed.some((race) => race === cardRace)) return false;
+  }
+  if (filter.traits?.length) {
+    const allowedTraits = filter.traits.map((trait) => String(trait).toLowerCase().trim());
+    if (!allowedTraits.some((trait) => cardTraits.has(trait))) return false;
+  }
   return true;
 }

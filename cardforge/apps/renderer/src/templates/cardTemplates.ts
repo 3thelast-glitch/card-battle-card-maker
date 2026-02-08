@@ -1,8 +1,20 @@
-export type TemplateKey = 'classic' | 'moon' | 'sand';
+export type TemplateKey =
+  | 'classic'
+  | 'moon'
+  | 'sand'
+  | 'obsidian'
+  | 'royal'
+  | 'forest'
+  | 'ember'
+  | 'frost'
+  | 'storm';
 
 export type CardTemplate = {
   key: TemplateKey;
   label: { en: string; ar: string };
+  titleKey?: string;
+  descKey?: string;
+  thumbnail?: string;
   defaultBgColor?: string;
   artRect: { left: number; top: number; right: number; bottom: number; radius: number };
   title: { x: number; y: number; size: number; letterSpacing?: number };
@@ -14,6 +26,9 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
   classic: {
     key: 'classic',
     label: { en: 'Classic', ar: 'كلاسيكي' },
+    titleKey: 'templates.classic.title',
+    descKey: 'templates.classic.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#2b0d16',
     artRect: { left: 20, top: 55, right: 20, bottom: 70, radius: 10 },
     title: { x: 22, y: 16, size: 18 },
@@ -22,6 +37,9 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
   moon: {
     key: 'moon',
     label: { en: 'Moon', ar: 'قمري' },
+    titleKey: 'templates.moon.title',
+    descKey: 'templates.moon.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#0b1220',
     artRect: { left: 18, top: 52, right: 18, bottom: 74, radius: 14 },
     title: { x: 22, y: 14, size: 19 },
@@ -31,10 +49,79 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
   sand: {
     key: 'sand',
     label: { en: 'Sand', ar: 'صحراوي' },
+    titleKey: 'templates.sand.title',
+    descKey: 'templates.sand.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#2a1a10',
     artRect: { left: 22, top: 58, right: 22, bottom: 72, radius: 10 },
     title: { x: 22, y: 16, size: 18 },
     desc: { x: 22, y: 288, size: 12 },
     badge: { x: 216, y: 14, text: '☼' },
+  },
+  obsidian: {
+    key: 'obsidian',
+    label: { en: 'Obsidian', ar: 'سبج' },
+    titleKey: 'templates.obsidian.title',
+    descKey: 'templates.obsidian.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#0e0f14',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
+  },
+  royal: {
+    key: 'royal',
+    label: { en: 'Royal', ar: 'ملكي' },
+    titleKey: 'templates.royal.title',
+    descKey: 'templates.royal.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#141a33',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
+  },
+  forest: {
+    key: 'forest',
+    label: { en: 'Forest', ar: 'غابة' },
+    titleKey: 'templates.forest.title',
+    descKey: 'templates.forest.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#122018',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
+  },
+  ember: {
+    key: 'ember',
+    label: { en: 'Ember', ar: 'جمرة' },
+    titleKey: 'templates.ember.title',
+    descKey: 'templates.ember.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#2a0f0f',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
+  },
+  frost: {
+    key: 'frost',
+    label: { en: 'Frost', ar: 'صقيع' },
+    titleKey: 'templates.frost.title',
+    descKey: 'templates.frost.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#0b1a24',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
+  },
+  storm: {
+    key: 'storm',
+    label: { en: 'Storm', ar: 'عاصفة' },
+    titleKey: 'templates.storm.title',
+    descKey: 'templates.storm.desc',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#101726',
+    artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
+    title: { x: 22, y: 16, size: 18 },
+    desc: { x: 22, y: 288, size: 12 },
   },
 };

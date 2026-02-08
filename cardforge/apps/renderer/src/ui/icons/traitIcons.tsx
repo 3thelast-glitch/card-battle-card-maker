@@ -6,7 +6,9 @@ export type TraitKey =
   | 'mage'
   | 'tank'
   | 'poison'
-  | 'flying';
+  | 'flying'
+  | 'holy'
+  | 'shadow';
 
 export const TRAIT_META: Record<string, { labelKey: string; tintClass: string }> = {
   swordsman: { labelKey: 'traits.swordsman', tintClass: 'swordsman' },
@@ -17,6 +19,8 @@ export const TRAIT_META: Record<string, { labelKey: string; tintClass: string }>
   tank: { labelKey: 'traits.tank', tintClass: 'tank' },
   poison: { labelKey: 'traits.poison', tintClass: 'poison' },
   flying: { labelKey: 'traits.flying', tintClass: 'flying' },
+  holy: { labelKey: 'traits.holy', tintClass: 'holy' },
+  shadow: { labelKey: 'traits.shadow', tintClass: 'shadow' },
 };
 
 export function TraitIcon({ trait, size = 14 }: { trait: string; size?: number }) {
@@ -91,6 +95,21 @@ export function TraitIcon({ trait, size = 14 }: { trait: string; size?: number }
       return (
         <svg {...props} aria-hidden="true">
           <path d="M4 14l6-2 4-6 2 4 4 2-6 2-4 6-2-4z" />
+        </svg>
+      );
+    case 'holy':
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M12 4v16" />
+          <path d="M4 12h16" />
+          <path d="M7 7l10 10" />
+          <path d="M17 7L7 17" />
+        </svg>
+      );
+    case 'shadow':
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M15 3a8 8 0 1 0 6 14A7 7 0 1 1 15 3z" />
         </svg>
       );
     default:

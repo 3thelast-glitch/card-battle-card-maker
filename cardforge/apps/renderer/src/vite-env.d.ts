@@ -39,6 +39,14 @@ declare global {
         onTranscodeProgress: (handler: (payload: { requestId?: string; pct?: number; fps?: number; time?: string }) => void) => () => void;
       };
     };
+    ai?: {
+      generate: (payload: {
+        prompt: string;
+        model?: string;
+        temperature?: number;
+        maxOutputTokens?: number;
+      }) => Promise<{ ok: boolean; text?: string; error?: string }>;
+    };
   }
 }
 

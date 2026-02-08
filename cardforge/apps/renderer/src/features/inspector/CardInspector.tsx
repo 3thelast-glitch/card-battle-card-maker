@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import type { ArtTransform, CardArt, CardArtVideoMeta, CardRace, CardTrait, DataRow, Project } from '../../../../../packages/core/src/index';
+import type { ArtTransform, CardArt, CardArtVideoMeta, CardRace, CardTrait, DataRow, ElementKey, Project } from '../../../../../packages/core/src/index';
 import { resolvePath } from '../../../../../packages/core/src/index';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Row, Select, Toggle, Badge, Divider } from '../../components/ui';
-import type { TemplateKey } from '../../templates/cardTemplates';
+import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
 import { TemplatePicker } from '../templates/TemplatePicker';
 import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
+import { ELEMENTS, getMatchup } from '../../lib/elements';
+import { Dialog } from '../../ui/Dialog';
 
 type Props = {
   row?: DataRow;
@@ -29,11 +31,15 @@ type Props = {
 
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
 const RACE_OPTIONS: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
-const TRAIT_OPTIONS: TraitKey[] = ['fire', 'ice', 'swordsman', 'archer', 'mage', 'tank', 'poison', 'flying'];
+const TRAIT_OPTIONS: TraitKey[] = ['fire', 'ice', 'swordsman', 'archer', 'mage', 'tank', 'poison', 'flying', 'holy', 'shadow'];
 
 export function CardInspector(props: Props) {
   const { t } = useTranslation();
   const [traitQuery, setTraitQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState<'name' | 'desc' | 'balance' | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [balanceSuggestion, setBalanceSuggestion] = useState<{ attack: number; defense: number; cost: number } | null>(null);
+  const [confirmBalanceOpen, setConfirmBalanceOpen] = useState(false);
   const row = props.row;
   const data = row?.data ?? {};
   const art: CardArt | undefined = row?.art ?? (data as any).art;
@@ -41,6 +47,7 @@ export function CardInspector(props: Props) {
   const rarity = normalizeRarity(data.rarity);
   const templateKey = normalizeTemplateKey(data.templateKey ?? data.template);
   const race = normalizeRace(data.race);
+  const element = normalizeElement(data.element);
   const traits = normalizeTraits(data.traits ?? (data as any).trait);
   const bgColor = String(data.bgColor ?? '');
   const attack = normalizeNumber(data.attack ?? data.stats?.attack);
@@ -69,6 +76,121 @@ export function CardInspector(props: Props) {
       })
       .slice(0, 8);
   }, [normalizedTraitQuery, traitSet, t]);
+  const matchup = useMemo(() => getMatchup(element || undefined), [element]);
+
+  const resolveAiError = (code?: string) => {
+    if (code === 'MISSING_API_KEY') return t('ai.errorMissingKey');
+    return t('ai.errorFailed');
+  };
+
+  const buildContext = () => {
+    const raceText = race || 'none';
+    const traitText = traits.length ? traits.join(', ') : 'none';
+    const elementText = element || 'none';
+    const abilityId = String((data as any).ability_id ?? (data as any).abilityId ?? '').trim();
+    const abilityText = props.language === 'ar' ? abilityAr : abilityEn;
+    return [
+      `Rarity: ${rarity}`,
+      `Element: ${elementText}`,
+      `Race: ${raceText}`,
+      `Traits: ${traitText}`,
+      abilityId ? `AbilityId: ${abilityId}` : null,
+      abilityText ? `Ability: ${abilityText}` : null,
+      `Current stats: ATK ${attack} DEF ${defense} COST ${cost || 0}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
+  const parseBalanceSuggestion = (text: string) => {
+    const cleaned = text.replace(/```(?:json)?/g, '').replace(/```/g, '').trim();
+    try {
+      const parsed = JSON.parse(cleaned);
+      const attackValue = Number(parsed.attack ?? parsed.atk);
+      const defenseValue = Number(parsed.defense ?? parsed.def);
+      const costValue = Number(parsed.cost ?? parsed.mana ?? 0);
+      if (Number.isFinite(attackValue) && Number.isFinite(defenseValue)) {
+        return {
+          attack: Math.max(0, Math.round(attackValue)),
+          defense: Math.max(0, Math.round(defenseValue)),
+          cost: Number.isFinite(costValue) ? Math.max(0, Math.round(costValue)) : 0,
+        };
+      }
+    } catch {
+      // fall through to loose parsing
+    }
+    const numbers = cleaned.match(/-?\d+(\.\d+)?/g) ?? [];
+    if (numbers.length >= 2) {
+      const attackValue = Number(numbers[0]);
+      const defenseValue = Number(numbers[1]);
+      const costValue = numbers.length >= 3 ? Number(numbers[2]) : Number(cost) || 0;
+      if (Number.isFinite(attackValue) && Number.isFinite(defenseValue)) {
+        return {
+          attack: Math.max(0, Math.round(attackValue)),
+          defense: Math.max(0, Math.round(defenseValue)),
+          cost: Number.isFinite(costValue) ? Math.max(0, Math.round(costValue)) : 0,
+        };
+      }
+    }
+    return null;
+  };
+
+  const runAi = async (mode: 'name' | 'desc' | 'balance') => {
+    if (!window.ai?.generate) {
+      setAiError(t('ai.errorMissingKey'));
+      return;
+    }
+    setAiLoading(mode);
+    setAiError(null);
+    try {
+      const context = buildContext();
+      let prompt = '';
+      if (mode === 'name') {
+        prompt = `Generate a short ${props.language === 'ar' ? 'Arabic' : 'English'} card name. Avoid profanity. Use 2-4 words. Context:\n${context}\nReturn only the name.`;
+      } else if (mode === 'desc') {
+        prompt = `Write a concise ${props.language === 'ar' ? 'Arabic' : 'English'} card ability description (1-2 lines). Avoid profanity. Context:\n${context}\nReturn only the description text.`;
+      } else {
+        prompt = `Suggest balanced stats for a trading card using the context below. Return JSON only with keys attack, defense, cost (integers).\n${context}`;
+      }
+
+      const result = await window.ai.generate({ prompt });
+      if (!result?.ok) {
+        setAiError(resolveAiError(result?.error));
+        return;
+      }
+      const text = String(result.text ?? '').trim();
+      if (!text) {
+        setAiError(t('ai.errorFailed'));
+        return;
+      }
+
+      if (mode === 'name') {
+        const cleaned = text.replace(/^["']|["']$/g, '').trim();
+        if (props.language === 'ar') props.onUpdateData('name.ar', cleaned);
+        else props.onUpdateData('name.en', cleaned);
+        return;
+      }
+
+      if (mode === 'desc') {
+        const cleaned = text.replace(/^["']|["']$/g, '').trim();
+        if (props.language === 'ar') props.onUpdateData('desc.ar', cleaned);
+        else props.onUpdateData('desc.en', cleaned);
+        return;
+      }
+
+      const suggestion = parseBalanceSuggestion(text);
+      if (!suggestion) {
+        setAiError(t('ai.errorFailed'));
+        return;
+      }
+      setBalanceSuggestion(suggestion);
+      setConfirmBalanceOpen(true);
+    } catch (error: any) {
+      setAiError(resolveAiError(error?.message));
+    } finally {
+      setAiLoading(null);
+    }
+  };
 
   const addTrait = (trait: string) => {
     const cleaned = String(trait || '').toLowerCase().trim();
@@ -96,7 +218,7 @@ export function CardInspector(props: Props) {
   };
 
   const resetArtTransform = () => {
-    updateArtTransform({ x: 0, y: 0, scale: 1, fit: 'cover' });
+    updateArtTransform({ x: 0, y: 0, scale: 1, rotate: 0, fit: 'cover' });
   };
 
   const customColumns = props.columns.filter((key) => !isReservedColumn(key));
@@ -117,6 +239,57 @@ export function CardInspector(props: Props) {
               language={props.language}
               onChange={(next) => props.onUpdateData('templateKey', next)}
             />
+          </div>
+          <div>
+            <div className="uiHelp">{t('cards.element')}</div>
+            <Select
+              value={element}
+              onChange={(e) => props.onUpdateData('element', e.target.value || undefined)}
+            >
+              <option value="">{t('common.none')}</option>
+              {Object.keys(ELEMENTS).map((key) => (
+                <option key={key} value={key}>
+                  {t(`elements.${key}`, { defaultValue: key })}
+                </option>
+              ))}
+            </Select>
+            {element ? (
+              <div className="elementChips">
+                <div className="elementChipGroup">
+                  <div className="uiHelp">{t('elements.weakTo')}</div>
+                  <div className="elementChipRow">
+                    {matchup.weakTo.length ? matchup.weakTo.map((item) => (
+                      <span key={`weak-${item}`} className="elementChip">
+                        <span className="elementChipIcon">{ELEMENTS[item]?.icon ?? '•'}</span>
+                        <span>{t(`elements.${item}`, { defaultValue: item })}</span>
+                      </span>
+                    )) : <span className="uiHelp">{t('common.none')}</span>}
+                  </div>
+                </div>
+                <div className="elementChipGroup">
+                  <div className="uiHelp">{t('elements.strongAgainst')}</div>
+                  <div className="elementChipRow">
+                    {matchup.strongAgainst.length ? matchup.strongAgainst.map((item) => (
+                      <span key={`strong-${item}`} className="elementChip">
+                        <span className="elementChipIcon">{ELEMENTS[item]?.icon ?? '•'}</span>
+                        <span>{t(`elements.${item}`, { defaultValue: item })}</span>
+                      </span>
+                    )) : <span className="uiHelp">{t('common.none')}</span>}
+                  </div>
+                </div>
+                <div className="elementChipGroup">
+                  <div className="uiHelp">{t('elements.resist')}</div>
+                  <div className="elementChipRow">
+                    {matchup.resist.length ? matchup.resist.map((item) => (
+                      <span key={`resist-${item}`} className="elementChip">
+                        <span className="elementChipIcon">{ELEMENTS[item]?.icon ?? '•'}</span>
+                        <span>{t(`elements.${item}`, { defaultValue: item })}</span>
+                      </span>
+                    )) : <span className="uiHelp">{t('common.none')}</span>}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
           <div>
             <div className="uiHelp">{t('cards.meta.race')}</div>
@@ -275,6 +448,39 @@ export function CardInspector(props: Props) {
       </details>
 
       <details className="uiAccordion" open>
+        <summary className="uiAccordionHeader">{t('ai.title')}</summary>
+        <div className="uiAccordionBody uiStack">
+          <Row gap={8} align="center" style={{ flexWrap: 'wrap' }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => runAi('name')}
+              disabled={aiLoading !== null}
+            >
+              {aiLoading === 'name' ? t('ai.working') : t('ai.generateName')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => runAi('desc')}
+              disabled={aiLoading !== null}
+            >
+              {aiLoading === 'desc' ? t('ai.working') : t('ai.generateDesc')}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => runAi('balance')}
+              disabled={aiLoading !== null}
+            >
+              {aiLoading === 'balance' ? t('ai.working') : t('ai.suggestBalance')}
+            </Button>
+          </Row>
+          {aiError ? <div className="uiHelp">{aiError}</div> : null}
+        </div>
+      </details>
+
+      <details className="uiAccordion" open>
         <summary className="uiAccordionHeader">{t('editor.inspector.media')}</summary>
         <div className="uiAccordionBody uiStack">
           <Row gap={8}>
@@ -334,6 +540,17 @@ export function CardInspector(props: Props) {
                     onChange={(e) => updateArtTransform({ scale: Number(e.target.value) || 1 })}
                   />
                 </div>
+                <div style={{ minWidth: 160 }}>
+                  <div className="uiHelp">{t('editor.rotation')}</div>
+                  <Input
+                    type="range"
+                    min={-180}
+                    max={180}
+                    step={1}
+                    value={artTransform.rotate}
+                    onChange={(e) => updateArtTransform({ rotate: Number(e.target.value) || 0 })}
+                  />
+                </div>
                 <div style={{ minWidth: 90 }}>
                   <div className="uiHelp">X</div>
                   <Input
@@ -358,6 +575,35 @@ export function CardInspector(props: Props) {
           ) : null}
         </div>
       </details>
+
+      <Dialog
+        open={confirmBalanceOpen && !!balanceSuggestion}
+        title={t('ai.confirmBalanceTitle')}
+        description={
+          balanceSuggestion
+            ? t('ai.confirmBalanceDesc', {
+                attack: balanceSuggestion.attack,
+                defense: balanceSuggestion.defense,
+                cost: balanceSuggestion.cost,
+              })
+            : undefined
+        }
+        confirmText={t('ai.confirm')}
+        cancelText={t('ai.cancel')}
+        tone="danger"
+        onConfirm={() => {
+          if (!balanceSuggestion) return;
+          props.onUpdateStat('attack', balanceSuggestion.attack);
+          props.onUpdateStat('defense', balanceSuggestion.defense);
+          props.onUpdateData('cost', balanceSuggestion.cost);
+          setConfirmBalanceOpen(false);
+          setBalanceSuggestion(null);
+        }}
+        onClose={() => {
+          setConfirmBalanceOpen(false);
+          setBalanceSuggestion(null);
+        }}
+      />
 
       <details className="uiAccordion">
         <summary className="uiAccordionHeader">{t('cards.advanced')}</summary>
@@ -443,7 +689,9 @@ function hasLocalizedValue(value: any) {
 
 function normalizeTemplateKey(value: any): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
   return 'classic';
 }
 
@@ -457,6 +705,12 @@ function normalizeRace(value: any) {
   const cleaned = String(value || '').toLowerCase().trim();
   if (!cleaned) return '';
   return cleaned as CardRace;
+}
+
+function normalizeElement(value: any) {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (!cleaned) return '';
+  return cleaned as ElementKey;
 }
 
 function normalizeTraits(value: any) {
@@ -498,6 +752,7 @@ function isReservedColumn(key: string) {
     'templateKey',
     'bgColor',
     'cost',
+    'element',
     'race',
     'traits',
     'tags',
@@ -536,10 +791,12 @@ function formatBytes(size: number) {
 
 function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   const scale = Number.isFinite(value?.scale) ? value!.scale : 1;
+  const rotate = Number.isFinite(value?.rotate) ? value!.rotate : 0;
   return {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
     scale: Math.min(2.5, Math.max(0.6, scale)),
+    rotate: Math.max(-180, Math.min(180, rotate)),
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }

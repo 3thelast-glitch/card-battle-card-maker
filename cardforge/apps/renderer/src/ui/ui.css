@@ -621,6 +621,8 @@
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.08);
   flex: 0 0 auto;
+  background-size: cover;
+  background-position: center;
 }
 
 .templatePickerMeta {
@@ -692,19 +694,21 @@
 
 .templateGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 }
 
 .templateCard {
   border: 1px solid var(--stroke);
   border-radius: var(--r-md);
   background: rgba(255, 255, 255, 0.04);
-  padding: 10px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
+  position: relative;
+  min-height: 210px;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
 
@@ -717,14 +721,18 @@
 .templateCard.isSelected {
   border-color: rgba(155, 77, 255, 0.5);
   background: rgba(155, 77, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(155, 77, 255, 0.5);
 }
 
 .templateCardThumb {
   width: 100%;
-  height: 120px;
+  aspect-ratio: 16 / 10;
   border-radius: var(--r-sm);
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.08);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
 }
 
 .templateCardMeta {
@@ -743,10 +751,59 @@
   color: var(--muted);
 }
 
+.templateCardCheck {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(155, 77, 255, 0.9);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
 .templateCardTags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.elementChips {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.elementChipGroup {
+  display: grid;
+  gap: 6px;
+}
+
+.elementChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.elementChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.elementChipIcon {
+  font-size: 12px;
+  line-height: 1;
 }
 
 .traitChips {
@@ -854,6 +911,14 @@
   background: rgba(56, 189, 248, 0.16);
 }
 
+.chip--holy {
+  background: rgba(245, 215, 110, 0.18);
+}
+
+.chip--shadow {
+  background: rgba(139, 92, 246, 0.16);
+}
+
 .traitBadge {
   width: 22px;
   height: 22px;
@@ -904,6 +969,120 @@
 .traitBadge--flying {
   background: rgba(56, 189, 248, 0.22);
 }
+
+.traitBadge--holy {
+  background: rgba(245, 215, 110, 0.22);
+}
+
+.traitBadge--shadow {
+  background: rgba(139, 92, 246, 0.22);
+}
+
+.traitSelector {
+  display: grid;
+  gap: 10px;
+}
+
+.traitOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.traitOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+}
+
+.traitOption.isActive {
+  border-color: rgba(155, 77, 255, 0.45);
+  background: rgba(155, 77, 255, 0.18);
+}
+
+.traitOption.isDerived {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.traitOptionIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.traitPreview {
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-md);
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 10px;
+}
+
+.traitPreviewStats {
+  display: flex;
+  gap: 12px;
+}
+
+.traitStat {
+  min-width: 72px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.22);
+  text-align: center;
+}
+
+.traitStatValue {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.traitStatLabel {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.traitPreviewList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.traitPreviewBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.traitPreviewIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
 .previewPanel {
   display: flex;
   flex-direction: column;
@@ -914,6 +1093,58 @@
   display: grid;
   place-items: center;
   padding: 8px;
+  min-height: 420px;
+  overflow: auto;
+}
+
+.bigPreviewWrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  min-height: 420px;
+}
+
+.bigPreviewCard {
+  width: 420px;
+  max-width: min(520px, 100%);
+}
+
+.bigPreviewTools {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.smallPreviewWrap {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.generatorInlinePreview {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: center;
+}
+
+.generatorInlinePreviewEmpty {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  opacity: 0.8;
+  text-align: center;
+  font-size: var(--small);
+  color: var(--muted);
 }
 
 .uiCollapse {

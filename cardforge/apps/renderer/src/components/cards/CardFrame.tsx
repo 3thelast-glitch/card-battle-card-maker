@@ -1,10 +1,11 @@
-import { useMemo, useState, type CSSProperties, type PointerEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RARITY_COLORS, Rarity } from '../../shared/cardRarityColors';
-import type { ArtTransform, CardArt, CardRace, CardTrait } from '../../../../../packages/core/src/index';
+import type { ArtTransform, CardArt, CardRace, CardTrait, ElementKey } from '../../../../../packages/core/src/index';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
 import { RaceIcon } from '../../ui/icons/raceIcons';
 import { TraitIcon, TRAIT_META } from '../../ui/icons/traitIcons';
+import { ELEMENTS, getMatchup } from '../../lib/elements';
 
 type Props = {
   rarity: Rarity;
@@ -16,6 +17,9 @@ type Props = {
   badgeText?: string;
   race?: CardRace;
   traits?: CardTrait[];
+  element?: ElementKey;
+  attack?: number;
+  defense?: number;
   posterWarning?: string;
   showControls?: boolean;
   width?: number;
@@ -58,6 +62,9 @@ export function CardFrame({
   badgeText,
   race,
   traits = [],
+  element,
+  attack,
+  defense,
   posterWarning,
   showControls,
   width = 280,
@@ -74,6 +81,7 @@ export function CardFrame({
   const isEpic = rarity === 'epic';
   const isLegendary = rarity === 'legendary';
   const [hovered, setHovered] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const template = CARD_TEMPLATES[templateKey] ?? CARD_TEMPLATES.classic;
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   const resolvedBg = bgColor ?? template.defaultBgColor ?? '#2b0d16';
@@ -95,6 +103,21 @@ export function CardFrame({
   const visibleTraits = trimmedTraits.slice(0, maxVisibleTraits);
   const extraTraitCount = Math.max(0, trimmedTraits.length - visibleTraits.length);
   const raceKey = race ? String(race).toLowerCase() : '';
+  const elementKey = element ? String(element).toLowerCase() : '';
+  const elementInfo = elementKey && ELEMENTS[elementKey as ElementKey];
+  const matchup = elementInfo ? getMatchup(elementKey as ElementKey) : { weakTo: [], strongAgainst: [], resist: [] };
+  const weakKey = matchup.weakTo[0];
+  const strongKey = matchup.strongAgainst[0];
+  const weakInfo = weakKey ? ELEMENTS[weakKey] : undefined;
+  const strongInfo = strongKey ? ELEMENTS[strongKey] : undefined;
+  const attackValue = normalizeStat(attack);
+  const defenseValue = normalizeStat(defense);
+  const statBorder = hexToRgba(tint, 0.55);
+  const statGlow = hexToRgba(tint, isLegendary ? 0.5 : isEpic ? 0.4 : 0.3);
+  const statStyle: CSSProperties = {
+    borderColor: statBorder,
+    boxShadow: `0 10px 18px rgba(0,0,0,.45), inset 0 1px 2px rgba(255,255,255,.18), 0 0 12px ${statGlow}`,
+  };
 
   const glow = useMemo(() => {
     if (!isRare && !isEpic && !isLegendary) return 'none';
@@ -131,6 +154,12 @@ export function CardFrame({
   } as CSSProperties;
 
   const controlsEnabled = showControls ? true : hovered;
+  const showVideo = art?.kind === 'video' && artInteractive && !videoFailed;
+  const showPoster = art?.kind === 'video' && !showVideo && art?.poster;
+
+  useEffect(() => {
+    setVideoFailed(false);
+  }, [art?.src, art?.poster]);
 
   const artRectStyle: CSSProperties = {
     left: template.artRect.left,
@@ -173,7 +202,9 @@ export function CardFrame({
       >
         <div
           className="cardArtInner"
-          style={{ transform: `translate(${artTransform.x}px, ${artTransform.y}px) scale(${artTransform.scale})` }}
+          style={{
+            transform: `translate(${artTransform.x}px, ${artTransform.y}px) scale(${artTransform.scale}) rotate(${artTransform.rotate}deg)`,
+          }}
         >
           {art?.kind === 'image' ? (
             <img
@@ -184,7 +215,7 @@ export function CardFrame({
               style={{ objectFit: artTransform.fit }}
             />
           ) : null}
-          {art?.kind === 'video' ? (
+          {showVideo ? (
             <video
               className="card-frame__media cardArtMedia"
               src={art.src}
@@ -194,8 +225,17 @@ export function CardFrame({
               loop
               autoPlay
               preload="metadata"
-              onError={() => console.warn('Video failed:', art.src)}
+              onError={() => setVideoFailed(true)}
               controls={controlsEnabled}
+              style={{ objectFit: artTransform.fit }}
+            />
+          ) : null}
+          {showPoster ? (
+            <img
+              className="card-frame__media cardArtMedia"
+              src={art!.poster!}
+              alt=""
+              draggable={false}
               style={{ objectFit: artTransform.fit }}
             />
           ) : null}
@@ -248,6 +288,52 @@ export function CardFrame({
             {resolvedDesc}
           </div>
         ) : null}
+        {elementInfo ? (
+          <div className="elementBadge" aria-label={t(elementInfo.labelKey)}>
+            <div
+              className="elementHex"
+              style={{
+                borderColor: elementInfo.color,
+                boxShadow: `0 0 12px ${elementInfo.color}55`,
+              }}
+              title={t(elementInfo.labelKey)}
+            >
+              <span>{elementInfo.icon}</span>
+            </div>
+            <div className="elementMiniRow">
+              {weakInfo ? (
+                <div className="elementMini elementMini--weak" title={t('elements.weakTo')}>
+                  <span className="elementMiniArrow">v</span>
+                  <span>{weakInfo.icon}</span>
+                </div>
+              ) : null}
+              {strongInfo ? (
+                <div className="elementMini elementMini--strong" title={t('elements.strongAgainst')}>
+                  <span className="elementMiniArrow">^</span>
+                  <span>{strongInfo.icon}</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+        {attackValue != null ? (
+          <div className="statBadge statBadge--atk" style={statStyle} title={t('stats.atk', { defaultValue: 'ATK' })}>
+            <span className="statIcon" aria-hidden="true">
+              <StatIcon kind="atk" />
+            </span>
+            <div className="statValue">{attackValue}</div>
+            <div className="statLabel">{t('stats.atk', { defaultValue: 'ATK' })}</div>
+          </div>
+        ) : null}
+        {defenseValue != null ? (
+          <div className="statBadge statBadge--def" style={statStyle} title={t('stats.def', { defaultValue: 'DEF' })}>
+            <span className="statIcon" aria-hidden="true">
+              <StatIcon kind="def" />
+            </span>
+            <div className="statValue">{defenseValue}</div>
+            <div className="statLabel">{t('stats.def', { defaultValue: 'DEF' })}</div>
+          </div>
+        ) : null}
         {posterWarning && art?.kind === 'video' && !art.poster ? (
           <div className="card-frame__warning">{posterWarning}</div>
         ) : null}
@@ -273,11 +359,36 @@ function resolveLocalized(value: Props['title'], language: 'en' | 'ar') {
   return value[language] ?? value.en ?? value.ar ?? '';
 }
 
+function normalizeStat(value?: number) {
+  if (!Number.isFinite(value)) return null;
+  return Math.max(0, Math.round(value as number));
+}
+
 function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   return {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
     scale: Number.isFinite(value?.scale) ? Math.min(3, Math.max(0.5, value!.scale)) : 1,
+    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }
+
+function StatIcon({ kind }: { kind: 'atk' | 'def' }) {
+  if (kind === 'def') {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 4.5l5 5-9.5 9.5H5v-5l9.5-9.5z" />
+      <path d="M12 7l5 5" />
+      <path d="M4 20h6" />
+    </svg>
+  );
+}
+

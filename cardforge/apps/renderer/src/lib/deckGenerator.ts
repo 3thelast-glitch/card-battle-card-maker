@@ -60,7 +60,7 @@ const DEFAULT_RANGES: Record<RarityKey, { attack: NumRange; defense: NumRange; c
 
 const DEFAULT_RACES: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
 
-const DEFAULT_TRAITS: CardTrait[] = ['fire', 'ice', 'swordsman', 'archer', 'tank', 'poison', 'flying'];
+const DEFAULT_TRAITS: CardTrait[] = ['fire', 'ice', 'swordsman', 'archer', 'mage', 'tank', 'poison', 'flying', 'holy', 'shadow'];
 
 export function createDefaultRangesConfig(): DeckGenRangesConfig {
   return {

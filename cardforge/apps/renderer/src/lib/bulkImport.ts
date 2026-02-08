@@ -80,6 +80,9 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
     const setName = getValue(normalized, ['set', 'setname', 'set_name']);
 
     const warnings: string[] = [];
+    if (String(artKind || '').toLowerCase().trim() === 'video' && !art) {
+      warnings.push('video-unsupported');
+    }
     if (art?.kind === 'video' && !art.poster) {
       warnings.push('poster-required');
     }
@@ -162,7 +165,9 @@ function normalizeRarity(value: any): Rarity {
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'classic' || cleaned === 'moon' || cleaned === 'sand') return cleaned as TemplateKey;
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
   return fallback;
 }
 
@@ -189,12 +194,20 @@ function buildArt(kindRaw: any, srcRaw: any, posterRaw: any): CardArt | undefine
   const src = String(srcRaw);
   const poster = posterRaw ? String(posterRaw) : undefined;
   if (kind === 'video') {
+    if (!isSupportedVideoSrc(src)) return undefined;
     return { kind: 'video', src, poster };
   }
   if (kind === 'image' || !kind) {
     return { kind: 'image', src };
   }
   return undefined;
+}
+
+function isSupportedVideoSrc(src: string) {
+  const lower = src.toLowerCase();
+  if (lower.startsWith('data:video/mp4') || lower.startsWith('data:video/webm')) return true;
+  if (lower.endsWith('.mp4') || lower.endsWith('.webm')) return true;
+  return false;
 }
 
 function slugify(value: string) {

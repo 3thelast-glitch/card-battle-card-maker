@@ -1,5 +1,13 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Blueprint, CardArt, DataRow, DataTable, ElementModel, Project } from '../../../../../packages/core/src/index';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
+import type {
+  ArtTransform,
+  Blueprint,
+  CardArt,
+  DataRow,
+  DataTable,
+  ElementModel,
+  Project,
+} from '../../../../../packages/core/src/index';
 import { createId, resolvePath } from '../../../../../packages/core/src/index';
 import { getParentPath } from '../../../../../packages/storage/src/index';
 import { useAppStore } from '../../state/appStore';
@@ -7,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
 import { parseCsvFile, parseXlsxFile, mapRowsToCards } from '../../lib/bulkImport';
 import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
+import { generatePoster, getVideoMetadata } from '../../lib/videoUtils';
 import {
   copyImageToProjectAssets,
   fileUrlToPath,
@@ -24,9 +33,10 @@ import type { Rarity } from '../../lib/balanceRules';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import { AppShell } from '../../ui/layout/AppShell';
 import { CardList, filterCards, type CardFilters } from '../cards/CardList';
-import { CardPreviewPanel } from '../preview/CardPreviewPanel';
 import { CardInspector } from '../inspector/CardInspector';
 import { Dialog } from '../../ui/Dialog';
+import { CardFrame } from '../../components/cards/CardFrame';
+import { EditorCanvas } from '../editor/EditorCanvas';
 
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
 const ABILITY_OPTIONS: AbilityKey[] = [
@@ -70,6 +80,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   } = useAppStore();
 
   const [filters, setFilters] = useState<CardFilters>({ query: '', rarity: '', template: '', tag: '' });
+  const [selectedId, setSelectedId] = useState<string | null>(previewRowId ?? null);
   const [defaultTemplate, setDefaultTemplate] = useState<TemplateKey>('classic');
   const [mergeById, setMergeById] = useState(false);
   const [hasLanguageColumns, setHasLanguageColumns] = useState(true);
@@ -83,12 +94,25 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [defaultAbility, setDefaultAbility] = useState<AbilityKey>('none');
   const [showVideoControls, setShowVideoControls] = useState(false);
   const [keepVideoAudio, setKeepVideoAudio] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'preview' | 'edit'>('preview');
+  const [editorSelectedIds, setEditorSelectedIds] = useState<string[]>([]);
+  const [editorZoom, setEditorZoom] = useState(1);
+  const [editorShowGrid, setEditorShowGrid] = useState(false);
+  const [editorSnapToGrid, setEditorSnapToGrid] = useState(true);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [copySummary, setCopySummary] = useState<CopySummary | null>(null);
+  const [lastGeneratedId, setLastGeneratedId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
+  const artDragRef = useRef<{
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+    pointerId: number;
+  } | null>(null);
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   const table = project.dataTables.find((tbl) => tbl.id === activeTableId) ?? project.dataTables[0];
@@ -104,22 +128,31 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const imageBinding = getImageBindingDefaults(table?.imageBinding);
   const bindingElements: ElementModel[] =
     blueprint?.elements.filter((el) => el.type === 'text' || el.type === 'image') ?? [];
+  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
 
   const tagOptions = useMemo(() => collectTags(rows), [rows]);
   const templateOptions = useMemo(() => collectTemplates(rows), [rows]);
   const filteredRows = useMemo(() => filterCards(rows, filters, language), [rows, filters, language]);
-  const selectedRow = rows.find((row) => row.id === previewRowId) ?? rows[0];
+  const selectedRow = useMemo(
+    () => filteredRows.find((row) => row.id === selectedId) ?? null,
+    [filteredRows, selectedId],
+  );
   const pendingRow = pendingDeleteId ? rows.find((row) => row.id === pendingDeleteId) : undefined;
+  const generatorRow = lastGeneratedId ? rows.find((row) => row.id === lastGeneratedId) : undefined;
 
   useEffect(() => {
-    if (!rows.length) {
-      if (previewRowId) setPreviewRowId(undefined);
+    if (!filteredRows.length) {
+      if (selectedId) setSelectedId(null);
       return;
     }
-    if (!previewRowId || !rows.find((row) => row.id === previewRowId)) {
-      setPreviewRowId(rows[0].id);
+    if (!selectedId || !filteredRows.some((row) => row.id === selectedId)) {
+      setSelectedId(filteredRows[0].id);
     }
-  }, [rows, previewRowId, setPreviewRowId]);
+  }, [filteredRows, selectedId]);
+
+  useEffect(() => {
+    setPreviewRowId(selectedId ?? undefined);
+  }, [selectedId, setPreviewRowId]);
 
   const previewArt = useMemo(() => {
     if (!selectedRow) return undefined;
@@ -133,12 +166,51 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     return { kind: 'image', src: resolved } as CardArt;
   }, [selectedRow, imageBinding]);
 
-  const previewRow = selectedRow && previewArt && selectedRow.art !== previewArt
-    ? { ...selectedRow, art: previewArt }
-    : selectedRow;
   const resolvedArt = resolveRowArt(selectedRow, previewArt);
 
   const posterWarning = previewArt?.kind === 'video' && !previewArt.poster ? t('data.posterRequired') : undefined;
+  const previewData = selectedRow?.data ?? {};
+  const previewTemplateKey = normalizeTemplateKey(
+    previewData.templateKey ?? previewData.template ?? previewData.template_key,
+    defaultTemplate,
+  );
+  const previewTitle = selectedRow ? getRowTitle(previewData, language) || selectedRow.id : '';
+  const previewDesc =
+    previewData.desc ?? previewData.ability ?? previewData.ability_en ?? previewData.ability_ar ?? '';
+  const previewTraits = normalizeTraits(previewData.traits ?? previewData.trait);
+  const previewRarity = normalizeRarity(previewData.rarity);
+  const previewAttack = normalizeNumber(previewData.attack ?? previewData.stats?.attack);
+  const previewDefense = normalizeNumber(previewData.defense ?? previewData.stats?.defense);
+  const previewElement = previewData.element;
+  const previewRace = previewData.race;
+  const previewBgColor = previewData.bgColor;
+  const previewTemplate = CARD_TEMPLATES[previewTemplateKey] ?? CARD_TEMPLATES[defaultTemplate];
+  const smallPreviewWidth = 240;
+  const smallPreviewHeight = 320;
+  const editorPreviewData = useMemo(() => {
+    if (!selectedRow || !table) return undefined;
+    const data = selectedRow.data
+      ? { ...selectedRow.data, ...(selectedRow.art ? { art: selectedRow.art } : {}), __lang: language }
+      : undefined;
+    if (!data) return undefined;
+    if (!imageBinding.column) return data;
+    const resolved = resolveImageReferenceSync(resolvePath(data, imageBinding.column), imageBinding);
+    if (!resolved) return data;
+    return setPathValue(data, imageBinding.column, resolved);
+  }, [selectedRow, table, imageBinding, language]);
+  const generatorData = generatorRow?.data ?? {};
+  const generatorTemplateKey = normalizeTemplateKey(
+    generatorData.templateKey ?? generatorData.template ?? generatorData.template_key,
+    defaultTemplate,
+  );
+  const generatorTitle = generatorRow ? getRowTitle(generatorData ?? {}, language) || generatorRow.id : '';
+  const generatorDesc =
+    generatorData.desc ?? generatorData.ability ?? generatorData.ability_en ?? generatorData.ability_ar ?? '';
+  const generatorTraits = normalizeTraits(generatorData.traits ?? generatorData.trait);
+  const generatorRarity = normalizeRarity(generatorData.rarity);
+  const generatorAttack = normalizeNumber(generatorData.attack ?? generatorData.stats?.attack);
+  const generatorDefense = normalizeNumber(generatorData.defense ?? generatorData.stats?.defense);
+  const generatorArt = generatorRow ? resolveRowArt(generatorRow, undefined) : undefined;
 
   const updateTable = (nextTable: DataTable) => {
     const exists = project.dataTables.some((tbl) => tbl.id === nextTable.id);
@@ -197,6 +269,43 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     updateRows(nextRows);
   };
 
+  const handleArtPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!selectedRow || !resolvedArt) return;
+    const current = normalizeArtTransform(resolvedArt.transform);
+    artDragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      baseX: current.x,
+      baseY: current.y,
+      pointerId: event.pointerId,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleArtPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!selectedRow || !resolvedArt) return;
+    const state = artDragRef.current;
+    if (!state) return;
+    const next = clampArtTransform(
+      {
+        ...normalizeArtTransform(resolvedArt.transform),
+        x: state.baseX + (event.clientX - state.startX),
+        y: state.baseY + (event.clientY - state.startY),
+      },
+      previewTemplate?.artRect,
+      smallPreviewWidth,
+      smallPreviewHeight,
+    );
+    updateRowArt(selectedRow.id, { ...resolvedArt, transform: next });
+  };
+
+  const handleArtPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const state = artDragRef.current;
+    if (!state) return;
+    artDragRef.current = null;
+    event.currentTarget.releasePointerCapture?.(state.pointerId);
+  };
+
   const addRow = () => {
     const nextRow: DataRow = {
       id: createId('row'),
@@ -209,15 +318,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       ? { ...table, rows: [...table.rows, nextRow] }
       : { id: createId('table'), name: t('data.mainTable'), columns: [], rows: [nextRow] };
     updateTable(nextTable);
-    setPreviewRowId(nextRow.id);
+    setSelectedId(nextRow.id);
   };
 
   const removeRow = (rowId: string) => {
     if (!table) return;
     const nextRows = table.rows.filter((row) => row.id !== rowId);
     updateRows(nextRows);
-    if (previewRowId === rowId && nextRows.length) {
-      setPreviewRowId(nextRows[0].id);
+    if (selectedId === rowId && nextRows.length) {
+      setSelectedId(nextRows[0].id);
     }
   };
 
@@ -252,7 +361,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       data: { ...(source.data ?? {}), id: nextId },
     };
     updateRows([...table.rows, nextRow]);
-    setPreviewRowId(nextId);
+    setSelectedId(nextId);
   };
 
   const updateBinding = (elementId: string, column: string) => {
@@ -264,6 +373,16 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const nextProject = {
       ...project,
       blueprints: project.blueprints.map((bp) => (bp.id === blueprint.id ? nextBlueprint : bp)),
+    };
+    onChange(nextProject);
+  };
+
+  const updateBlueprintElements = (nextElements: ElementModel[]) => {
+    if (!blueprint) return;
+    const normalized = normalizeZIndex(nextElements);
+    const nextProject = {
+      ...project,
+      blueprints: project.blueprints.map((bp) => (bp.id === blueprint.id ? { ...bp, elements: normalized } : bp)),
     };
     onChange(nextProject);
   };
@@ -383,115 +502,55 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     if (!selectedRow) return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'video/*';
-    input.onchange = () => {
+    input.accept = 'video/mp4,video/webm';
+    input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
       const rowId = selectedRow.id;
-      const filePath = (file as any).path as string | undefined;
-      const videoApi = window.cardsmith?.video;
-      const projectPath = project.meta.filePath;
-      const requestId = createId('video');
-      const isLarge = file.size > 3 * 1024 * 1024;
-
-      const fallbackToLocal = () => {
-        const src = URL.createObjectURL(file);
-        setVideoJob({ title: t('data.videoProcessing') });
-        captureVideoPosterFromUrl(src)
-          .then((poster) => updateRowArt(rowId, { kind: 'video', src, poster }))
-          .catch(() => updateRowArt(rowId, { kind: 'video', src }))
-          .finally(() => setVideoJob(null));
-      };
-
-      if (!filePath || !videoApi) {
-        fallbackToLocal();
+      const allowed = ['video/mp4', 'video/webm'];
+      if (!allowed.includes(file.type)) {
+        alert(t('data.videoUnsupportedCodec'));
         return;
       }
-
-      let unsubscribe: (() => void) | undefined;
-      if (videoApi.onTranscodeProgress) {
-        unsubscribe = videoApi.onTranscodeProgress((payload) => {
-          if (payload?.requestId !== requestId) return;
-          setVideoJob((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  pct: typeof payload.pct === 'number' ? Math.max(0, Math.min(100, payload.pct)) : prev.pct,
-                  detail: payload.time ? `${payload.time}` : prev.detail,
-                }
-              : prev,
-          );
-        });
+      if (file.size > 20 * 1024 * 1024) {
+        alert(t('data.videoSizeWarning'));
       }
-
-      (async () => {
-        try {
-          setVideoJob({ title: t('data.videoProcessing') });
-          const probe = await videoApi.probe(filePath);
-          if (!probe.ok) {
-            setVideoJob(null);
-            if (probe.error === 'FFMPEG_UNAVAILABLE') {
-              alert(t('data.videoTranscodeUnavailable'));
-              fallbackToLocal();
-              return;
-            }
-            alert(probe.error ?? t('data.videoProbeFailed'));
-            return;
-          }
-          if (isLarge) {
-            alert(t('data.videoLargeWarning'));
-          }
-
-          const container = String(probe.container || '').toLowerCase();
-          const videoCodec = String(probe.videoCodec || '').toLowerCase();
-          const audioCodec = String(probe.audioCodec || '').toLowerCase();
-          const supportsContainer = container.includes('mp4') || container.includes('mov');
-          const supportsVideo = videoCodec === 'h264';
-          const supportsAudio = !keepVideoAudio || !probe.hasAudio || audioCodec === 'aac';
-          const needsTranscode = isLarge || !supportsContainer || !supportsVideo || !supportsAudio;
-
-          setVideoJob({
-            title: needsTranscode ? t('data.videoCompressing') : t('data.videoProcessing'),
-            pct: 0,
-            requestId,
-          });
-
-          const transcode = await videoApi.transcode(filePath, {
-            projectPath,
-            keepAudio: keepVideoAudio,
-            requestId,
-            assetId: rowId,
-            copyOnly: !needsTranscode,
-          });
-
-          if (!transcode.ok) {
-            setVideoJob(null);
-            if (transcode.error === 'FFMPEG_UNAVAILABLE') {
-              alert(t('data.videoTranscodeUnavailable'));
-              fallbackToLocal();
-              return;
-            }
-            alert(transcode.error ?? t('data.videoTranscodeFailed'));
-            return;
-          }
-
-          const outPath = transcode.outPath;
-          const reprobe = await videoApi.probe(outPath);
-          const meta = reprobe.ok ? stripProbeOk(reprobe) : stripProbeOk(probe);
-
-          setVideoJob({ title: t('data.videoGeneratingPoster') });
-          const posterRes = await videoApi.poster(outPath, { projectPath, assetId: rowId });
-          const posterUrl = posterRes.ok ? toFileUrl(posterRes.posterPath) : undefined;
-          const srcUrl = toFileUrl(outPath);
-          updateRowArt(rowId, { kind: 'video', src: srcUrl, poster: posterUrl, meta });
-          setVideoJob(null);
-        } catch (err: any) {
-          setVideoJob(null);
-          alert(err?.message ?? t('data.videoPosterFailed'));
-        } finally {
-          if (unsubscribe) unsubscribe();
+      try {
+        const meta = await getVideoMetadata(file);
+        if (!meta.canPlay) {
+          alert(t('data.videoUnsupportedCodec'));
+          return;
         }
-      })();
+        if (meta.duration > 10) {
+          alert(t('data.videoDurationWarning'));
+        }
+        const src = URL.createObjectURL(file);
+        let posterUrl: string | undefined;
+        try {
+          setVideoJob({ title: t('data.videoGeneratingPoster') });
+          const posterBlob = await generatePoster(file);
+          posterUrl = URL.createObjectURL(posterBlob);
+        } catch {
+          posterUrl = undefined;
+        } finally {
+          setVideoJob(null);
+        }
+        updateRowArt(rowId, {
+          kind: 'video',
+          src,
+          poster: posterUrl,
+          meta: {
+            duration: meta.duration,
+            width: meta.width,
+            height: meta.height,
+            container: file.type,
+            size: file.size,
+          },
+        });
+      } catch {
+        setVideoJob(null);
+        alert(t('data.videoUnsupportedCodec'));
+      }
     };
     input.click();
   };
@@ -524,6 +583,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     let created = 0;
     let updated = 0;
     let warnings = 0;
+    let firstCreatedId: string | undefined;
 
     cards.forEach((card) => {
       warnings += card.warnings?.length ?? 0;
@@ -543,6 +603,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       }
 
       const nextId = ensureUniqueRowId(card.id, existingIds);
+      if (!firstCreatedId) firstCreatedId = nextId;
       nextRows.push({
         id: nextId,
         data: { ...card.data, id: nextId },
@@ -559,6 +620,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       : { id: createId('table'), name: t('data.mainTable'), columns: collectColumns(nextRows.map((row) => row.data ?? {})), rows: nextRows };
     updateTable(nextTable);
     setImportSummary({ created, updated, errors: errors.length, warnings });
+    if (firstCreatedId) {
+      setSelectedId(firstCreatedId);
+    }
     if (errors.length) {
       alert(errors.join('\n'));
     }
@@ -593,8 +657,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
     const existingIds = new Set(rows.map((row) => row.id));
     const nextRows = [...rows];
+    let firstGeneratedId: string | undefined;
     result.cards.forEach((card) => {
       const nextId = ensureUniqueRowId(card.id, existingIds);
+      if (!firstGeneratedId) firstGeneratedId = nextId;
       nextRows.push({
         id: nextId,
         data: { ...card.data, id: nextId },
@@ -610,9 +676,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     updateTable(nextTable);
     setDeckAutoBalanced(result.autoBalanced);
     setImportSummary(null);
-    if (result.cards.length) {
-      setPreviewRowId(nextRows[nextRows.length - 1]?.id);
+    if (firstGeneratedId) {
+      setSelectedId(firstGeneratedId);
     }
+    setLastGeneratedId(firstGeneratedId ?? null);
   };
 
   const total = dist.common + dist.rare + dist.epic + dist.legendary;
@@ -784,7 +851,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           cards={rows}
           selectedId={selectedRow?.id}
           onSelect={(id) => {
-            setPreviewRowId(id);
+            setSelectedId(id);
             setLeftDrawerOpen(false);
           }}
           filters={filters}
@@ -1103,6 +1170,27 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   </div>
                 </div>
               </details>
+              {generatorRow ? (
+                <div className="generatorInlinePreview">
+                  <CardFrame
+                    rarity={generatorRarity}
+                    art={generatorArt}
+                    templateKey={generatorTemplateKey}
+                    title={generatorTitle}
+                    description={generatorDesc}
+                    race={generatorData.race}
+                    traits={generatorTraits}
+                    element={generatorData.element}
+                    attack={generatorAttack}
+                    defense={generatorDefense}
+                    bgColor={generatorData.bgColor}
+                    width={260}
+                    height={360}
+                  />
+                </div>
+              ) : (
+                <div className="generatorInlinePreviewEmpty">{t('cards.generatorPreviewEmpty')}</div>
+              )}
             </div>
           </ToolSection>
 
@@ -1176,30 +1264,80 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           <div className="uiTitle">{t('cards.preview')}</div>
           <div className="uiSub">{selectedRow ? getRowTitle(selectedRow.data ?? {}, language) : t('cards.empty')}</div>
         </div>
-        <Row gap={8}>
-          <Button size="sm" variant="outline" onClick={() => selectedRow && duplicateRow(selectedRow.id)} disabled={!selectedRow}>
-            {t('cards.duplicate')}
-          </Button>
-          <Button size="sm" variant="danger" onClick={() => requestDelete(selectedRow?.id)} disabled={!selectedRow}>
-            {t('common.delete')}
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setScreen('editor')} disabled={!selectedRow}>
-            {t('cards.openEditor')}
-          </Button>
-        </Row>
+        <div className="uiRow bigPreviewTools">
+          <div className="uiRow" style={{ gap: 6 }}>
+            <Button
+              size="sm"
+              variant={previewMode === 'preview' ? 'primary' : 'outline'}
+              onClick={() => setPreviewMode('preview')}
+              disabled={!selectedRow}
+            >
+              {t('data.preview')}
+            </Button>
+            <Button
+              size="sm"
+              variant={previewMode === 'edit' ? 'primary' : 'outline'}
+              onClick={() => setPreviewMode('edit')}
+              disabled={!selectedRow || !blueprint}
+            >
+              {t('data.edit')}
+            </Button>
+          </div>
+          <div className="uiRow" style={{ gap: 8 }}>
+            <Button size="sm" variant="outline" onClick={() => selectedRow && duplicateRow(selectedRow.id)} disabled={!selectedRow}>
+              {t('cards.duplicate')}
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => requestDelete(selectedRow?.id)} disabled={!selectedRow}>
+              {t('common.delete')}
+            </Button>
+          </div>
+        </div>
       </div>
       <div className="panelScroll uiPanelBody">
-        <CardPreviewPanel
-          row={previewRow}
-          defaultTemplate={defaultTemplate}
-          posterWarning={posterWarning}
-          showControls={showVideoControls}
-          onToggleControls={setShowVideoControls}
-          onUpdateArtTransform={(next) => {
-            if (!selectedRow || !resolvedArt) return;
-            updateRowArt(selectedRow.id, { ...resolvedArt, transform: next });
-          }}
-        />
+        {!selectedRow ? (
+          <div className="empty">{t('data.selectCardHint')}</div>
+        ) : previewMode === 'preview' ? (
+          <div className="bigPreviewWrap">
+            <div className="bigPreviewCard">
+            <CardFrame
+              rarity={previewRarity}
+              art={resolvedArt}
+              templateKey={previewTemplateKey}
+              title={previewTitle}
+              description={previewDesc}
+                race={previewRace}
+                traits={previewTraits}
+                element={previewElement}
+                attack={previewAttack}
+                defense={previewDefense}
+                bgColor={previewBgColor}
+                showControls={showVideoControls}
+                posterWarning={posterWarning}
+                width={420}
+                height={540}
+              />
+            </div>
+          </div>
+        ) : blueprint ? (
+          <div className="bigPreviewWrap">
+            <EditorCanvas
+              blueprint={blueprint}
+              elements={blueprint.elements ?? []}
+              selectedIds={editorSelectedIds}
+              gridSize={10}
+              showGrid={editorShowGrid}
+              snapToGrid={editorSnapToGrid}
+              zoom={editorZoom}
+              projectRoot={projectRoot}
+              previewData={editorPreviewData}
+              onSelectIds={setEditorSelectedIds}
+              onChange={updateBlueprintElements}
+              onZoomChange={setEditorZoom}
+            />
+          </div>
+        ) : (
+          <div className="empty">{t('data.selectCardHint')}</div>
+        )}
       </div>
     </div>
   );
@@ -1216,24 +1354,54 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         </Button>
       </div>
       <div className="panelScroll uiPanelBody">
-        <CardInspector
-          row={selectedRow}
-          project={project}
-          columns={columns}
-          language={language}
-          showVideoControls={showVideoControls}
-          onToggleVideoControls={setShowVideoControls}
-          keepVideoAudio={keepVideoAudio}
-          onToggleKeepVideoAudio={setKeepVideoAudio}
-          onUpdateData={(path, value) => selectedRow && updateRowData(selectedRow.id, path, value)}
-          onUpdateStat={(key, value) => selectedRow && updateRowStats(selectedRow.id, key, value)}
-          onUpdateRow={(patch) => selectedRow && updateRowMeta(selectedRow.id, patch)}
-          onPickImage={pickArtImage}
-          onPickVideo={pickArtVideo}
-          onRegeneratePoster={regeneratePoster}
-          onDuplicate={() => selectedRow && duplicateRow(selectedRow.id)}
-          onDelete={() => requestDelete(selectedRow?.id)}
-        />
+        {!selectedRow ? (
+          <div className="empty">{t('data.selectCardHint')}</div>
+        ) : (
+          <div className="uiStack" style={{ gap: 12 }}>
+            <div className="smallPreviewWrap">
+              <CardFrame
+                rarity={previewRarity}
+                art={resolvedArt}
+                templateKey={previewTemplateKey}
+                title={previewTitle}
+                description={previewDesc}
+                race={previewRace}
+                traits={previewTraits}
+                element={previewElement}
+                attack={previewAttack}
+                defense={previewDefense}
+                bgColor={previewBgColor}
+                showControls={showVideoControls}
+                posterWarning={posterWarning}
+              width={smallPreviewWidth}
+              height={smallPreviewHeight}
+              artInteractive
+              onArtPointerDown={handleArtPointerDown}
+              onArtPointerMove={handleArtPointerMove}
+              onArtPointerUp={handleArtPointerUp}
+              onArtPointerLeave={handleArtPointerUp}
+            />
+            </div>
+            <CardInspector
+              row={selectedRow}
+              project={project}
+              columns={columns}
+              language={language}
+              showVideoControls={showVideoControls}
+              onToggleVideoControls={setShowVideoControls}
+              keepVideoAudio={keepVideoAudio}
+              onToggleKeepVideoAudio={setKeepVideoAudio}
+              onUpdateData={(path, value) => selectedRow && updateRowData(selectedRow.id, path, value)}
+              onUpdateStat={(key, value) => selectedRow && updateRowStats(selectedRow.id, key, value)}
+              onUpdateRow={(patch) => selectedRow && updateRowMeta(selectedRow.id, patch)}
+              onPickImage={pickArtImage}
+              onPickVideo={pickArtVideo}
+              onRegeneratePoster={regeneratePoster}
+              onDuplicate={() => selectedRow && duplicateRow(selectedRow.id)}
+              onDelete={() => requestDelete(selectedRow?.id)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1377,6 +1545,73 @@ function resolveRowArt(row?: DataRow, fallback?: CardArt) {
   if (isCardArt(dataArt)) return dataArt;
   if (fallback && isCardArt(fallback)) return fallback;
   return undefined;
+}
+
+function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+    return cleaned as TemplateKey;
+  }
+  return fallback;
+}
+
+function normalizeRarity(value: any): Rarity {
+  const cleaned = String(value || '').toLowerCase().trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
+  return 'common';
+}
+
+function normalizeTraits(value: any) {
+  if (Array.isArray(value)) {
+    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  return raw
+    .split(/[,|]/g)
+    .map((trait) => trait.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeNumber(value: any) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeArtTransform(value?: ArtTransform): ArtTransform {
+  return {
+    x: Number.isFinite(value?.x) ? value!.x : 0,
+    y: Number.isFinite(value?.y) ? value!.y : 0,
+    scale: Number.isFinite(value?.scale) ? Math.min(2.5, Math.max(0.6, value!.scale)) : 1,
+    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
+    fit: value?.fit === 'contain' ? 'contain' : 'cover',
+  };
+}
+
+function clampArtTransform(
+  value: ArtTransform,
+  artRect: { left: number; right: number; top: number; bottom: number } | undefined,
+  frameWidth: number,
+  frameHeight: number,
+) {
+  const scale = Math.min(2.5, Math.max(0.6, value.scale || 1));
+  if (!artRect) {
+    return { ...value, scale };
+  }
+  const artWidth = Math.max(1, frameWidth - artRect.left - artRect.right);
+  const artHeight = Math.max(1, frameHeight - artRect.top - artRect.bottom);
+  const maxOffsetX = Math.max(0, (artWidth * scale - artWidth) / 2);
+  const maxOffsetY = Math.max(0, (artHeight * scale - artHeight) / 2);
+  return {
+    ...value,
+    scale,
+    x: Math.min(maxOffsetX, Math.max(-maxOffsetX, value.x || 0)),
+    y: Math.min(maxOffsetY, Math.max(-maxOffsetY, value.y || 0)),
+  };
+}
+
+function normalizeZIndex(elements: ElementModel[]) {
+  return elements.map((el, idx) => ({ ...el, zIndex: idx + 1 }));
 }
 
 function ensureUniqueRowId(baseId: string, existing: Set<string>) {
