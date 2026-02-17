@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { DataRow, Project } from '../../../../packages/core/src/index';
 import { useTranslation } from 'react-i18next';
 import { Row, Input, Select, Button, Badge, Divider } from '../components/ui';
+import { Zap, Sword, Shield, BarChart3 } from 'lucide-react';
 import { useAppStore } from '../state/appStore';
 import { simulate, type SimResult } from '../lib/simulator';
 import type { Rarity } from '../lib/balanceRules';
@@ -51,6 +52,8 @@ export function SimulatorScreen(props: { project: Project }) {
   const deckB = useMemo(() => buildDeck(rows, filtersB), [rows, filtersB]);
 
   const canRun = runs > 0 && deckA.length > 0 && deckB.length > 0;
+  const previewDeckA = deckA.slice(0, 4);
+  const previewDeckB = deckB.slice(0, 4);
 
   const handleRun = () => {
     const safeRuns = Math.max(1, Math.floor(Number(runs) || 1));
@@ -83,8 +86,8 @@ export function SimulatorScreen(props: { project: Project }) {
 
   if (!dataTable) {
     return (
-      <div className="screen uiApp">
-        <div className="uiPanel simPanel">
+      <div className="screen uiApp min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="uiPanel simPanel bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-slate-200/50">
           <div className="uiPanelHeader">
             <div>
               <div className="uiTitle">{t('simulator.title')}</div>
@@ -101,9 +104,9 @@ export function SimulatorScreen(props: { project: Project }) {
   }
 
   return (
-    <div className="screen uiApp">
-      <div className="simShell">
-        <aside className="uiPanel simPanel">
+    <div className="screen uiApp min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="simShell grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <aside className="uiPanel simPanel bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-slate-200/50">
           <div className="uiPanelHeader">
             <div>
               <div className="uiTitle">{t('simulator.filters')}</div>
@@ -112,10 +115,15 @@ export function SimulatorScreen(props: { project: Project }) {
           </div>
           <div className="uiPanelBody simPanelBody">
             <details className="uiCollapse" open>
-              <summary>
-                <div style={{ fontWeight: 600 }}>{t('simulator.deckA')}</div>
+              <summary className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2 font-semibold">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                  <span>{t('simulator.deckA')}</span>
+                </div>
               </summary>
-              <div className="uiCollapseBody">
+              <div className="uiCollapseBody mt-3">
                 <DeckFilterControls
                   filters={filtersA}
                   onChange={setFiltersA}
@@ -127,13 +135,33 @@ export function SimulatorScreen(props: { project: Project }) {
                   rarityLabels={rarityLabels}
                   count={deckA.length}
                 />
+                {previewDeckA.length ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {previewDeckA.map((card, index) => (
+                      <div
+                        key={toKey(card.id, `deck-a-${index}`)}
+                        className="rounded-xl border border-slate-200/60 bg-white/80 p-3 shadow-sm"
+                      >
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{card.rarity}</div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          ATK {card.attack} / DEF {card.defense}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </details>
             <details className="uiCollapse" open>
-              <summary>
-                <div style={{ fontWeight: 600 }}>{t('simulator.deckB')}</div>
+              <summary className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-2 font-semibold">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                  <span>{t('simulator.deckB')}</span>
+                </div>
               </summary>
-              <div className="uiCollapseBody">
+              <div className="uiCollapseBody mt-3">
                 <DeckFilterControls
                   filters={filtersB}
                   onChange={setFiltersB}
@@ -145,20 +173,45 @@ export function SimulatorScreen(props: { project: Project }) {
                   rarityLabels={rarityLabels}
                   count={deckB.length}
                 />
+                {previewDeckB.length ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {previewDeckB.map((card, index) => (
+                      <div
+                        key={toKey(card.id, `deck-b-${index}`)}
+                        className="rounded-xl border border-slate-200/60 bg-white/80 p-3 shadow-sm"
+                      >
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{card.rarity}</div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          ATK {card.attack} / DEF {card.defense}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </details>
           </div>
         </aside>
 
-        <main className="uiPanel simPanel">
+        <main className="uiPanel simPanel bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-slate-200/50">
           <div className="uiPanelHeader">
-            <div>
-              <div className="uiTitle">{t('simulator.results')}</div>
-              <div className="uiSub">{t('simulator.readyHint')}</div>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-slate-600" />
+              <div>
+                <div className="uiTitle">{t('simulator.results')}</div>
+                <div className="uiSub">{t('simulator.readyHint')}</div>
+              </div>
             </div>
             <Row gap={8}>
-              <Button onClick={handleRun} disabled={!canRun || isRunning}>
-                {t('simulator.run')}
+              <Button
+                onClick={handleRun}
+                disabled={!canRun || isRunning}
+                className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white transform hover:-translate-y-1 transition-all shadow-lg"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Sword className="h-4 w-4" />
+                  {t('simulator.run')}
+                </span>
               </Button>
               <Button variant="outline" onClick={handleStop} disabled={!isRunning}>
                 {t('simulator.stop')}
@@ -193,7 +246,8 @@ export function SimulatorScreen(props: { project: Project }) {
               )}
               <Divider />
               <details className="uiCollapse">
-                <summary>
+                <summary className="flex items-center gap-2 cursor-pointer">
+                  <Shield className="h-4 w-4 text-slate-500" />
                   <div style={{ fontWeight: 600 }}>{t('simulator.advanced')}</div>
                 </summary>
                 <div className="uiCollapseBody">
@@ -204,11 +258,14 @@ export function SimulatorScreen(props: { project: Project }) {
           </div>
         </main>
 
-        <aside className="uiPanel simPanel">
+        <aside className="uiPanel simPanel bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-slate-200/50">
           <div className="uiPanelHeader">
-            <div>
-              <div className="uiTitle">{t('simulator.details')}</div>
-              <div className="uiSub">{t('simulator.title')}</div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-slate-600" />
+              <div>
+                <div className="uiTitle">{t('simulator.details')}</div>
+                <div className="uiSub">{t('simulator.title')}</div>
+              </div>
             </div>
           </div>
           <div className="uiPanelBody simPanelBody">

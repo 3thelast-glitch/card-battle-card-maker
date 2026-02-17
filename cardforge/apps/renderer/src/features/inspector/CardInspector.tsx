@@ -9,6 +9,7 @@ import { TemplatePicker } from '../templates/TemplatePicker';
 import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
 import { ELEMENTS, getMatchup } from '../../lib/elements';
 import { Dialog } from '../../ui/Dialog';
+import { generateGeminiText } from '../../services/gemini.service';
 
 type Props = {
   row?: DataRow;
@@ -136,10 +137,6 @@ export function CardInspector(props: Props) {
   };
 
   const runAi = async (mode: 'name' | 'desc' | 'balance') => {
-    if (!window.ai?.generate) {
-      setAiError(t('ai.errorMissingKey'));
-      return;
-    }
     setAiLoading(mode);
     setAiError(null);
     try {
@@ -153,12 +150,7 @@ export function CardInspector(props: Props) {
         prompt = `Suggest balanced stats for a trading card using the context below. Return JSON only with keys attack, defense, cost (integers).\n${context}`;
       }
 
-      const result = await window.ai.generate({ prompt });
-      if (!result?.ok) {
-        setAiError(resolveAiError(result?.error));
-        return;
-      }
-      const text = String(result.text ?? '').trim();
+      const text = (await generateGeminiText(prompt)).trim();
       if (!text) {
         setAiError(t('ai.errorFailed'));
         return;

@@ -26,14 +26,15 @@ if (!apiKey && import.meta.env.DEV) {
   console.warn('⚠️ VITE_GEMINI_API_KEY is not set - gemini.service.ts:26');
 }
 
-// ✅ استخدم v1 مع الاسم الكامل للموديل
-const callGeminiAPI = async (modelFullName: string, prompt: string): Promise<string> => {
+// ✅ استخدم v1 API مباشرة (ليس v1beta)
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models';
+
+const callGeminiAPI = async (model: string, prompt: string): Promise<string> => {
   if (!apiKey) {
     throw new Error('MISSING_API_KEY');
   }
 
-  // ✅ استخدم v1 مع اسم الموديل الكامل
-  const url = `https://generativelanguage.googleapis.com/v1/${modelFullName}:generateContent?key=${apiKey}`;
+  const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -59,7 +60,7 @@ const callGeminiAPI = async (modelFullName: string, prompt: string): Promise<str
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Gemini API Error: - gemini.service.ts:62', errorText);
+    console.error('Gemini API Error: - gemini.service.ts:63', errorText);
     throw new Error(`Gemini API failed: ${response.status}`);
   }
 
@@ -73,26 +74,17 @@ const callGeminiAPI = async (modelFullName: string, prompt: string): Promise<str
 };
 
 export const generateGeminiText = async (prompt: string): Promise<string> => {
-  // ✅ جرّب الموديلات المختلفة
-  const modelsToTry = [
-    'models/gemini-1.5-flash-latest',
-    'models/gemini-1.5-flash',
-    'models/gemini-1.0-pro-latest',
-    'models/gemini-1.0-pro',
-    'models/gemini-pro'
-  ];
-
-  for (const model of modelsToTry) {
-    try {
-      console.log(`🔄 Trying model: ${model} - gemini.service.ts:87`);
-      return await callGeminiAPI(model, prompt);
-    } catch (error: any) {
-      console.warn(`❌ ${model} failed: - gemini.service.ts:90`, error.message);
-      // استمر للموديل التالي
+  try {
+    // ✅ جرّب gemini-1.5-flash أولاً
+    return await callGeminiAPI('gemini-1.5-flash', prompt);
+  } catch (error: any) {
+    // ✅ إذا فشل، استخدم gemini-pro
+    if (error?.message?.includes('404') || error?.message?.includes('not found')) {
+      console.warn('⚠️ gemini1.5flash failed, trying geminipro... - gemini.service.ts:83');
+      return await callGeminiAPI('gemini-pro', prompt);
     }
+    throw error;
   }
-
-  throw new Error('All Gemini models failed. Please check your API key.');
 };
 
 const buildPrompt = (context: CardContext) => {
@@ -132,7 +124,21 @@ const extractJson = (text: string) => {
 
 export const generateCardContent = async (context: CardContext): Promise<CardContentResult> => {
   const prompt = buildPrompt(context);
-  const text = await generateGeminiText(prompt);
+  let text: string;
+  
+  try {
+    // ✅ جرّب gemini-1.5-flash أولاً
+    text = await callGeminiAPI('gemini-1.5-flash', prompt);
+  } catch (error: any) {
+    // ✅ إذا فشل، استخدم gemini-pro
+    if (error?.message?.includes('404') || error?.message?.includes('not found')) {
+      console.warn('⚠️ gemini1.5flash failed, trying geminipro... - gemini.service.ts:135');
+      text = await callGeminiAPI('gemini-pro', prompt);
+    } else {
+      throw error;
+    }
+  }
+
   const data = extractJson(text);
 
   return {
