@@ -254,11 +254,14 @@ function DeckFilterControls(props: {
           onChange={(e) => onChange({ ...filters, rarity: e.target.value as DeckFilter['rarity'] })}
         >
           <option value="">{t('common.all')}</option>
-          {RARITY_OPTIONS.map((rarity) => (
-            <option key={rarity} value={rarity}>
-              {props.rarityLabels[rarity]}
-            </option>
-          ))}
+          {RARITY_OPTIONS.map((rarity, index) => {
+            const keyValue = toKey(rarity, `rarity-${index}`);
+            return (
+              <option key={keyValue} value={rarity}>
+                {toDisplayText(props.rarityLabels[rarity])}
+              </option>
+            );
+          })}
         </Select>
       </div>
       <div>
@@ -268,11 +271,15 @@ function DeckFilterControls(props: {
           onChange={(e) => onChange({ ...filters, race: e.target.value })}
         >
           <option value="">{t('common.all')}</option>
-          {props.raceOptions.map((race) => (
-            <option key={race} value={race}>
-              {t(`races.${race}`, { defaultValue: race })}
-            </option>
-          ))}
+          {props.raceOptions.map((race, index) => {
+            const raceValue = toDisplayText(race);
+            const keyValue = toKey(raceValue, `race-${index}`);
+            return (
+              <option key={keyValue} value={raceValue}>
+                {t(`races.${raceValue}`, { defaultValue: raceValue })}
+              </option>
+            );
+          })}
         </Select>
       </div>
       <div>
@@ -282,11 +289,15 @@ function DeckFilterControls(props: {
           onChange={(e) => onChange({ ...filters, trait: e.target.value })}
         >
           <option value="">{t('common.all')}</option>
-          {props.traitOptions.map((trait) => (
-            <option key={trait} value={trait}>
-              {t(`traits.${trait}`, { defaultValue: trait })}
-            </option>
-          ))}
+          {props.traitOptions.map((trait, index) => {
+            const traitValue = toDisplayText(trait);
+            const keyValue = toKey(traitValue, `trait-${index}`);
+            return (
+              <option key={keyValue} value={traitValue}>
+                {t(`traits.${traitValue}`, { defaultValue: traitValue })}
+              </option>
+            );
+          })}
         </Select>
       </div>
       <details className="uiCollapse">
@@ -301,11 +312,15 @@ function DeckFilterControls(props: {
               onChange={(e) => onChange({ ...filters, template: e.target.value })}
             >
               <option value="">{t('common.all')}</option>
-              {props.templateOptions.map((key) => (
-                <option key={key} value={key}>
-                  {getTemplateLabel(key, props.language)}
-                </option>
-              ))}
+              {props.templateOptions.map((key, index) => {
+                const templateKey = toDisplayText(key);
+                const keyValue = toKey(templateKey, `template-${index}`);
+                return (
+                  <option key={keyValue} value={templateKey}>
+                    {toDisplayText(getTemplateLabel(templateKey, props.language))}
+                  </option>
+                );
+              })}
             </Select>
           </div>
           <div>
@@ -315,11 +330,15 @@ function DeckFilterControls(props: {
               onChange={(e) => onChange({ ...filters, tag: e.target.value })}
             >
               <option value="">{t('common.all')}</option>
-              {props.tagOptions.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
+              {props.tagOptions.map((tag, index) => {
+                const tagValue = toDisplayText(tag);
+                const keyValue = toKey(tagValue, `tag-${index}`);
+                return (
+                  <option key={keyValue} value={tagValue}>
+                    {tagValue}
+                  </option>
+                );
+              })}
             </Select>
           </div>
         </div>
@@ -384,25 +403,64 @@ function rowToCard(row: DataRow): SimCard | null {
 }
 
 function normalizeNumber(value: any) {
-  const parsed = Number(value);
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  const parsed = Number(toDisplayText(value));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function toDisplayText(value: any) {
+  if (value == null) return '';
+  const valueType = typeof value;
+  if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+    return String(value);
+  }
+  if (valueType === 'object') {
+    const candidate =
+      value.label ??
+      value.name ??
+      value.key ??
+      value.id ??
+      value.value;
+    const candidateType = typeof candidate;
+    if (candidateType === 'string' || candidateType === 'number' || candidateType === 'boolean') {
+      return String(candidate);
+    }
+    return '';
+  }
+  try {
+    return String(value);
+  } catch {
+    return '';
+  }
+}
+
+function toKey(value: any, fallback: string) {
+  const text = toDisplayText(value).trim();
+  return text ? text : fallback;
+}
+
 function normalizeRarity(value: any): Rarity {
-  const cleaned = String(value || '').toLowerCase().trim();
+  const cleaned = toDisplayText(value).toLowerCase().trim();
   if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
   return 'common';
 }
 
 function normalizeRace(value: any) {
-  return String(value || '').toLowerCase().trim();
+  return toDisplayText(value).toLowerCase().trim();
 }
 
 function normalizeTraits(value: any) {
   if (Array.isArray(value)) {
-    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+    return value.map((trait) => toDisplayText(trait).toLowerCase().trim()).filter(Boolean);
   }
-  const raw = String(value || '').trim();
+  const raw = toDisplayText(value).trim();
   if (!raw) return [];
   return raw
     .split(/[,|]/g)
@@ -412,13 +470,13 @@ function normalizeTraits(value: any) {
 
 function resolveTemplate(data: Record<string, any>) {
   const raw = data.templateKey ?? data.template ?? data.template_key;
-  return String(raw || '').toLowerCase().trim();
+  return toDisplayText(raw).toLowerCase().trim();
 }
 
 function extractTags(data: Record<string, any>) {
   const raw = data.tags ?? data.tag;
   if (Array.isArray(raw)) {
-    return raw.map((tag) => String(tag).trim()).filter(Boolean);
+    return raw.map((tag) => toDisplayText(tag).trim()).filter(Boolean);
   }
   if (typeof raw === 'string') {
     return raw

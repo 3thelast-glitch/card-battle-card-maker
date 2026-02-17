@@ -16,7 +16,9 @@ import { addRecentProject, loadRecentProjects, parseProject, stringifyProject } 
 import type { TemplateDefinition } from '../templates/types';
 import { templateToBlueprint } from '../templates/types';
 
-const SimulatorScreen = lazy(() => import('../screens/SimulatorScreen'));
+const SimulatorScreen = lazy(() =>
+  import('../screens/SimulatorScreen').then((module) => ({ default: module.SimulatorScreen })),
+);
 
 export function App() {
   const { t, i18n } = useTranslation();
