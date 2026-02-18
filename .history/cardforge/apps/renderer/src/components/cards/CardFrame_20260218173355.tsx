@@ -325,7 +325,7 @@ export function CardFrame({
           {showPoster ? (
             <img
               className="card-frame__media cardArtMedia"
-              src={(art as any).poster}
+              src={art!.poster!}
               alt=""
               draggable={false}
               style={{ objectFit: artTransform.fit }}

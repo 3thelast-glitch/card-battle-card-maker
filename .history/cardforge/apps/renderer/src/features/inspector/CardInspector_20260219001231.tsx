@@ -399,26 +399,17 @@ export function CardInspector(props: Props) {
     ...style
   }))}
  onUpdate={(badges) => {
-  console.log('💾 Saving badges:', badges);  // ✅ للاختبار
-  
-  // 🔥 تحويل badges للـ badgeStyles format
-  const badgeStyles = {};
+  // 🔥 تحويل badges للـ badgeStyles
+  const newBadgeStyles = {};
   badges.forEach(badge => {
-    badgeStyles[badge.id] = {
-      color: badge.color,
-      scale: badge.scale,
-      rotation: badge.rotation,
-      opacity: badge.opacity,
-      // باقي الخصائص اللي تبيها
-    };
+    newBadgeStyles[badge.id] = badge;
   });
   
-  // 🔥 حفظ في الـ card
-  props.onChange({
+  // 🔥 تحديث الـ card
+    props.onChange({
     badgeStyles
   });
 }}
-
 />
           </div>
         </div>

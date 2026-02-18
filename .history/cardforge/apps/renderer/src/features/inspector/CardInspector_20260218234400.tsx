@@ -379,7 +379,8 @@ export function CardInspector(props: Props) {
               <option value="elementBadge">{t('cards.element', { defaultValue: 'Element' })}</option>
               <option value="tribe">أيقونات الفئة (Traits)</option>
             </Select>
-<UltimateBadgeEditor
+
+      <UltimateBadgeEditor
   badges={Object.entries(badgeStyles).map(([id, style]) => ({
     id,
     type: 'icon',
@@ -398,35 +399,13 @@ export function CardInspector(props: Props) {
     zIndex: 1,
     ...style
   }))}
- onUpdate={(badges) => {
-  console.log('💾 Saving badges:', badges);  // ✅ للاختبار
-  
-  // 🔥 تحويل badges للـ badgeStyles format
-  const badgeStyles = {};
-  badges.forEach(badge => {
-    badgeStyles[badge.id] = {
-      color: badge.color,
-      scale: badge.scale,
-      rotation: badge.rotation,
-      opacity: badge.opacity,
-      // باقي الخصائص اللي تبيها
-    };
-  });
-  
-  // 🔥 حفظ في الـ card
-  props.onChange({
-    badgeStyles
-  });
-}}
-
+  onUpdate={(badges) => {
+    badges.forEach(badge => {
+      props.onUpdateBadge(badge.id, badge);
+    });
+  }}
 />
-          </div>
-        </div>
-      </details>
 
-    </div>
-  );
-}
 
 const BADGE_PRESETS = [
   { id: 'default', name: 'Default', style: { scale: 1, color: '', shadow: 'none', borderWidth: 0 } },

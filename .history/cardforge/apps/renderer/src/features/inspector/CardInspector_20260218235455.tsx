@@ -398,27 +398,11 @@ export function CardInspector(props: Props) {
     zIndex: 1,
     ...style
   }))}
- onUpdate={(badges) => {
-  console.log('💾 Saving badges:', badges);  // ✅ للاختبار
-  
-  // 🔥 تحويل badges للـ badgeStyles format
-  const badgeStyles = {};
-  badges.forEach(badge => {
-    badgeStyles[badge.id] = {
-      color: badge.color,
-      scale: badge.scale,
-      rotation: badge.rotation,
-      opacity: badge.opacity,
-      // باقي الخصائص اللي تبيها
-    };
-  });
-  
-  // 🔥 حفظ في الـ card
-  props.onChange({
-    badgeStyles
-  });
-}}
-
+  onUpdate={(badges) => {
+    badges.forEach(badge => {
+      props.onUpdateBadge(badge.id, badge);
+    });
+  }}
 />
           </div>
         </div>

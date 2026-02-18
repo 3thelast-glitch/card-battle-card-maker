@@ -14,7 +14,6 @@ import { TemplatePicker } from '../templates/TemplatePicker';
 import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
 import { ELEMENTS } from '../../lib/elements';
 import { resolveImageSrc } from '../../utils/file';
-import { UltimateBadgeEditor } from './UltimateBadgeEditor';
 
 type Props = {
   row?: DataRow;
@@ -379,47 +378,14 @@ export function CardInspector(props: Props) {
               <option value="elementBadge">{t('cards.element', { defaultValue: 'Element' })}</option>
               <option value="tribe">أيقونات الفئة (Traits)</option>
             </Select>
-<UltimateBadgeEditor
-  badges={Object.entries(badgeStyles).map(([id, style]) => ({
-    id,
-    type: 'icon',
-    name: id,
-    x: 50,
-    y: 50,
-    scale: 1,
-    rotation: 0,
-    opacity: 1,
-    backgroundOpacity: 0.2,
-    color: '#ffffff',
-    gradientType: 'linear',
-    gradientAngle: 135,
-    borderWidth: 0,
-    shadowIntensity: 0,
-    zIndex: 1,
-    ...style
-  }))}
- onUpdate={(badges) => {
-  console.log('💾 Saving badges:', badges);  // ✅ للاختبار
-  
-  // 🔥 تحويل badges للـ badgeStyles format
-  const badgeStyles = {};
-  badges.forEach(badge => {
-    badgeStyles[badge.id] = {
-      color: badge.color,
-      scale: badge.scale,
-      rotation: badge.rotation,
-      opacity: badge.opacity,
-      // باقي الخصائص اللي تبيها
-    };
-  });
-  
-  // 🔥 حفظ في الـ card
-  props.onChange({
-    badgeStyles
-  });
-}}
 
-/>
+            <BadgeStylingPanel
+              key={selectedBadgeId}
+              badge={badgeStyles[selectedBadgeId] ?? {}}
+              onChange={(newStyle) => props.onUpdateData(`style.badges.${selectedBadgeId}`, newStyle)}
+              assetOptions={assetOptions}
+              t={t}
+            />
           </div>
         </div>
       </details>
@@ -445,14 +411,7 @@ const ICON_LIBRARY = [
   { id: 'arrowRight', icon: ArrowRight }, { id: 'circle', icon: Circle }
 ];
 
-interface BadgeStylingPanelProps {
-  badge: any;
-  onChange: (newStyle: any) => void;
-  assetOptions: { id: string; name: string; resolvedSrc: string }[];
-  t: (key: string, options?: any) => string;
-}
-
-function BadgeStylingPanel({ badge, onChange, assetOptions, t }: BadgeStylingPanelProps) {
+function BadgeStylingPanel({ badge, onChange, assetOptions, t }: any) {
   const [activeTab, setActiveTab] = useState<'presets' | 'layout' | 'colors' | 'effects' | 'content'>('layout');
   
   const update = (key: string, val: any) => onChange({ ...badge, [key]: val });
