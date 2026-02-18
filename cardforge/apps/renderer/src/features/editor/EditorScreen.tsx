@@ -1,24 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Blueprint, CardArt, DataRow, ElementModel, Project } from '../../../../../packages/core/src/index';
-import { clamp, createId, resolvePath } from '../../../../../packages/core/src/index';
+import { createId, resolvePath } from '../../../../../packages/core/src/index';
 import { useAppStore } from '../../state/appStore';
-import { addRecentProject, getParentPath, stringifyProject } from '../../../../../packages/storage/src/index';
-import { Button, Divider, IconButton, Input, Kbd, Row, Select, Toggle } from '../../components/ui';
+import { addRecentProject, stringifyProject } from '../../../../../packages/storage/src/index';
+import { Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
 import { Dialog } from '../../ui/Dialog';
-import { EditorCanvas } from './EditorCanvas';
 import { useTranslation } from 'react-i18next';
-import { getElementTypeLabel } from '../../utils/labels';
 import { normalizeImageFit } from '../../utils/imageFit';
 import { fileUrlToPath, resolveImageReferenceSync } from '../../utils/imageBinding';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
+import { CardFrame } from '../../components/cards/CardFrame';
+import type { Rarity } from '../../lib/balanceRules';
 import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
 import { applyTraitsToData } from '../../lib/card.logic';
 import type { BaseTraitKey } from '../../lib/traits/traits.types';
 import { TraitSelector } from '../../components/editor/TraitSelector';
-import { CardPreview } from '../../components/editor/CardPreview';
 import { generateCardContent } from '../../services/gemini.service';
-
-const DEFAULT_GRID = 10;
 
 type VideoJob = {
   title: string;
@@ -32,14 +29,8 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const { project, onChange } = props;
   const { activeBlueprintId, activeTableId, setActiveBlueprintId, previewRowId, setPreviewRowId, setRecents } = useAppStore();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [gridSize, setGridSize] = useState(DEFAULT_GRID);
-  const [snapToGrid, setSnapToGrid] = useState(true);
-  const [showGrid, setShowGrid] = useState(true);
-  const [zoom, setZoom] = useState(1);
   const [history, setHistory] = useState<ElementModel[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [dragLayerId, setDragLayerId] = useState<string | null>(null);
-  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [keepVideoAudio, setKeepVideoAudio] = useState(false);
   const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
@@ -82,20 +73,41 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
     inspectorData.bgColor ?? CARD_TEMPLATES[inspectorTemplateKey]?.defaultBgColor ?? '#2b0d16';
   const inspectorVideoMeta = activeRow?.art?.kind === 'video' ? activeRow.art.meta : undefined;
   const traitState = useMemo(() => applyTraitsToData(inspectorData), [inspectorData]);
-  const previewData = useMemo(() => {
+  const previewArt = useMemo(() => {
     if (!activeRow) return undefined;
-    const lang = i18n.language?.startsWith('ar') ? 'ar' : 'en';
-    const data = activeRow?.data
-      ? { ...activeRow.data, ...(activeRow.art ? { art: activeRow.art } : {}), __lang: lang }
-      : undefined;
-    if (!data || !activeTable) return undefined;
-    const binding = activeTable.imageBinding;
-    if (!binding?.column) return data;
-    const resolved = resolveImageReferenceSync(resolvePath(data, binding.column), binding);
-    if (!resolved) return data;
-    return setPathValue(data, binding.column, resolved);
-  }, [activeRow, activeTable, i18n.language]);
-  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
+    if (isCardArt(activeRow.art)) return activeRow.art;
+    const dataArt = (activeRow.data as any)?.art;
+    if (isCardArt(dataArt)) return dataArt;
+    const binding = activeTable?.imageBinding;
+    if (!binding?.column) return undefined;
+    const raw = resolvePath(activeRow.data ?? {}, binding.column);
+    const resolved = resolveImageReferenceSync(raw, binding);
+    if (!resolved) return undefined;
+    return { kind: 'image', src: resolved } as CardArt;
+  }, [activeRow, activeTable]);
+  const resolvedArt = resolveRowArt(activeRow, previewArt);
+  const posterWarning = previewArt?.kind === 'video' && !previewArt.poster ? t('data.posterRequired') : undefined;
+  const previewTitle =
+    inspectorData.name ??
+    inspectorData.title ??
+    inspectorData.character_name ??
+    inspectorData.character_name_en ??
+    inspectorData.character_name_ar ??
+    activeRow?.id ??
+    '';
+  const previewDesc =
+    inspectorData.desc ?? inspectorData.ability ?? inspectorData.ability_en ?? inspectorData.ability_ar ?? '';
+  const previewTraits = traitState.allTraits;
+  const previewAttack = traitState.attack;
+  const previewDefense = traitState.defense;
+  const previewElement = inspectorData.element ?? inspectorData.main_element;
+  const previewRace = inspectorData.race;
+  const previewBadgeStyle = (inspectorData as any)?.style?.badges;
+  const previewWidth = 280;
+  const previewHeight = 360;
+  const previewScale = 0.7;
+  const previewScaledWidth = Math.round(previewWidth * previewScale);
+  const previewScaledHeight = Math.round(previewHeight * previewScale);
   const editorLanguage = i18n.language?.startsWith('ar') ? 'ar' : 'en';
 
   const updateActiveTableRows = useCallback(
@@ -386,160 +398,6 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedIds, undo, redo, duplicateSelection, deleteSelected, updateSelectedBy, saveProject]);
 
-  const addText = () => {
-    const el: ElementModel = {
-      id: createId('el'),
-      type: 'text',
-      name: t('editor.defaults.title'),
-      x: 60,
-      y: 40,
-      w: 500,
-      h: 60,
-      rotation: 0,
-      visible: true,
-      opacity: 1,
-      zIndex: elements.length + 1,
-      text: '{{name}}',
-      fontSize: 36,
-      fontFamily: 'Segoe UI',
-      align: 'center',
-      fill: '#ffffff',
-    };
-    const nextElements = [...elements, el];
-    updateElements(nextElements);
-    setSelection([el.id], nextElements);
-  };
-
-  const addShape = () => {
-    const el: ElementModel = {
-      id: createId('el'),
-      type: 'shape',
-      name: t('editor.defaults.rectangle'),
-      x: 80,
-      y: 140,
-      w: 420,
-      h: 180,
-      rotation: 0,
-      visible: true,
-      opacity: 1,
-      zIndex: elements.length + 1,
-      shape: 'rect',
-      fill: '#1f2a44',
-      stroke: '#3b5b8a',
-      strokeWidth: 2,
-      radius: 14,
-    };
-    const nextElements = [...elements, el];
-    updateElements(nextElements);
-    setSelection([el.id], nextElements);
-  };
-
-  const addIcon = () => {
-    const el: ElementModel = {
-      id: createId('el'),
-      type: 'icon',
-      name: t('editor.defaults.icon'),
-      x: 90,
-      y: 90,
-      w: 120,
-      h: 120,
-      rotation: 0,
-      visible: true,
-      opacity: 1,
-      zIndex: elements.length + 1,
-      iconName: 'ICON',
-      fontSize: 40,
-      fill: '#f8d66d',
-    };
-    const nextElements = [...elements, el];
-    updateElements(nextElements);
-    setSelection([el.id], nextElements);
-  };
-
-  const addImage = async () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const dataUrl = await fileToDataUrl(file, t('editor.errors.readImage'));
-      const el: ElementModel = {
-        id: createId('el'),
-        type: 'image',
-        name: t('editor.defaults.image'),
-        x: 70,
-        y: 220,
-        w: 420,
-        h: 300,
-        rotation: 0,
-        visible: true,
-        opacity: 1,
-        zIndex: elements.length + 1,
-        src: dataUrl,
-        fit: 'cover',
-      };
-      const nextElements = [...elements, el];
-      updateElements(nextElements);
-      setSelection([el.id], nextElements);
-    };
-    input.click();
-  };
-
-  const alignSelected = (mode: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
-    if (!selectedIds.length) return;
-    const w = blueprint.size.w;
-    const h = blueprint.size.h;
-    updateSelectedBy((el) => {
-      const patch: Partial<ElementModel> = {};
-      if (mode === 'left') patch.x = 0;
-      if (mode === 'center') patch.x = (w - el.w) / 2;
-      if (mode === 'right') patch.x = w - el.w;
-      if (mode === 'top') patch.y = 0;
-      if (mode === 'middle') patch.y = (h - el.h) / 2;
-      if (mode === 'bottom') patch.y = h - el.h;
-      return { ...el, ...patch };
-    });
-  };
-
-  const orderedLayers = useMemo(
-    () => elements.slice().sort((a, b) => b.zIndex - a.zIndex),
-    [elements],
-  );
-
-  const applyLayerOrder = useCallback(
-    (topFirst: ElementModel[]) => {
-      const next = normalizeZIndex([...topFirst].reverse());
-      updateElements(next);
-    },
-    [updateElements],
-  );
-
-  const moveLayer = useCallback(
-    (dragId: string, targetId: string) => {
-      if (dragId === targetId) return;
-      const list = [...orderedLayers];
-      const fromIndex = list.findIndex((el) => el.id === dragId);
-      const toIndex = list.findIndex((el) => el.id === targetId);
-      if (fromIndex < 0 || toIndex < 0) return;
-      const [moved] = list.splice(fromIndex, 1);
-      list.splice(toIndex, 0, moved);
-      applyLayerOrder(list);
-    },
-    [orderedLayers, applyLayerOrder],
-  );
-
-  const reorder = (id: string, dir: 'up' | 'down') => {
-    const list = [...orderedLayers];
-    const idx = list.findIndex((el) => el.id === id);
-    const target = dir === 'up' ? idx - 1 : idx + 1;
-    if (idx < 0 || target < 0 || target >= list.length) return;
-    const temp = list[idx];
-    list[idx] = list[target];
-    list[target] = temp;
-    applyLayerOrder(list);
-  };
-
   if (!blueprint) {
     return <div className="screen" style={{ padding: 24 }}>{t('editor.noBlueprint')}</div>;
   }
@@ -575,37 +433,6 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   const anyVisible = selectedElements.some((el) => el.visible);
   const allLocked = selectedElements.every((el) => el.locked);
   const anyLocked = selectedElements.some((el) => el.locked);
-
-  const handleDropAsset = useCallback(
-    (asset: { src: string; name: string }, point: { x: number; y: number }) => {
-      if (!blueprint) return;
-      const w = 300;
-      const h = 300;
-      const maxX = Math.max(0, blueprint.size.w - w);
-      const maxY = Math.max(0, blueprint.size.h - h);
-      const x = clamp(point.x - w / 2, 0, maxX);
-      const y = clamp(point.y - h / 2, 0, maxY);
-      const el: ElementModel = {
-        id: createId('el'),
-        type: 'image',
-        name: asset.name || t('editor.defaults.image'),
-        x,
-        y,
-        w,
-        h,
-        rotation: 0,
-        visible: true,
-        opacity: 1,
-        zIndex: elements.length + 1,
-        src: asset.src,
-        fit: 'cover',
-      };
-      const nextElements = [...elements, el];
-      updateElements(nextElements);
-      setSelection([el.id], nextElements);
-    },
-    [blueprint, elements, updateElements, setSelection, t],
-  );
 
   const confirmDelete = () => {
     if (!selectedIds.length) return;
@@ -779,140 +606,6 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   return (
     <div className="screen uiApp">
       <div className="editorShell">
-        <aside className={`editorPanel editorLeft ${leftDrawerOpen ? 'drawerOpen' : ''}`}>
-          <div className="editorPanelHeader">
-            <div>
-              <div className="uiTitle">{t('editor.toolboxTitle')}</div>
-              <div className="uiSub">{t('editor.toolboxSubtitle')}</div>
-            </div>
-            <Button size="sm" variant="outline" className="panelClose" onClick={() => setLeftDrawerOpen(false)}>
-              {t('common.close')}
-            </Button>
-          </div>
-          <div className="editorPanelBody">
-            <details className="uiCollapse" open>
-              <summary>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{t('editor.toolboxTitle')}</div>
-                  <div className="uiSub">{t('editor.toolboxSubtitle')}</div>
-                </div>
-              </summary>
-              <div className="uiCollapseBody">
-                <div className="editorToolGrid">
-                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addText}>
-                    <span className="toolIcon">+</span>
-                    {t('editor.addText')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addImage}>
-                    <span className="toolIcon">+</span>
-                    {t('editor.addImage')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addShape}>
-                    <span className="toolIcon">+</span>
-                    {t('editor.addShape')}
-                  </Button>
-                  <Button size="sm" variant="outline" className="editorToolBtn" onClick={addIcon}>
-                    <span className="toolIcon">+</span>
-                    {t('editor.addIcon')}
-                  </Button>
-                </div>
-              </div>
-            </details>
-
-            <details className="uiCollapse" open>
-              <summary>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{t('editor.layersTitle')}</div>
-                  <div className="uiSub">{t('editor.layersSubtitle')}</div>
-                </div>
-              </summary>
-              <div className="uiCollapseBody">
-                {elements.length === 0 ? (
-                  <div className="empty">{t('editor.noElements')}</div>
-                ) : (
-                  <div className="editorLayerList">
-                    {orderedLayers.map((el) => (
-                      <div
-                        key={el.id}
-                        className={`layerRow ${selectedIds.includes(el.id) ? 'isSelected' : ''}`}
-                        draggable
-                        onDragStart={() => setDragLayerId(el.id)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => {
-                          if (dragLayerId) moveLayer(dragLayerId, el.id);
-                          setDragLayerId(null);
-                        }}
-                        onDragEnd={() => setDragLayerId(null)}
-                        onDoubleClick={() => {
-                          const nextName = window.prompt(t('editor.layers.renamePrompt'), el.name);
-                          if (!nextName) return;
-                          updateElements(elements.map((e) => (e.id === el.id ? { ...e, name: nextName.trim() } : e)));
-                        }}
-                        onClick={(e) => {
-                          if (el.locked || el.visible === false) return;
-                          if (e.shiftKey) {
-                            setSelection(
-                              selectedIds.includes(el.id)
-                                ? selectedIds.filter((id) => id !== el.id)
-                                : [...selectedIds, el.id],
-                            );
-                          } else {
-                            setSelection([el.id]);
-                          }
-                        }}
-                      >
-                        <div className="layerMeta">
-                          <div className="layerName">{el.name}</div>
-                          <div className="layerHint">{getElementTypeLabel(t, el.type)}</div>
-                        </div>
-                        <div className="layerActions">
-                          <IconButton
-                            variant="outline"
-                            title={t('editor.layers.visibility')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              const nextVisible = !el.visible;
-                              updateElements(elements.map((e) => (e.id === el.id ? { ...e, visible: nextVisible } : e)));
-                              if (!nextVisible) {
-                                setSelection(selectedIds.filter((id) => id !== el.id));
-                              }
-                            }}
-                          >
-                            {el.visible ? t('editor.layers.visibleShort') : t('editor.layers.hiddenShort')}
-                          </IconButton>
-                          <IconButton
-                            variant="outline"
-                            title={t('editor.layers.lock')}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              const nextLocked = !el.locked;
-                              updateElements(elements.map((e) => (e.id === el.id ? { ...e, locked: nextLocked } : e)));
-                              if (nextLocked) {
-                                setSelection(selectedIds.filter((id) => id !== el.id));
-                              }
-                            }}
-                          >
-                            {el.locked ? t('editor.layers.lockShort') : t('editor.layers.unlockShort')}
-                          </IconButton>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </details>
-
-            <Divider />
-            <div className="uiHelp">{t('editor.shortcuts')}</div>
-            <div className="uiRow" style={{ gap: 6, flexWrap: 'wrap' }}>
-              <Kbd>Ctrl</Kbd><Kbd>Z</Kbd>
-              <Kbd>Ctrl</Kbd><Kbd>Y</Kbd>
-              <Kbd>Ctrl</Kbd><Kbd>D</Kbd>
-              <Kbd>Del</Kbd>
-            </div>
-          </div>
-        </aside>
-
         <main className="editorPanel editorCenter">
           <div className="editorPanelHeader">
             <div>
@@ -920,24 +613,6 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
               <div className="uiSub">{t('editor.canvasSubtitle')}</div>
             </div>
             <div className="uiRow" style={{ justifyContent: 'flex-end' }}>
-              <Button
-                size="sm"
-                variant="outline"
-                className="onlySmallLeft"
-                onClick={() => setLeftDrawerOpen(true)}
-              >
-                {t('editor.toolboxTitle')}
-              </Button>
-              <div className="uiRow" style={{ gap: 6 }}>
-                <div className="uiHelp">{t('editor.zoom')}</div>
-                <Input
-                  type="number"
-                  value={zoom}
-                  step={0.1}
-                  onChange={(e) => setZoom(clamp(Number(e.target.value), 0.3, 2.5))}
-                  style={{ width: 70 }}
-                />
-              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -949,53 +624,41 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
             </div>
           </div>
           <div className="editorPanelBody editorCenterBody">
-            <div className="uiRow" style={{ flexWrap: 'wrap' }}>
-              <div className="uiHelp">{t('editor.grid')}</div>
-              <Input
-                type="number"
-                value={gridSize}
-                min={4}
-                max={64}
-                onChange={(e) => setGridSize(clamp(Number(e.target.value), 4, 64))}
-                style={{ width: 100 }}
-              />
-              <Toggle checked={showGrid} onChange={setShowGrid} label={t('editor.showGrid')} />
-              <Toggle checked={snapToGrid} onChange={setSnapToGrid} label={t('editor.snap')} />
-              <Toggle
-                checked={Boolean(previewData)}
-                onChange={(next) => setPreviewRowId(next ? activeTable?.rows?.[0]?.id : undefined)}
-                label={t('editor.livePreview')}
-              />
-              <div style={{ marginLeft: 'auto' }} className="uiRow">
-                <IconButton variant="outline" title={t('editor.undo')} onClick={undo}>{t('editor.undo')}</IconButton>
-                <IconButton variant="outline" title={t('editor.redo')} onClick={redo}>{t('editor.redo')}</IconButton>
-              </div>
-            </div>
-            <div className="uiRow" style={{ flexWrap: 'wrap' }}>
-              <div className="uiHelp">{t('editor.alignLabel')}</div>
-              <IconButton variant="outline" title={t('editor.align.left')} onClick={() => alignSelected('left')}>{t('editor.align.leftShort')}</IconButton>
-              <IconButton variant="outline" title={t('editor.align.center')} onClick={() => alignSelected('center')}>{t('editor.align.centerShort')}</IconButton>
-              <IconButton variant="outline" title={t('editor.align.right')} onClick={() => alignSelected('right')}>{t('editor.align.rightShort')}</IconButton>
-              <IconButton variant="outline" title={t('editor.align.top')} onClick={() => alignSelected('top')}>{t('editor.align.topShort')}</IconButton>
-              <IconButton variant="outline" title={t('editor.align.middle')} onClick={() => alignSelected('middle')}>{t('editor.align.middleShort')}</IconButton>
-              <IconButton variant="outline" title={t('editor.align.bottom')} onClick={() => alignSelected('bottom')}>{t('editor.align.bottomShort')}</IconButton>
-            </div>
             <div className="editorCenterStage">
-              <EditorCanvas
-                blueprint={blueprint}
-                elements={elements}
-                selectedIds={selectedIds}
-                gridSize={gridSize}
-                showGrid={showGrid}
-                snapToGrid={snapToGrid}
-                zoom={zoom}
-                projectRoot={projectRoot}
-                previewData={previewData}
-                onSelectIds={setSelection}
-                onChange={(next) => updateElements(next)}
-                onZoomChange={setZoom}
-                onDropAsset={handleDropAsset}
-              />
+              {!activeRow ? (
+                <div className="empty">{t('data.selectCardHint')}</div>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                    padding: 24,
+                  }}
+                >
+                  <div style={{ boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)', borderRadius: 16 }}>
+                    <CardFrame
+                      rarity={inspectorRarity}
+                      art={resolvedArt}
+                      templateKey={inspectorTemplateKey}
+                      title={previewTitle}
+                      description={previewDesc}
+                      race={previewRace}
+                      traits={previewTraits}
+                      element={previewElement}
+                      attack={previewAttack}
+                      defense={previewDefense}
+                      badgeStyle={previewBadgeStyle}
+                      bgColor={inspectorBgColor}
+                      posterWarning={posterWarning}
+                      width={420}
+                      height={540}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </main>
@@ -1099,11 +762,36 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
                       onChange={updateTraits}
                     />
                     <div className="uiHelp">{t('traitSystem.previewTitle')}</div>
-                    <CardPreview
-                      attack={traitState.attack}
-                      defense={traitState.defense}
-                      traits={traitState.allTraits}
-                    />
+                    <div className="smallPreviewWrap">
+                      <div style={{ width: previewScaledWidth, height: previewScaledHeight }}>
+                        <div
+                          style={{
+                            width: previewWidth,
+                            height: previewHeight,
+                            transform: `scale(${previewScale})`,
+                            transformOrigin: 'top left',
+                          }}
+                        >
+                          <CardFrame
+                            rarity={inspectorRarity}
+                            art={resolvedArt}
+                            templateKey={inspectorTemplateKey}
+                            title={previewTitle}
+                            description={previewDesc}
+                            race={previewRace}
+                            traits={previewTraits}
+                            element={previewElement}
+                            attack={previewAttack}
+                            defense={previewDefense}
+                            badgeStyle={previewBadgeStyle}
+                            bgColor={inspectorBgColor}
+                            posterWarning={posterWarning}
+                            width={previewWidth}
+                            height={previewHeight}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="uiStack">
@@ -1561,9 +1249,8 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
         </aside>
       </div>
       <div
-        className={`drawerOverlay ${leftDrawerOpen || rightDrawerOpen ? 'open' : ''}`}
+        className={`drawerOverlay ${rightDrawerOpen ? 'open' : ''}`}
         onClick={() => {
-          setLeftDrawerOpen(false);
           setRightDrawerOpen(false);
         }}
       />
@@ -1610,10 +1297,28 @@ function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
   return fallback;
 }
 
-function normalizeRarity(value: any) {
+function normalizeRarity(value: any): Rarity {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
   return 'common';
+}
+
+function isCardArt(value: any): value is CardArt {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      ((value.kind === 'image' && typeof value.src === 'string') ||
+        (value.kind === 'video' && typeof value.src === 'string')),
+  );
+}
+
+function resolveRowArt(row?: DataRow, fallback?: CardArt) {
+  if (!row) return undefined;
+  if (isCardArt(row.art)) return row.art;
+  const dataArt = (row.data as any)?.art;
+  if (isCardArt(dataArt)) return dataArt;
+  if (fallback && isCardArt(fallback)) return fallback;
+  return undefined;
 }
 
 function setPathValue(data: Record<string, any>, path: string, value: any) {

@@ -41,9 +41,6 @@ type BadgeStyle = {
   color?: string;
   iconUrl?: string;
   gap?: number;
-  borderWidth?: number;
-  borderColor?: string;
-  xOffset?: number;
 };
 
 type BadgeStyleConfig = {
@@ -139,28 +136,22 @@ export function CardFrame({
   const defenseBadge = normalizeBadgeStyle(badgeStyle?.defenseBadge);
   const elementBadge = normalizeBadgeStyle(badgeStyle?.elementBadge);
 
-  const attackStyle = {
-    ...buildStatStyle(
-      attackBadge.color || tint,
-      isLegendary,
-      isEpic,
-      attackBadge.scale,
-      'left bottom',
-      attackBadge.color,
-    ),
-    ...(attackBadge.borderWidth ? { borderWidth: attackBadge.borderWidth, borderStyle: 'solid', borderColor: attackBadge.borderColor || undefined } : {}),
-  };
-  const defenseStyle = {
-    ...buildStatStyle(
-      defenseBadge.color || tint,
-      isLegendary,
-      isEpic,
-      defenseBadge.scale,
-      'right bottom',
-      defenseBadge.color,
-    ),
-    ...(defenseBadge.borderWidth ? { borderWidth: defenseBadge.borderWidth, borderStyle: 'solid', borderColor: defenseBadge.borderColor || undefined } : {}),
-  };
+  const attackStyle = buildStatStyle(
+    attackBadge.color || tint,
+    isLegendary,
+    isEpic,
+    attackBadge.scale,
+    'left bottom',
+    attackBadge.color,
+  );
+  const defenseStyle = buildStatStyle(
+    defenseBadge.color || tint,
+    isLegendary,
+    isEpic,
+    defenseBadge.scale,
+    'right bottom',
+    defenseBadge.color,
+  );
   const elementColor = elementBadge.color || elementInfo?.color;
   const elementContainerStyle: CSSProperties = {
     transform: `scale(${elementBadge.scale})`,
@@ -304,14 +295,11 @@ export function CardFrame({
           <div className="metaBadges" style={metaBadgeStyle}>
             {raceKey ? (
               <span
-                className={`metaBadge metaBadge--race metaBadge--${raceKey} bg-slate-900`}
+                className={`metaBadge metaBadge--race metaBadge--${raceKey}`}
                 title={t(`races.${raceKey}`, { defaultValue: raceKey })}
                 style={{
                   backgroundColor: tribeBadge.color || undefined,
-                  transform: `translateX(${tribeBadge.xOffset}px) scale(${tribeBadge.scale})`,
-                  borderWidth: tribeBadge.borderWidth || undefined,
-                  borderStyle: tribeBadge.borderWidth ? 'solid' : undefined,
-                  borderColor: tribeBadge.borderColor || undefined,
+                  transform: `scale(${tribeBadge.scale})`,
                 }}
               >
                 <RaceIcon race={raceKey as CardRace} size={14} />
@@ -320,7 +308,7 @@ export function CardFrame({
             {visibleTraits.map((trait, index) => {
               const key = trait.toLowerCase();
               const meta = TRAIT_META[key];
-              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''} bg-slate-900`;
+              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''}`;
               return (
                 <span
                   key={`${key}-${index}`}
@@ -328,10 +316,7 @@ export function CardFrame({
                   title={t(`traits.${key}`, { defaultValue: trait })}
                   style={{
                     backgroundColor: tribeBadge.color || undefined,
-                    transform: `translateX(${tribeBadge.xOffset}px) scale(${tribeBadge.scale})`,
-                    borderWidth: tribeBadge.borderWidth || undefined,
-                    borderStyle: tribeBadge.borderWidth ? 'solid' : undefined,
-                    borderColor: tribeBadge.borderColor || undefined,
+                    transform: `scale(${tribeBadge.scale})`,
                   }}
                 >
                   <TraitIcon trait={key} size={12} />
@@ -355,9 +340,7 @@ export function CardFrame({
             <div
               className="elementHex"
               style={{
-                borderColor: elementBadge.borderColor || elementColor,
-                borderWidth: elementBadge.borderWidth || undefined,
-                borderStyle: elementBadge.borderWidth ? 'solid' : undefined,
+                borderColor: elementColor,
                 backgroundColor: elementBadge.color ? hexToRgba(elementBadge.color, 0.8) : undefined,
                 boxShadow: elementColor ? `0 0 12px ${toGlowColor(elementColor, 0.35)}` : undefined,
               }}
@@ -456,17 +439,11 @@ function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
   const color = String(style?.color ?? '').trim();
   const iconUrl = String(style?.iconUrl ?? '').trim();
   const gap = Number.isFinite(style?.gap) ? Number(style?.gap) : 4;
-  const borderWidth = Number.isFinite(style?.borderWidth) ? Number(style?.borderWidth) : 0;
-  const borderColor = String(style?.borderColor ?? '').trim();
-  const xOffset = Number.isFinite(style?.xOffset) ? Number(style?.xOffset) : 0;
   return {
     scale,
     color: color || '',
     iconUrl: iconUrl || '',
     gap,
-    borderWidth,
-    borderColor,
-    xOffset,
   };
 }
 

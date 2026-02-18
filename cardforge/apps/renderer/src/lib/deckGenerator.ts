@@ -31,6 +31,7 @@ export type GeneratedCard = {
   data: {
     name: { en: string; ar: string };
     desc: { en: string; ar: string };
+    ability?: { en: string; ar: string };
     rarity: RarityKey;
     templateKey: string;
     bgColor?: string;
@@ -78,10 +79,10 @@ export function createDefaultRangesConfig(): DeckGenRangesConfig {
 }
 
 const RARITY_LABELS = {
-  common: { en: 'Common', ar: 'Ø¹Ø§Ø¯ÙŠ' },
-  rare: { en: 'Rare', ar: 'Ù†Ø§Ø¯Ø±' },
-  epic: { en: 'Epic', ar: 'Ù…Ù„Ø­Ù…ÙŠ' },
-  legendary: { en: 'Legendary', ar: 'Ø£Ø³Ø·ÙˆØ±ÙŠ' },
+  common: { en: 'Common', ar: 'شائعة' },
+  rare: { en: 'Rare', ar: 'نادرة' },
+  epic: { en: 'Epic', ar: 'ملحمية' },
+  legendary: { en: 'Legendary', ar: 'أسطورية' },
 } as const;
 
 function toNumber(value: any) {
@@ -347,9 +348,11 @@ export function generateDeck({
       const label = RARITY_LABELS[rarity];
       const index = i + 1;
       const nameEn = `Card ${label.en} ${index}`;
-      const nameAr = `Ø¨Ø·Ø§Ù‚Ø© ${label.ar} ${index}`;
-      const descEn = 'Auto ability';
-      const descAr = 'Ù‚Ø¯Ø±Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠØ©';
+      const nameAr = `بطاقة ${label.ar} ${index}`;
+      const abilityNameEn = 'Auto ability';
+      const abilityNameAr = 'قدرة تلقائية';
+      const descEn = 'Ability description here';
+      const descAr = 'وصف القدرة يظهر هنا';
       const fallbackName = preferredLang === 'ar' ? nameAr : nameEn;
       const fallbackDesc = preferredLang === 'ar' ? descAr : descEn;
 
@@ -421,6 +424,7 @@ export function generateDeck({
         const data: GeneratedCard['data'] = {
           name: { en: nameEn || fallbackName, ar: nameAr || fallbackName },
           desc: { en: descEn || fallbackDesc, ar: descAr || fallbackDesc },
+          ability: { en: abilityNameEn, ar: abilityNameAr },
           rarity,
           templateKey,
           race: selectedRace,

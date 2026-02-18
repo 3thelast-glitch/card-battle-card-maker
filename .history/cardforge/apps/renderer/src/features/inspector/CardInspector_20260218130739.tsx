@@ -1,9 +1,7 @@
-﻿﻿import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from '../../../../../packages/core/src/index';
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
-import { HexColorPicker } from 'react-colorful';
-import { Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move } from 'lucide-react';
 import { Button, Input, Row, Select } from '../../components/ui';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
@@ -72,9 +70,8 @@ export function CardInspector(props: Props) {
   const attackBadge = badgeStyles.attackBadge ?? {};
   const defenseBadge = badgeStyles.defenseBadge ?? {};
   const elementBadge = badgeStyles.elementBadge ?? {};
-  const tribeBadge = badgeStyles.tribe ?? {};
 
-  const updateBadgeField = (badgeKey: 'attackBadge' | 'defenseBadge' | 'elementBadge' | 'tribe', field: string, value: any) => {
+  const updateBadgeField = (badgeKey: 'attackBadge' | 'defenseBadge' | 'elementBadge', field: string, value: any) => {
     props.onUpdateData(`style.badges.${badgeKey}.${field}`, value);
   };
 
@@ -84,7 +81,7 @@ export function CardInspector(props: Props) {
     return match?.id ?? '';
   };
 
-  const pickBadgeIcon = (badgeKey: 'attackBadge' | 'defenseBadge' | 'elementBadge' | 'tribe') => {
+  const pickBadgeIcon = (badgeKey: 'attackBadge' | 'defenseBadge' | 'elementBadge') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -131,6 +128,91 @@ export function CardInspector(props: Props) {
     props.onUpdateData(
       'traits',
       traits.filter((item) => String(item).toLowerCase().trim() !== cleaned),
+    );
+  };
+
+  const renderBadgeControls = (
+    label: string,
+    badgeKey: 'attackBadge' | 'defenseBadge' | 'elementBadge',
+    badge: any,
+  ) => {
+    const scaleValue = clampNumber(Number(badge?.scale ?? 1), 0.5, 2);
+    const colorValue = typeof badge?.color === 'string' && badge.color ? badge.color : '#ffffff';
+    const selectedAssetId = getAssetIdForIcon(badge?.iconUrl);
+    return (
+      <div className="uiStack" style={{ gap: 10 }}>
+        <div className="uiSub">{label}</div>
+        <Row gap={10}>
+          <div style={{ minWidth: 180, flex: 1 }}>
+            <div className="uiHelp">{t('editor.inspector.badgeScale', { defaultValue: 'Scale' })}</div>
+            <Input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.1}
+              value={scaleValue}
+              onChange={(e) => updateBadgeField(badgeKey, 'scale', clampNumber(Number(e.target.value), 0.5, 2))}
+            />
+          </div>
+          <div style={{ minWidth: 90 }}>
+            <div className="uiHelp">{t('editor.inspector.badgeScale', { defaultValue: 'Scale' })}</div>
+            <Input
+              type="number"
+              min={0.5}
+              max={2}
+              step={0.1}
+              value={scaleValue}
+              onChange={(e) => updateBadgeField(badgeKey, 'scale', clampNumber(Number(e.target.value), 0.5, 2))}
+            />
+          </div>
+        </Row>
+        <Row gap={10} style={{ alignItems: 'flex-end' }}>
+          <div style={{ minWidth: 120 }}>
+            <div className="uiHelp">{t('editor.inspector.badgeColor', { defaultValue: 'Color' })}</div>
+            <Input
+              type="color"
+              value={colorValue}
+              onChange={(e) => updateBadgeField(badgeKey, 'color', e.target.value)}
+            />
+          </div>
+          <div style={{ minWidth: 200, flex: 1 }}>
+            <div className="uiHelp">{t('editor.inspector.badgeIcon', { defaultValue: 'Icon' })}</div>
+            <Select
+              value={selectedAssetId}
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                if (!selectedId) {
+                  updateBadgeField(badgeKey, 'iconUrl', '');
+                  return;
+                }
+                const asset = assetOptions.find((opt) => opt.id === selectedId);
+                updateBadgeField(badgeKey, 'iconUrl', asset ? asset.resolvedSrc : '');
+              }}
+            >
+              <option value="">{t('common.none')}</option>
+              {assetOptions.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => pickBadgeIcon(badgeKey)}
+          >
+            {t('editor.inspector.badgeIconUpload', { defaultValue: 'Upload Icon' })}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => updateBadgeField(badgeKey, 'iconUrl', '')}
+          >
+            {t('common.reset')}
+          </Button>
+        </Row>
+      </div>
     );
   };
 
@@ -381,245 +463,14 @@ export function CardInspector(props: Props) {
       </details>
 
       <details className="uiAccordion">
-        <summary className="uiAccordionHeader">🎨 BADGE STYLING</summary>
+        <summary className="uiAccordionHeader">{t('editor.inspector.badges', { defaultValue: 'Badge Styling' })}</summary>
         <div className="uiAccordionBody uiStack">
-          <BadgeControl
-            label={t('cards.element', { defaultValue: 'Element' })}
-            value={elementBadge}
-            onChange={(field, val) => updateBadgeField('elementBadge', field, val)}
-            onPickIcon={() => pickBadgeIcon('elementBadge')}
-            assetOptions={assetOptions}
-            t={t}
-          />
-          <BadgeControl
-            label="أيقونات الفئة (Traits)"
-            value={tribeBadge}
-            onChange={(field, val) => updateBadgeField('tribe', field, val)}
-            onPickIcon={() => pickBadgeIcon('tribe')}
-            assetOptions={assetOptions}
-            t={t}
-            showGap={true}
-            showXOffset={true}
-          />
-          <BadgeControl
-            label={t('editor.inspector.attack', { defaultValue: 'Attack' })}
-            value={attackBadge}
-            onChange={(field, val) => updateBadgeField('attackBadge', field, val)}
-            onPickIcon={() => pickBadgeIcon('attackBadge')}
-            assetOptions={assetOptions}
-            t={t}
-          />
-          <BadgeControl
-            label={t('editor.inspector.defense', { defaultValue: 'Defense' })}
-            value={defenseBadge}
-            onChange={(field, val) => updateBadgeField('defenseBadge', field, val)}
-            onPickIcon={() => pickBadgeIcon('defenseBadge')}
-            assetOptions={assetOptions}
-            t={t}
-          />
+          {renderBadgeControls(t('editor.inspector.attack', { defaultValue: 'Attack' }), 'attackBadge', attackBadge)}
+          {renderBadgeControls(t('editor.inspector.defense', { defaultValue: 'Defense' }), 'defenseBadge', defenseBadge)}
+          {renderBadgeControls(t('cards.element', { defaultValue: 'Element' }), 'elementBadge', elementBadge)}
         </div>
       </details>
 
-    </div>
-  );
-}
-
-function BadgeControl({
-  label,
-  value,
-  onChange,
-  onPickIcon,
-  assetOptions,
-  t,
-  showGap,
-  showXOffset,
-}: {
-  label: string;
-  value: any;
-  onChange: (field: string, val: any) => void;
-  onPickIcon: () => void;
-  assetOptions: { id: string; name: string; resolvedSrc: string }[];
-  t: any;
-  showGap?: boolean;
-  showXOffset?: boolean;
-}) {
-  const scale = value?.scale ?? 1;
-  const color = value?.color ?? '';
-  const iconUrl = value?.iconUrl ?? '';
-  const gap = value?.gap ?? 4;
-  const xOffset = value?.xOffset ?? 0;
-  const borderWidth = value?.borderWidth ?? 0;
-  const borderColor = value?.borderColor ?? '';
-  const [showColor, setShowColor] = useState(false);
-  const [showBorderColor, setShowBorderColor] = useState(false);
-
-  return (
-    <div className="uiStack" style={{ gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-      <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="uiSub" style={{ fontWeight: 600 }}>{label}</div>
-        <button
-          type="button"
-          className="iconButton"
-          onClick={() => {
-            onChange('scale', 1);
-            onChange('color', '');
-            onChange('iconUrl', '');
-            onChange('borderWidth', 0);
-            onChange('borderColor', '');
-            onChange('xOffset', 0);
-          }}
-          title={t('common.reset')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <RotateCcw size={14} />
-        </button>
-      </Row>
-
-      <Row gap={8} style={{ alignItems: 'center' }}>
-        <Maximize size={16} style={{ opacity: 0.5 }} />
-        <Input
-          type="range"
-          min={0.5}
-          max={1.5}
-          step={0.1}
-          value={scale}
-          onChange={(e) => onChange('scale', Number(e.target.value))}
-          style={{ flex: 1 }}
-        />
-        <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{scale}x</span>
-      </Row>
-
-      {showXOffset && (
-        <Row gap={8} style={{ alignItems: 'center' }}>
-          <Move size={16} style={{ opacity: 0.5 }} />
-          <Input
-            type="range"
-            min={-50}
-            max={50}
-            step={1}
-            value={xOffset}
-            onChange={(e) => onChange('xOffset', Number(e.target.value))}
-            style={{ flex: 1 }}
-          />
-          <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{xOffset}</span>
-        </Row>
-      )}
-
-      <Row gap={8} style={{ alignItems: 'center' }}>
-        <Square size={16} style={{ opacity: 0.5 }} />
-        <Input
-          type="range"
-          min={0}
-          max={10}
-          step={0.5}
-          value={borderWidth}
-          onChange={(e) => onChange('borderWidth', Number(e.target.value))}
-          style={{ flex: 1 }}
-        />
-        <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{borderWidth}px</span>
-      </Row>
-
-      <Row gap={8} style={{ alignItems: 'center', position: 'relative' }}>
-        <div style={{ width: 16 }} />
-        <button
-          type="button"
-          onClick={() => setShowBorderColor(!showBorderColor)}
-          style={{
-            flex: 1,
-            height: 28,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-            backgroundColor: borderColor || 'transparent',
-            backgroundImage: !borderColor ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
-            backgroundSize: '8px 8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '11px',
-            color: borderColor ? (parseInt(borderColor.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff') : 'var(--text-muted)',
-            textShadow: borderColor ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
-          }}
-        >
-          Border Color
-        </button>
-        {showBorderColor && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4 }}>
-            <div style={{ position: 'fixed', inset: 0 }} onClick={() => setShowBorderColor(false)} />
-            <HexColorPicker color={borderColor || '#ffffff'} onChange={(c) => onChange('borderColor', c)} />
-          </div>
-        )}
-      </Row>
-
-      {showGap && (
-        <Row gap={8} style={{ alignItems: 'center' }}>
-          <MoveHorizontal size={16} style={{ opacity: 0.5 }} />
-          <Input
-            type="range"
-            min={0}
-            max={20}
-            step={1}
-            value={gap}
-            onChange={(e) => onChange('gap', Number(e.target.value))}
-            style={{ flex: 1 }}
-          />
-          <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{gap}</span>
-        </Row>
-      )}
-
-      <Row gap={8} style={{ alignItems: 'center', position: 'relative' }}>
-        <Palette size={16} style={{ opacity: 0.5 }} />
-        <button
-          type="button"
-          onClick={() => setShowColor(!showColor)}
-          style={{
-            flex: 1,
-            height: 28,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-            backgroundColor: color || 'transparent',
-            backgroundImage: !color ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
-            backgroundSize: '8px 8px',
-            backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
-            cursor: 'pointer'
-          }}
-        />
-        {color && (
-          <button
-            type="button"
-            onClick={() => onChange('color', '')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-          >
-            <X size={14} />
-          </button>
-        )}
-        {showColor && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4 }}>
-            <div style={{ position: 'fixed', inset: 0 }} onClick={() => setShowColor(false)} />
-            <HexColorPicker color={color || '#ffffff'} onChange={(c) => onChange('color', c)} />
-          </div>
-        )}
-      </Row>
-
-      <Row gap={8} style={{ alignItems: 'center' }}>
-        <ImageIcon size={16} style={{ opacity: 0.5 }} />
-        <Select
-          value={assetOptions.find((a) => a.resolvedSrc === iconUrl)?.id || ''}
-          onChange={(e) => {
-            const asset = assetOptions.find((a) => a.id === e.target.value);
-            onChange('iconUrl', asset ? asset.resolvedSrc : '');
-          }}
-          style={{ flex: 1 }}
-        >
-          <option value="">{t('common.none')}</option>
-          {assetOptions.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </Select>
-        <Button size="sm" variant="outline" onClick={onPickIcon} style={{ padding: '0 8px' }}>
-          <ImageIcon size={14} />
-        </Button>
-      </Row>
     </div>
   );
 }
@@ -697,3 +548,6 @@ function getRarityLabel(rarity: Rarity, language: 'en' | 'ar') {
   } as const;
   return labels[rarity][language] ?? labels[rarity].en;
 }
+
+
+

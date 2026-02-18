@@ -3,7 +3,7 @@ import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from 
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
-import { Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move } from 'lucide-react';
+import { Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square } from 'lucide-react';
 import { Button, Input, Row, Select } from '../../components/ui';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
@@ -399,7 +399,6 @@ export function CardInspector(props: Props) {
             assetOptions={assetOptions}
             t={t}
             showGap={true}
-            showXOffset={true}
           />
           <BadgeControl
             label={t('editor.inspector.attack', { defaultValue: 'Attack' })}
@@ -432,7 +431,6 @@ function BadgeControl({
   assetOptions,
   t,
   showGap,
-  showXOffset,
 }: {
   label: string;
   value: any;
@@ -441,13 +439,11 @@ function BadgeControl({
   assetOptions: { id: string; name: string; resolvedSrc: string }[];
   t: any;
   showGap?: boolean;
-  showXOffset?: boolean;
 }) {
   const scale = value?.scale ?? 1;
   const color = value?.color ?? '';
   const iconUrl = value?.iconUrl ?? '';
   const gap = value?.gap ?? 4;
-  const xOffset = value?.xOffset ?? 0;
   const borderWidth = value?.borderWidth ?? 0;
   const borderColor = value?.borderColor ?? '';
   const [showColor, setShowColor] = useState(false);
@@ -466,7 +462,6 @@ function BadgeControl({
             onChange('iconUrl', '');
             onChange('borderWidth', 0);
             onChange('borderColor', '');
-            onChange('xOffset', 0);
           }}
           title={t('common.reset')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -488,22 +483,6 @@ function BadgeControl({
         />
         <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{scale}x</span>
       </Row>
-
-      {showXOffset && (
-        <Row gap={8} style={{ alignItems: 'center' }}>
-          <Move size={16} style={{ opacity: 0.5 }} />
-          <Input
-            type="range"
-            min={-50}
-            max={50}
-            step={1}
-            value={xOffset}
-            onChange={(e) => onChange('xOffset', Number(e.target.value))}
-            style={{ flex: 1 }}
-          />
-          <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{xOffset}</span>
-        </Row>
-      )}
 
       <Row gap={8} style={{ alignItems: 'center' }}>
         <Square size={16} style={{ opacity: 0.5 }} />

@@ -3,7 +3,7 @@ import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from 
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
-import { Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move } from 'lucide-react';
+import { Palette, Maximize, Image as ImageIcon, X, RotateCcw } from 'lucide-react';
 import { Button, Input, Row, Select } from '../../components/ui';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
@@ -392,14 +392,12 @@ export function CardInspector(props: Props) {
             t={t}
           />
           <BadgeControl
-            label="أيقونات الفئة (Traits)"
+            label={t('cards.meta.tribe', { defaultValue: 'أيقونات الفئة/القبيلة' })}
             value={tribeBadge}
             onChange={(field, val) => updateBadgeField('tribe', field, val)}
             onPickIcon={() => pickBadgeIcon('tribe')}
             assetOptions={assetOptions}
             t={t}
-            showGap={true}
-            showXOffset={true}
           />
           <BadgeControl
             label={t('editor.inspector.attack', { defaultValue: 'Attack' })}
@@ -431,8 +429,6 @@ function BadgeControl({
   onPickIcon,
   assetOptions,
   t,
-  showGap,
-  showXOffset,
 }: {
   label: string;
   value: any;
@@ -440,18 +436,11 @@ function BadgeControl({
   onPickIcon: () => void;
   assetOptions: { id: string; name: string; resolvedSrc: string }[];
   t: any;
-  showGap?: boolean;
-  showXOffset?: boolean;
 }) {
   const scale = value?.scale ?? 1;
   const color = value?.color ?? '';
   const iconUrl = value?.iconUrl ?? '';
-  const gap = value?.gap ?? 4;
-  const xOffset = value?.xOffset ?? 0;
-  const borderWidth = value?.borderWidth ?? 0;
-  const borderColor = value?.borderColor ?? '';
   const [showColor, setShowColor] = useState(false);
-  const [showBorderColor, setShowBorderColor] = useState(false);
 
   return (
     <div className="uiStack" style={{ gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
@@ -464,9 +453,6 @@ function BadgeControl({
             onChange('scale', 1);
             onChange('color', '');
             onChange('iconUrl', '');
-            onChange('borderWidth', 0);
-            onChange('borderColor', '');
-            onChange('xOffset', 0);
           }}
           title={t('common.reset')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -488,84 +474,6 @@ function BadgeControl({
         />
         <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{scale}x</span>
       </Row>
-
-      {showXOffset && (
-        <Row gap={8} style={{ alignItems: 'center' }}>
-          <Move size={16} style={{ opacity: 0.5 }} />
-          <Input
-            type="range"
-            min={-50}
-            max={50}
-            step={1}
-            value={xOffset}
-            onChange={(e) => onChange('xOffset', Number(e.target.value))}
-            style={{ flex: 1 }}
-          />
-          <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{xOffset}</span>
-        </Row>
-      )}
-
-      <Row gap={8} style={{ alignItems: 'center' }}>
-        <Square size={16} style={{ opacity: 0.5 }} />
-        <Input
-          type="range"
-          min={0}
-          max={10}
-          step={0.5}
-          value={borderWidth}
-          onChange={(e) => onChange('borderWidth', Number(e.target.value))}
-          style={{ flex: 1 }}
-        />
-        <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{borderWidth}px</span>
-      </Row>
-
-      <Row gap={8} style={{ alignItems: 'center', position: 'relative' }}>
-        <div style={{ width: 16 }} />
-        <button
-          type="button"
-          onClick={() => setShowBorderColor(!showBorderColor)}
-          style={{
-            flex: 1,
-            height: 28,
-            borderRadius: 4,
-            border: '1px solid var(--border-color)',
-            backgroundColor: borderColor || 'transparent',
-            backgroundImage: !borderColor ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
-            backgroundSize: '8px 8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '11px',
-            color: borderColor ? (parseInt(borderColor.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff') : 'var(--text-muted)',
-            textShadow: borderColor ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
-          }}
-        >
-          Border Color
-        </button>
-        {showBorderColor && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, marginTop: 4 }}>
-            <div style={{ position: 'fixed', inset: 0 }} onClick={() => setShowBorderColor(false)} />
-            <HexColorPicker color={borderColor || '#ffffff'} onChange={(c) => onChange('borderColor', c)} />
-          </div>
-        )}
-      </Row>
-
-      {showGap && (
-        <Row gap={8} style={{ alignItems: 'center' }}>
-          <MoveHorizontal size={16} style={{ opacity: 0.5 }} />
-          <Input
-            type="range"
-            min={0}
-            max={20}
-            step={1}
-            value={gap}
-            onChange={(e) => onChange('gap', Number(e.target.value))}
-            style={{ flex: 1 }}
-          />
-          <span className="uiHelp" style={{ width: 30, textAlign: 'right' }}>{gap}</span>
-        </Row>
-      )}
 
       <Row gap={8} style={{ alignItems: 'center', position: 'relative' }}>
         <Palette size={16} style={{ opacity: 0.5 }} />

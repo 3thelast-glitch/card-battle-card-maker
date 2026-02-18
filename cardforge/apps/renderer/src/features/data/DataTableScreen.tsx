@@ -14,8 +14,6 @@ import { useAppStore } from '../../state/appStore';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
 import { parseCsvFile, parseXlsxFile, mapRowsToCards } from '../../lib/bulkImport';
-import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
-import { generatePoster, getVideoMetadata } from '../../lib/videoUtils';
 import {
   copyImageToProjectAssets,
   fileUrlToPath,
@@ -60,13 +58,6 @@ type CopySummary = {
   failed: number;
 };
 
-type VideoJob = {
-  title: string;
-  detail?: string;
-  pct?: number;
-  requestId?: string;
-};
-
 export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void }) {
   const { t, i18n } = useTranslation();
   const { project, onChange } = props;
@@ -92,8 +83,6 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [rangesConfig, setRangesConfig] = useState(() => createDefaultRangesConfig());
   const [defaultCost, setDefaultCost] = useState(1);
   const [defaultAbility, setDefaultAbility] = useState<AbilityKey>('none');
-  const [showVideoControls, setShowVideoControls] = useState(false);
-  const [keepVideoAudio, setKeepVideoAudio] = useState(false);
   const [previewMode, setPreviewMode] = useState<'preview' | 'edit'>('preview');
   const [editorSelectedIds, setEditorSelectedIds] = useState<string[]>([]);
   const [editorZoom, setEditorZoom] = useState(1);
@@ -105,7 +94,6 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [lastGeneratedId, setLastGeneratedId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [videoJob, setVideoJob] = useState<VideoJob | null>(null);
   const artDragRef = useRef<{
     startX: number;
     startY: number;
@@ -184,6 +172,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const previewElement = previewData.element;
   const previewRace = previewData.race;
   const previewBgColor = previewData.bgColor;
+  const previewBadgeStyle = (previewData as any)?.style?.badges;
   const previewTemplate = CARD_TEMPLATES[previewTemplateKey] ?? CARD_TEMPLATES[defaultTemplate];
   const smallPreviewWidth = 240;
   const smallPreviewHeight = 320;
@@ -211,6 +200,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const generatorAttack = normalizeNumber(generatorData.attack ?? generatorData.stats?.attack);
   const generatorDefense = normalizeNumber(generatorData.defense ?? generatorData.stats?.defense);
   const generatorArt = generatorRow ? resolveRowArt(generatorRow, undefined) : undefined;
+  const generatorBadgeStyle = (generatorData as any)?.style?.badges;
 
   const updateTable = (nextTable: DataTable) => {
     const exists = project.dataTables.some((tbl) => tbl.id === nextTable.id);
@@ -496,82 +486,6 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       }
     };
     input.click();
-  };
-
-  const pickArtVideo = () => {
-    if (!selectedRow) return;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'video/mp4,video/webm';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const rowId = selectedRow.id;
-      const allowed = ['video/mp4', 'video/webm'];
-      if (!allowed.includes(file.type)) {
-        alert(t('data.videoUnsupportedCodec'));
-        return;
-      }
-      if (file.size > 20 * 1024 * 1024) {
-        alert(t('data.videoSizeWarning'));
-      }
-      try {
-        const meta = await getVideoMetadata(file);
-        if (!meta.canPlay) {
-          alert(t('data.videoUnsupportedCodec'));
-          return;
-        }
-        if (meta.duration > 10) {
-          alert(t('data.videoDurationWarning'));
-        }
-        const src = URL.createObjectURL(file);
-        let posterUrl: string | undefined;
-        try {
-          setVideoJob({ title: t('data.videoGeneratingPoster') });
-          const posterBlob = await generatePoster(file);
-          posterUrl = URL.createObjectURL(posterBlob);
-        } catch {
-          posterUrl = undefined;
-        } finally {
-          setVideoJob(null);
-        }
-        updateRowArt(rowId, {
-          kind: 'video',
-          src,
-          poster: posterUrl,
-          meta: {
-            duration: meta.duration,
-            width: meta.width,
-            height: meta.height,
-            container: file.type,
-            size: file.size,
-          },
-        });
-      } catch {
-        setVideoJob(null);
-        alert(t('data.videoUnsupportedCodec'));
-      }
-    };
-    input.click();
-  };
-
-  const regeneratePoster = async () => {
-    if (!selectedRow?.art || selectedRow.art.kind !== 'video') return;
-    try {
-      const videoApi = window.cardsmith?.video;
-      if (videoApi) {
-        const sourcePath = isFileUrl(selectedRow.art.src) ? fileUrlToPath(selectedRow.art.src) : selectedRow.art.src;
-        const result = await videoApi.poster(sourcePath, { projectPath: project.meta.filePath, assetId: selectedRow.id });
-        if (result.ok) {
-          updateRowArt(selectedRow.id, { ...selectedRow.art, poster: toFileUrl(result.posterPath) });
-          return;
-        }
-      }
-      const poster = await captureVideoPosterFromUrl(selectedRow.art.src);
-      updateRowArt(selectedRow.id, { ...selectedRow.art, poster });
-    } catch (err: any) {
-      alert(err?.message ?? t('data.videoPosterFailed'));
-    }
   };
 
   const handleImport = async (file: File, mode: 'csv' | 'xlsx') => {
@@ -1183,6 +1097,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                     element={generatorData.element}
                     attack={generatorAttack}
                     defense={generatorDefense}
+                    badgeStyle={generatorBadgeStyle}
                     bgColor={generatorData.bgColor}
                     width={260}
                     height={360}
@@ -1305,17 +1220,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               templateKey={previewTemplateKey}
               title={previewTitle}
               description={previewDesc}
-                race={previewRace}
-                traits={previewTraits}
-                element={previewElement}
-                attack={previewAttack}
-                defense={previewDefense}
-                bgColor={previewBgColor}
-                showControls={showVideoControls}
-                posterWarning={posterWarning}
-                width={420}
-                height={540}
-              />
+              race={previewRace}
+              traits={previewTraits}
+              element={previewElement}
+              attack={previewAttack}
+              defense={previewDefense}
+              badgeStyle={previewBadgeStyle}
+              bgColor={previewBgColor}
+              posterWarning={posterWarning}
+              width={420}
+              height={540}
+            />
             </div>
           </div>
         ) : blueprint ? (
@@ -1370,33 +1285,27 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                 element={previewElement}
                 attack={previewAttack}
                 defense={previewDefense}
+                badgeStyle={previewBadgeStyle}
                 bgColor={previewBgColor}
-                showControls={showVideoControls}
                 posterWarning={posterWarning}
-              width={smallPreviewWidth}
-              height={smallPreviewHeight}
-              artInteractive
-              onArtPointerDown={handleArtPointerDown}
-              onArtPointerMove={handleArtPointerMove}
-              onArtPointerUp={handleArtPointerUp}
-              onArtPointerLeave={handleArtPointerUp}
-            />
+                width={smallPreviewWidth}
+                height={smallPreviewHeight}
+                artInteractive
+                onArtPointerDown={handleArtPointerDown}
+                onArtPointerMove={handleArtPointerMove}
+                onArtPointerUp={handleArtPointerUp}
+                onArtPointerLeave={handleArtPointerUp}
+              />
             </div>
             <CardInspector
               row={selectedRow}
               project={project}
               columns={columns}
               language={language}
-              showVideoControls={showVideoControls}
-              onToggleVideoControls={setShowVideoControls}
-              keepVideoAudio={keepVideoAudio}
-              onToggleKeepVideoAudio={setKeepVideoAudio}
               onUpdateData={(path, value) => selectedRow && updateRowData(selectedRow.id, path, value)}
               onUpdateStat={(key, value) => selectedRow && updateRowStats(selectedRow.id, key, value)}
               onUpdateRow={(patch) => selectedRow && updateRowMeta(selectedRow.id, patch)}
               onPickImage={pickArtImage}
-              onPickVideo={pickArtVideo}
-              onRegeneratePoster={regeneratePoster}
               onDuplicate={() => selectedRow && duplicateRow(selectedRow.id)}
               onDelete={() => requestDelete(selectedRow?.id)}
             />
@@ -1423,17 +1332,6 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           setRightDrawerOpen(false);
         }}
       />
-      {videoJob ? (
-        <div className="videoJobOverlay">
-          <div className="videoJobPanel uiPanel">
-            <div className="uiTitle">{videoJob.title}</div>
-            {videoJob.detail ? <div className="uiSub">{videoJob.detail}</div> : null}
-            <div className="videoJobBar">
-              <div className="videoJobBarFill" style={{ width: `${Math.round(videoJob.pct ?? 0)}%` }} />
-            </div>
-          </div>
-        </div>
-      ) : null}
       <Dialog
         open={confirmDeleteOpen}
         title={t('cards.delete.title')}
@@ -1639,14 +1537,6 @@ function stripProbeOk(result: any) {
   if (!result || !result.ok) return undefined;
   const { ok, ...meta } = result;
   return meta;
-}
-
-function toFileUrl(filePath: string) {
-  const normalized = String(filePath || '').replace(/\\/g, '/');
-  if (!normalized) return '';
-  if (normalized.startsWith('file://')) return normalized;
-  if (normalized.startsWith('/')) return `file://${normalized}`;
-  return `file:///${normalized}`;
 }
 
 function collectTags(rows: DataRow[]) {

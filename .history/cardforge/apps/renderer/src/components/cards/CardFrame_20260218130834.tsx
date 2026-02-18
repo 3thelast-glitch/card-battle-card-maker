@@ -40,17 +40,12 @@ type BadgeStyle = {
   scale?: number;
   color?: string;
   iconUrl?: string;
-  gap?: number;
-  borderWidth?: number;
-  borderColor?: string;
-  xOffset?: number;
 };
 
 type BadgeStyleConfig = {
   attackBadge?: BadgeStyle;
   defenseBadge?: BadgeStyle;
   elementBadge?: BadgeStyle;
-  tribe?: BadgeStyle;
 };
 
 function hexToRgb(hex: string) {
@@ -111,14 +106,10 @@ export function CardFrame({
   const badgeTop = resolvedTitle
     ? template.title.y + template.title.size + 6
     : template.artRect.top + 6;
-  const tribeBadge = normalizeBadgeStyle(badgeStyle?.tribe);
-  const metaBadgeStyle: CSSProperties = {
+  const badgeStyle: CSSProperties = {
     left: template.title.x,
     right: template.title.x,
     top: badgeTop,
-    display: 'flex',
-    justifyContent: 'center',
-    gap: tribeBadge.gap,
   };
   const traitList = Array.isArray(traits) ? traits.filter(Boolean) : [];
   const trimmedTraits = traitList.map((trait) => String(trait));
@@ -139,28 +130,20 @@ export function CardFrame({
   const defenseBadge = normalizeBadgeStyle(badgeStyle?.defenseBadge);
   const elementBadge = normalizeBadgeStyle(badgeStyle?.elementBadge);
 
-  const attackStyle = {
-    ...buildStatStyle(
-      attackBadge.color || tint,
-      isLegendary,
-      isEpic,
-      attackBadge.scale,
-      'left bottom',
-      attackBadge.color,
-    ),
-    ...(attackBadge.borderWidth ? { borderWidth: attackBadge.borderWidth, borderStyle: 'solid', borderColor: attackBadge.borderColor || undefined } : {}),
-  };
-  const defenseStyle = {
-    ...buildStatStyle(
-      defenseBadge.color || tint,
-      isLegendary,
-      isEpic,
-      defenseBadge.scale,
-      'right bottom',
-      defenseBadge.color,
-    ),
-    ...(defenseBadge.borderWidth ? { borderWidth: defenseBadge.borderWidth, borderStyle: 'solid', borderColor: defenseBadge.borderColor || undefined } : {}),
-  };
+  const attackStyle = buildStatStyle(
+    attackBadge.color || tint,
+    isLegendary,
+    isEpic,
+    attackBadge.scale,
+    'left bottom',
+  );
+  const defenseStyle = buildStatStyle(
+    defenseBadge.color || tint,
+    isLegendary,
+    isEpic,
+    defenseBadge.scale,
+    'right bottom',
+  );
   const elementColor = elementBadge.color || elementInfo?.color;
   const elementContainerStyle: CSSProperties = {
     transform: `scale(${elementBadge.scale})`,
@@ -301,18 +284,11 @@ export function CardFrame({
           </div>
         ) : null}
         {raceKey || trimmedTraits.length ? (
-          <div className="metaBadges" style={metaBadgeStyle}>
+          <div className="metaBadges" style={badgeStyle}>
             {raceKey ? (
               <span
-                className={`metaBadge metaBadge--race metaBadge--${raceKey} bg-slate-900`}
+                className={`metaBadge metaBadge--race metaBadge--${raceKey}`}
                 title={t(`races.${raceKey}`, { defaultValue: raceKey })}
-                style={{
-                  backgroundColor: tribeBadge.color || undefined,
-                  transform: `translateX(${tribeBadge.xOffset}px) scale(${tribeBadge.scale})`,
-                  borderWidth: tribeBadge.borderWidth || undefined,
-                  borderStyle: tribeBadge.borderWidth ? 'solid' : undefined,
-                  borderColor: tribeBadge.borderColor || undefined,
-                }}
               >
                 <RaceIcon race={raceKey as CardRace} size={14} />
               </span>
@@ -320,19 +296,12 @@ export function CardFrame({
             {visibleTraits.map((trait, index) => {
               const key = trait.toLowerCase();
               const meta = TRAIT_META[key];
-              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''} bg-slate-900`;
+              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''}`;
               return (
                 <span
                   key={`${key}-${index}`}
                   className={className}
                   title={t(`traits.${key}`, { defaultValue: trait })}
-                  style={{
-                    backgroundColor: tribeBadge.color || undefined,
-                    transform: `translateX(${tribeBadge.xOffset}px) scale(${tribeBadge.scale})`,
-                    borderWidth: tribeBadge.borderWidth || undefined,
-                    borderStyle: tribeBadge.borderWidth ? 'solid' : undefined,
-                    borderColor: tribeBadge.borderColor || undefined,
-                  }}
                 >
                   <TraitIcon trait={key} size={12} />
                 </span>
@@ -355,10 +324,7 @@ export function CardFrame({
             <div
               className="elementHex"
               style={{
-                borderColor: elementBadge.borderColor || elementColor,
-                borderWidth: elementBadge.borderWidth || undefined,
-                borderStyle: elementBadge.borderWidth ? 'solid' : undefined,
-                backgroundColor: elementBadge.color ? hexToRgba(elementBadge.color, 0.8) : undefined,
+                borderColor: elementColor,
                 boxShadow: elementColor ? `0 0 12px ${toGlowColor(elementColor, 0.35)}` : undefined,
               }}
               title={t(elementInfo.labelKey)}
@@ -455,18 +421,10 @@ function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
   const scale = clampNumber(Number(style?.scale ?? 1), 0.5, 2);
   const color = String(style?.color ?? '').trim();
   const iconUrl = String(style?.iconUrl ?? '').trim();
-  const gap = Number.isFinite(style?.gap) ? Number(style?.gap) : 4;
-  const borderWidth = Number.isFinite(style?.borderWidth) ? Number(style?.borderWidth) : 0;
-  const borderColor = String(style?.borderColor ?? '').trim();
-  const xOffset = Number.isFinite(style?.xOffset) ? Number(style?.xOffset) : 0;
   return {
     scale,
     color: color || '',
     iconUrl: iconUrl || '',
-    gap,
-    borderWidth,
-    borderColor,
-    xOffset,
   };
 }
 
@@ -476,17 +434,13 @@ function buildStatStyle(
   isEpic: boolean,
   scale: number,
   origin: string,
-  explicitColor?: string,
 ): CSSProperties {
   const safeColor = color || '#ffffff';
   const borderColor = isHexColor(safeColor) ? hexToRgba(safeColor, 0.55) : safeColor;
   const glow = isHexColor(safeColor)
     ? hexToRgba(safeColor, isLegendary ? 0.5 : isEpic ? 0.4 : 0.3)
     : safeColor;
-  const backgroundColor = explicitColor
-    ? (isHexColor(explicitColor) ? hexToRgba(explicitColor, 0.8) : explicitColor)
-    : (isHexColor(safeColor) ? hexToRgba(safeColor, 0.12) : undefined);
-
+  const backgroundColor = isHexColor(safeColor) ? hexToRgba(safeColor, 0.12) : undefined;
   return {
     borderColor,
     boxShadow: `0 10px 18px rgba(0,0,0,.45), inset 0 1px 2px rgba(255,255,255,.18), 0 0 12px ${glow}`,
@@ -527,3 +481,4 @@ function StatIcon({ kind }: { kind: 'atk' | 'def' }) {
     </svg>
   );
 }
+

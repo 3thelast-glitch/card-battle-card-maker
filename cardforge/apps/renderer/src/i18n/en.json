@@ -350,6 +350,12 @@
       "stats": "Stats",
       "text": "Text",
       "media": "Media",
+      "visuals": "Visuals",
+      "badges": "Badge Styling",
+      "badgeScale": "Scale",
+      "badgeColor": "Color",
+      "badgeIcon": "Icon",
+      "badgeIconUpload": "Upload Icon",
       "template": "Template",
       "rarity": "Rarity",
       "rarityCommon": "Common",
@@ -452,7 +458,9 @@
     "generatorPreviewEmpty": "Choose settings and click \"Generate Deck\" to preview here.",
     "element": "Element",
     "meta": {
+      "type": "Type",
       "race": "Race",
+      "class": "Class",
       "traits": "Traits"
     },
     "art": {

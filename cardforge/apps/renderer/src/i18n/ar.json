@@ -339,6 +339,12 @@
       "stats": "الإحصائيات",
       "text": "النص",
       "media": "الوسائط",
+      "visuals": "المرئيات",
+      "badges": "تنسيق الشارات",
+      "badgeScale": "المقياس",
+      "badgeColor": "اللون",
+      "badgeIcon": "الأيقونة",
+      "badgeIconUpload": "رفع أيقونة",
       "template": "القالب",
       "rarity": "الندرة",
       "rarityCommon": "عادي",
@@ -452,7 +458,9 @@
     "generatorPreviewEmpty": "اختر إعدادات ثم اضغط \"توليد المجموعة\" لعرض المعاينة هنا.",
     "element": "العنصر",
     "meta": {
+      "type": "النوع",
       "race": "العرق",
+      "class": "الفئة",
       "traits": "السمات"
     },
     "art": {

@@ -1,3 +1,5 @@
 {
-	"robotcode.disableExtension": true
+	"robotcode.disableExtension": true,
+	"geminicodeassist.outlines.automaticOutlineGeneration": true,
+	"Codegeex.RepoIndex": true
 }
