@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent } from 'react';
 import type { ArtTransform, CardArt, DataRow } from '../../../../../packages/core/src/index';
-import { ProfessionalCard } from '../cards/ProfessionalCard';
+import { CardFrame } from '../../components/cards/CardFrame';
 import { useTranslation } from 'react-i18next';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import { Toggle } from '../../components/ui';
@@ -85,16 +85,27 @@ export function CardPreviewPanel(props: {
   return (
     <div className="previewPanel">
       <div className="previewCanvas">
-        <ProfessionalCard
-          data={{
-            name: title,
-            main_element: element || 'Normal',
-            traits: traits,
-            attack: attack,
-            hp: defense,
-          }}
+        <CardFrame
+          rarity={rarity as any}
+          bgColor={bgColor}
+          art={art}
+          templateKey={templateKey}
+          title={title}
+          description={desc}
+          element={element as any}
+          race={race as any}
+          traits={traits as any}
+          attack={attack}
+          defense={defense}
+          posterWarning={props.posterWarning}
+          showControls={props.showControls}
           width={previewWidth}
           height={previewHeight}
+          artInteractive={Boolean(props.onUpdateArtTransform)}
+          onArtPointerDown={handlePointerDown}
+          onArtPointerMove={handlePointerMove}
+          onArtPointerUp={handlePointerUp}
+          onArtPointerLeave={handlePointerUp}
         />
       </div>
       {art?.kind === 'video' ? (

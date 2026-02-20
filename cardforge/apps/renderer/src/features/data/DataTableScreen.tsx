@@ -72,6 +72,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
   const [filters, setFilters] = useState<CardFilters>({ query: '', rarity: '', template: '', tag: '' });
   const [selectedId, setSelectedId] = useState<string | null>(previewRowId ?? null);
+  const [inspectorData, setInspectorData] = useState<DataRow | null>(null);
   const [defaultTemplate, setDefaultTemplate] = useState<TemplateKey>('classic');
   const [mergeById, setMergeById] = useState(false);
   const [hasLanguageColumns, setHasLanguageColumns] = useState(true);
@@ -215,41 +216,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     setActiveTableId(nextTable.id);
   };
 
-  const updateRows = (nextRows: DataRow[]) => {
-    if (!table) return;
-    const nextTable = { ...table, rows: nextRows, columns: collectColumns(nextRows.map((row) => row.data ?? {})) };
-    updateTable(nextTable);
-  };
+  useEffect(() => {
+    if (selectedRow) {
+      setInspectorData(selectedRow);
+    }
+  }, [selectedRow]);
 
-  const updateRowData = (rowId: string, path: string, value: any) => {
-    if (!table) return;
-    const nextRows = table.rows.map((row) =>
-      row.id === rowId ? { ...row, data: setPathValue(row.data ?? {}, path, value) } : row,
-    );
-    updateRows(nextRows);
-  };
-
-  const updateRowStats = (rowId: string, key: 'attack' | 'defense', value: number) => {
-    if (!table) return;
-    const nextRows = table.rows.map((row) => {
-      if (row.id !== rowId) return row;
-      const data = row.data ?? {};
-      const stats = { ...(data.stats ?? {}), [key]: value };
-      return {
-        ...row,
-        data: {
-          ...data,
-          [key]: value,
-          stats,
-        },
-      };
-    });
-    updateRows(nextRows);
-  };
-
-  const updateRowMeta = (rowId: string, patch: Partial<DataRow>) => {
-    if (!table) return;
-    const nextRows = table.rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row));
+  const handleInspectorChange = (newCardData: DataRow) => {
+    setInspectorData(newCardData);
+    const nextRows = rows.map((row) => (row.id === newCardData.id ? newCardData : row));
     updateRows(nextRows);
   };
 
@@ -1262,31 +1237,31 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       <div className="panelHeaderSticky uiPanelHeader">
         <div>
           <div className="uiTitle">{t('cards.inspector')}</div>
-          <div className="uiSub">{selectedRow ? getRowTitle(selectedRow.data ?? {}, language) : t('cards.empty')}</div>
+          <div className="uiSub">{inspectorData ? getRowTitle(inspectorData.data ?? {}, language) : t('cards.empty')}</div>
         </div>
         <Button size="sm" variant="outline" className="panelClose" onClick={() => setRightDrawerOpen(false)}>
           {t('common.close')}
         </Button>
       </div>
       <div className="panelScroll uiPanelBody">
-        {!selectedRow ? (
+        {!inspectorData ? (
           <div className="empty">{t('data.selectCardHint')}</div>
         ) : (
           <div className="uiStack" style={{ gap: 12 }}>
             <div className="smallPreviewWrap">
               <CardFrame
-                rarity={previewRarity}
-                art={resolvedArt}
-                templateKey={previewTemplateKey}
-                title={previewTitle}
-                description={previewDesc}
-                race={previewRace}
-                traits={previewTraits}
-                element={previewElement}
-                attack={previewAttack}
-                defense={previewDefense}
-                badgeStyle={previewBadgeStyle}
-                bgColor={previewBgColor}
+                rarity={normalizeRarity(inspectorData.data.rarity)}
+                art={resolveRowArt(inspectorData, previewArt)}
+                templateKey={normalizeTemplateKey(inspectorData.data.templateKey ?? inspectorData.data.template ?? inspectorData.data.template_key, defaultTemplate)}
+                title={getRowTitle(inspectorData.data, language) || inspectorData.id}
+                description={inspectorData.data.desc ?? inspectorData.data.ability ?? inspectorData.data.ability_en ?? inspectorData.data.ability_ar ?? ''}
+                race={inspectorData.data.race}
+                traits={normalizeTraits(inspectorData.data.traits ?? inspectorData.data.trait)}
+                element={inspectorData.data.element}
+                attack={normalizeNumber(inspectorData.data.attack ?? inspectorData.data.stats?.attack)}
+                defense={normalizeNumber(inspectorData.data.defense ?? inspectorData.data.stats?.defense)}
+                badgeStyle={(inspectorData.data as any)?.style?.badges}
+                bgColor={inspectorData.data.bgColor}
                 posterWarning={posterWarning}
                 width={smallPreviewWidth}
                 height={smallPreviewHeight}
@@ -1298,16 +1273,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               />
             </div>
             <CardInspector
-              row={selectedRow}
+              cardData={inspectorData}
+              onChange={handleInspectorChange}
               project={project}
               columns={columns}
               language={language}
-              onUpdateData={(path, value) => selectedRow && updateRowData(selectedRow.id, path, value)}
-              onUpdateStat={(key, value) => selectedRow && updateRowStats(selectedRow.id, key, value)}
-              onUpdateRow={(patch) => selectedRow && updateRowMeta(selectedRow.id, patch)}
               onPickImage={pickArtImage}
-              onDuplicate={() => selectedRow && duplicateRow(selectedRow.id)}
-              onDelete={() => requestDelete(selectedRow?.id)}
+              onDuplicate={() => duplicateRow(inspectorData.id)}
+              onDelete={() => requestDelete(inspectorData.id)}
             />
           </div>
         )}

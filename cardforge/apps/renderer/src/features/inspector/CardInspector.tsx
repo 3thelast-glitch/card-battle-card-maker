@@ -1,44 +1,409 @@
-﻿﻿import { useMemo, useState } from 'react';
+﻿﻿import { useMemo, useState, useCallback, ReactNode } from 'react';
 import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from '../../../../../packages/core/src/index';
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
-import { 
-  Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move, 
-  Layout, Wand2, Type, Eye, EyeOff, Layers, Shield, Zap, Star, Heart, Sword, Flame, Moon, Droplets, Diamond, Mic, Skull, Ghost, Anchor, Sun, Crown, ArrowRight, Circle
+import {
+  Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move,
+  Layout, Wand2, Type, Eye, EyeOff, Layers, Shield, Zap, Star, Heart, Sword, Flame, Moon,
+  Droplets, Diamond, Mic, Skull, Ghost, Anchor, Sun, Crown, ArrowRight, Circle, Pen,
+  Sparkles, Copy, Trash2, UploadCloud, CheckCircle2,
 } from 'lucide-react';
 import { Button, Input, Row, Select } from '../../components/ui';
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
 import { TemplatePicker } from '../templates/TemplatePicker';
-import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
+import { TraitIcon, TRAIT_META, TRAIT_OPTIONS, type TraitKey } from '../../ui/icons/traitIcons';
 import { ELEMENTS } from '../../lib/elements';
 import { resolveImageSrc } from '../../utils/file';
-import { UltimateBadgeEditor } from './UltimateBadgeEditor';
 
-type Props = {
-  row?: DataRow;
+// --- Constants ---
+const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
+const RACE_OPTIONS: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
+
+const RARITY_GRADIENT: Record<Rarity, string> = {
+  common: 'from-slate-500 to-slate-600',
+  rare: 'from-blue-500 to-cyan-500',
+  epic: 'from-purple-500 to-violet-600',
+  legendary: 'from-amber-400 to-orange-500',
+};
+
+// --- Type Definitions ---
+interface BadgeModel {
+  id: string;
+  text?: string;
+  color: string;
+  textColor: string;
+  borderColor: string;
+  borderWidth: number;
+  borderRadius: number;
+  shadowBlur: number;
+  shadowColor: string;
+  scale: number;
+  rotation: number;
+  opacity: number;
+}
+
+interface BadgeStylingPanelProps {
+  badge: BadgeModel;
+  onChange: (updates: Partial<BadgeModel>) => void;
+}
+
+const defaultBadgeStyle: Omit<BadgeModel, 'id'> = {
+  text: '',
+  color: 'rgba(15, 23, 42, 0.5)',
+  textColor: '#f59e0b',
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+  borderWidth: 1,
+  borderRadius: 12,
+  shadowBlur: 0,
+  shadowColor: 'rgba(245, 158, 11, 0.5)',
+  scale: 1,
+  rotation: 0,
+  opacity: 1,
+};
+
+// --- Shared primitive UI atoms ---
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+      {children}
+    </label>
+  );
+}
+
+function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={[
+        'w-full bg-slate-800/80 border border-slate-700/80 text-slate-100 text-sm',
+        'rounded-lg px-3 py-2 placeholder-slate-600',
+        'focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30',
+        'transition-all duration-200',
+        props.className ?? '',
+      ].join(' ')}
+    />
+  );
+}
+
+function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      {...props}
+      className={[
+        'w-full bg-slate-800/80 border border-slate-700/80 text-slate-100 text-sm',
+        'rounded-lg px-3 py-2 appearance-none cursor-pointer',
+        'focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30',
+        'transition-all duration-200',
+        props.className ?? '',
+      ].join(' ')}
+    />
+  );
+}
+
+function GradientButton({
+  onClick,
+  children,
+  className = '',
+  variant = 'default',
+}: {
+  onClick?: () => void;
+  children: ReactNode;
+  className?: string;
+  variant?: 'default' | 'magic' | 'danger' | 'ghost';
+}) {
+  const variants = {
+    default: 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/40',
+    magic: 'bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-400 hover:via-orange-400 hover:to-pink-400 text-white shadow-lg shadow-orange-900/40',
+    danger: 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-900/40',
+    ghost: 'bg-slate-800/70 hover:bg-slate-700/70 text-slate-300 border border-slate-700 hover:border-slate-600',
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold tracking-wide',
+        'transition-all duration-200 active:scale-95',
+        variants[variant],
+        className,
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
+// --- Section accordion shell ---
+function Section({
+  title,
+  icon,
+  accent = 'violet',
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  accent?: 'violet' | 'amber' | 'cyan' | 'rose' | 'emerald';
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const accents: Record<string, string> = {
+    violet: 'from-violet-500/20 to-transparent border-violet-500/30 text-violet-400',
+    amber: 'from-amber-500/20 to-transparent border-amber-500/30 text-amber-400',
+    cyan: 'from-cyan-500/20 to-transparent border-cyan-500/30 text-cyan-400',
+    rose: 'from-rose-500/20 to-transparent border-rose-500/30 text-rose-400',
+    emerald: 'from-emerald-500/20 to-transparent border-emerald-500/30 text-emerald-400',
+  };
+  return (
+    <div className="rounded-xl border border-slate-700/60 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center gap-2 px-4 py-3 bg-gradient-to-r ${accents[accent]} border-b text-left transition-all duration-200 hover:brightness-110`}
+      >
+        <span className="flex-shrink-0">{icon}</span>
+        <span className="flex-1 text-xs font-bold uppercase tracking-widest">{title}</span>
+        <span className={`text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {open && (
+        <div className="px-4 py-4 bg-slate-900/60 space-y-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Child Components ---
+
+const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
+  const [activeTab, setActiveTab] = useState<'layout' | 'colors' | 'effects' | 'content'>('layout');
+  const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+
+  const tabs = {
+    layout: { label: 'التخطيط', icon: Layout },
+    colors: { label: 'الألوان', icon: Palette },
+    effects: { label: 'التأثيرات', icon: Wand2 },
+    content: { label: 'المحتوى', icon: Pen },
+  };
+
+  const ControlWrapper = ({ children }: { children: ReactNode }) => (
+    <div className="flex flex-col gap-4">{children}</div>
+  );
+
+  const ControlRow = ({ label, children }: { label: string; children: ReactNode }) => (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex items-center gap-3">{children}</div>
+    </div>
+  );
+
+  const GameSlider = ({ value, min, max, step, onChange: onSliderChange }: { value: number; min: number; max: number; step: number; onChange: (v: number) => void }) => (
+    <input
+      type="range"
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+      onChange={(e) => onSliderChange(parseFloat(e.target.value))}
+      className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+    />
+  );
+
+  const ColorButton = ({ color, field }: { color: string; field: keyof BadgeModel }) => (
+    <button
+      type="button"
+      onClick={() => setShowColorPicker(showColorPicker === field ? null : field)}
+      className="w-full h-9 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-colors duration-200 shadow-inner"
+      style={{ backgroundColor: color }}
+    />
+  );
+
+  return (
+    <div dir="rtl" className="w-full rounded-xl border border-slate-700/60 overflow-hidden bg-slate-900/60">
+      {/* Tab bar */}
+      <div className="flex bg-slate-800/80 border-b border-slate-700/60">
+        {Object.entries(tabs).map(([key, { label, icon: Icon }]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key as any)}
+            className={[
+              'relative flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-bold transition-all duration-200',
+              activeTab === key
+                ? 'text-amber-400 bg-slate-900/70'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800',
+            ].join(' ')}
+          >
+            <Icon size={13} />
+            <span>{label}</span>
+            {activeTab === key && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-4 space-y-5">
+        {activeTab === 'layout' && (
+          <ControlWrapper>
+            <ControlRow label="الحجم (Scale)">
+              <GameSlider value={badge.scale} min={0.5} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.scale.toFixed(2)}x</span>
+            </ControlRow>
+            <ControlRow label="الدوران (Rotation)">
+              <GameSlider value={badge.rotation} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.rotation}°</span>
+            </ControlRow>
+          </ControlWrapper>
+        )}
+
+        {activeTab === 'colors' && (
+          <ControlWrapper>
+            <ControlRow label="لون الخلفية">
+              <ColorButton color={badge.color} field="color" />
+            </ControlRow>
+            {showColorPicker === 'color' && (
+              <HexColorPicker color={badge.color} onChange={(c) => onChange({ color: c })} />
+            )}
+            <ControlRow label="لون النص">
+              <ColorButton color={badge.textColor} field="textColor" />
+            </ControlRow>
+            {showColorPicker === 'textColor' && (
+              <HexColorPicker color={badge.textColor} onChange={(c) => onChange({ textColor: c })} />
+            )}
+            <ControlRow label="الشفافية (Opacity)">
+              <GameSlider value={badge.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">%{Math.round(badge.opacity * 100)}</span>
+            </ControlRow>
+          </ControlWrapper>
+        )}
+
+        {activeTab === 'effects' && (
+          <ControlWrapper>
+            <ControlRow label="عرض الإطار">
+              <GameSlider value={badge.borderWidth} min={0} max={10} step={0.5} onChange={(v) => onChange({ borderWidth: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.borderWidth}px</span>
+            </ControlRow>
+            <ControlRow label="لون الإطار">
+              <ColorButton color={badge.borderColor} field="borderColor" />
+            </ControlRow>
+            {showColorPicker === 'borderColor' && (
+              <HexColorPicker color={badge.borderColor} onChange={(c) => onChange({ borderColor: c })} />
+            )}
+            <ControlRow label="تدوير الحواف">
+              <GameSlider value={badge.borderRadius} min={0} max={32} step={1} onChange={(v) => onChange({ borderRadius: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.borderRadius}px</span>
+            </ControlRow>
+            <ControlRow label="قوة التوهج (Shadow)">
+              <GameSlider value={badge.shadowBlur} min={0} max={30} step={1} onChange={(v) => onChange({ shadowBlur: v })} />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.shadowBlur}px</span>
+            </ControlRow>
+            <ControlRow label="لون التوهج">
+              <ColorButton color={badge.shadowColor} field="shadowColor" />
+            </ControlRow>
+            {showColorPicker === 'shadowColor' && (
+              <HexColorPicker color={badge.shadowColor} onChange={(c) => onChange({ shadowColor: c })} />
+            )}
+          </ControlWrapper>
+        )}
+
+        {activeTab === 'content' && (
+          <ControlWrapper>
+            <ControlRow label="النص">
+              <StyledInput
+                value={badge.text ?? ''}
+                onChange={(e) => onChange({ text: e.target.value })}
+                placeholder="أدخل النص هنا..."
+              />
+            </ControlRow>
+          </ControlWrapper>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TraitPicker = ({
+  selectedTraits = [],
+  onAddTrait,
+  onRemoveTrait,
+  maxTraits = 5,
+}: {
+  selectedTraits: TraitKey[];
+  onAddTrait: (trait: TraitKey) => void;
+  onRemoveTrait: (trait: TraitKey) => void;
+  maxTraits?: number;
+}) => {
+  const availableTraits = TRAIT_OPTIONS.filter((trait) => !selectedTraits.includes(trait));
+
+  return (
+    <div className="space-y-3">
+      {selectedTraits.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <FieldLabel>Active Traits</FieldLabel>
+            <span className="text-[10px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+              {selectedTraits.length}/{maxTraits}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {selectedTraits.map((trait) => (
+              <div key={trait} className="relative group">
+                <TraitIcon
+                  trait={trait}
+                  selected={true}
+                  onClick={() => onRemoveTrait(trait)}
+                  className="w-9 h-9 ring-2 ring-violet-500/60 ring-offset-1 ring-offset-slate-900"
+                />
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <X size={8} className="text-white" />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <FieldLabel>Add Trait</FieldLabel>
+        <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto p-2 bg-slate-800/60 rounded-lg border border-slate-700/60">
+          {availableTraits.slice(0, 18).map((trait) => (
+            <TraitIcon
+              key={trait}
+              trait={trait}
+              onClick={() => {
+                if (selectedTraits.length < maxTraits) onAddTrait(trait);
+              }}
+              className="w-10 h-10 hover:scale-110 transition-transform duration-150"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Main Component ---
+
+export function CardInspector(props: {
+  cardData: DataRow | null;
   project: Project;
-  columns: string[];
   language: 'en' | 'ar';
-  onUpdateData: (path: string, value: any) => void;
-  onUpdateStat: (key: 'attack' | 'defense', value: number) => void;
-  onUpdateRow: (patch: Partial<DataRow>) => void;
+  onChange: (newCardData: DataRow) => void;
   onPickImage: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-};
-
-const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
-const RACE_OPTIONS: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
-const TRAIT_OPTIONS: TraitKey[] = ['fire', 'ice', 'swordsman', 'archer', 'mage', 'tank', 'poison', 'flying', 'holy', 'shadow'];
-
-export function CardInspector(props: Props) {
+}) {
   const { t } = useTranslation();
-  const [traitQuery, setTraitQuery] = useState('');
-  const row = props.row;
-  const data = row?.data ?? {};
-  const art: CardArt | undefined = row?.art ?? (data as any).art;
+  const { cardData, project, language, onChange, onPickImage, onDuplicate, onDelete } = props;
+
+  const data = cardData?.data ?? {};
+  const art: CardArt | undefined = cardData?.art ?? (data as any).art;
   const rarity = normalizeRarity(data.rarity);
   const templateKey = normalizeTemplateKey(data.templateKey ?? data.template);
   const race = normalizeRace(data.race);
@@ -47,111 +412,174 @@ export function CardInspector(props: Props) {
   const attack = normalizeNumber(data.attack ?? data.stats?.attack);
   const defense = normalizeNumber(data.defense ?? data.stats?.defense);
   const cost = data.cost != null ? normalizeNumber(data.cost) : '';
-  const nameEn = getLocalizedValue(data.name ?? data.title ?? data.character_name ?? data.character_name_en, 'en');
-  const nameAr = getLocalizedValue(data.name ?? data.title ?? data.character_name ?? data.character_name_ar, 'ar');
-  const descriptionValue = data.desc ?? data.description ?? data.description_en ?? data.description_ar;
-  const descriptionEn = getLocalizedValue(descriptionValue, 'en');
-  const descriptionAr = getLocalizedValue(descriptionValue, 'ar');
-  const abilityValue =
-    data.ability ??
-    data.ability_name ??
-    data.ability_en ??
-    data.ability_ar ??
-    data.ability_name_en ??
-    data.ability_name_ar;
-  const abilityEn = getLocalizedValue(abilityValue, 'en');
-  const abilityAr = getLocalizedValue(abilityValue, 'ar');
-  const projectRoot = props.project.meta.filePath ? getParentPath(props.project.meta.filePath) : '';
+  const nameEn = getLocalizedValue(data.name ?? data.title, 'en');
+  const nameAr = getLocalizedValue(data.name ?? data.title, 'ar');
+  const descriptionEn = getLocalizedValue(data.desc, 'en');
+  const descriptionAr = getLocalizedValue(data.desc, 'ar');
+  const abilityEn = getLocalizedValue(data.ability, 'en');
+  const abilityAr = getLocalizedValue(data.ability, 'ar');
+
+  const badgeStyles = (data as any)?.style?.badges ?? {};
+
+  const traitSet = new Set(traits);
+
   const assetOptions = useMemo(
     () =>
-      (props.project.assets?.images ?? []).map((asset) => ({
+      (project?.assets?.images ?? []).map((asset) => ({
         id: asset.id,
         name: asset.name,
         src: asset.src,
-        resolvedSrc: resolveImageSrc(asset.src, projectRoot),
+        resolvedSrc: resolveImageSrc(
+          asset.src,
+          project?.meta?.filePath ? getParentPath(project.meta.filePath) : undefined,
+        ),
       })),
-    [projectRoot, props.project.assets?.images],
+    [project],
   );
-  const badgeStyles = (data as any)?.style?.badges ?? {};
-  const attackBadge = badgeStyles.attackBadge ?? {};
-  const defenseBadge = badgeStyles.defenseBadge ?? {};
-  const elementBadge = badgeStyles.elementBadge ?? {};
-  const tribeBadge = badgeStyles.tribe ?? {};
 
-  const getAssetIdForIcon = (iconUrl?: string) => {
-    if (!iconUrl) return '';
-    const match = assetOptions.find((asset) => asset.resolvedSrc === iconUrl || asset.src === iconUrl);
-    return match?.id ?? '';
+  const handleUpdateData = (path: string, value: any) => {
+    if (!cardData) return;
+    onChange({
+      ...cardData,
+      data: setPathValue(cardData.data ?? {}, path, value),
+    });
   };
 
-  const traitSet = new Set(traits);
-  const normalizedTraitQuery = traitQuery.trim().toLowerCase();
-  const traitSuggestions = useMemo(() => {
-    const list = TRAIT_OPTIONS.filter((trait) => !traitSet.has(trait as CardTrait));
-    if (!normalizedTraitQuery) return list.slice(0, 8);
-    return list
-      .filter((trait) => {
-        const meta = TRAIT_META[trait];
-        const label = t(meta?.labelKey ?? `traits.${trait}`, { defaultValue: trait }).toLowerCase();
-        return trait.includes(normalizedTraitQuery) || label.includes(normalizedTraitQuery);
-      })
-      .slice(0, 8);
-  }, [normalizedTraitQuery, traitSet, t]);
-
-  const addTrait = (trait: string) => {
-    const cleaned = String(trait || '').toLowerCase().trim();
-    if (!cleaned) return;
-    if (traitSet.has(cleaned as CardTrait)) {
-      setTraitQuery('');
-      return;
-    }
-    props.onUpdateData('traits', Array.from(new Set([...traits, cleaned])));
-    setTraitQuery('');
+  const addTrait = (trait: TraitKey) => {
+    if (traitSet.has(trait)) return;
+    handleUpdateData('traits', [...traits, trait]);
   };
 
-  const removeTrait = (trait: string) => {
-    const cleaned = String(trait || '').toLowerCase().trim();
-    props.onUpdateData(
-      'traits',
-      traits.filter((item) => String(item).toLowerCase().trim() !== cleaned),
-    );
+  const removeTrait = (trait: TraitKey) => {
+    handleUpdateData('traits', traits.filter((t) => t !== trait));
+  };
+
+  const handleUpdateStat = (key: 'attack' | 'defense', value: number) => {
+    if (!cardData) return;
+    const data = cardData.data ?? {};
+    const stats = { ...(data.stats ?? {}), [key]: value };
+    onChange({
+      ...cardData,
+      data: {
+        ...data,
+        [key]: value,
+        stats,
+      },
+    });
   };
 
   const [selectedBadgeId, setSelectedBadgeId] = useState<'attackBadge' | 'defenseBadge' | 'elementBadge' | 'tribe'>('attackBadge');
 
-  if (!row) {
-    return <div className="empty">{t('cards.empty')}</div>;
+  const selectedBadgeStyle: BadgeModel = {
+    ...defaultBadgeStyle,
+    id: selectedBadgeId,
+    ...(badgeStyles[selectedBadgeId] ?? {}),
+  };
+
+  const handleBadgeChange = (updates: Partial<BadgeModel>) => {
+    const newBadgeStyles = {
+      ...badgeStyles,
+      [selectedBadgeId]: {
+        ...selectedBadgeStyle,
+        ...updates,
+      },
+    };
+
+    if (!cardData) return;
+    onChange({
+      ...cardData,
+      data: {
+        ...cardData.data,
+        style: {
+          ...(cardData.data as Record<string, unknown>).style,
+          badges: newBadgeStyles,
+        },
+      },
+    });
+  };
+
+  if (!cardData) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center">
+          <ImageIcon size={22} className="text-slate-500" />
+        </div>
+        <p className="text-sm font-medium text-slate-500">{t('cards.empty')}</p>
+        <p className="text-xs text-slate-600">Select a card from the list to inspect it</p>
+      </div>
+    );
   }
 
   return (
-    <div className="uiStack">
-      <details className="uiAccordion" open>
-        <summary className="uiAccordionHeader">{t('editor.inspector.card')}</summary>
-        <div className="uiAccordionBody uiStack">
-          <Row gap={10}>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('common.name')} ({t('settings.english')})</div>
-              <Input value={nameEn} onChange={(e) => props.onUpdateData('name.en', e.target.value)} />
-            </div>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('common.name')} ({t('settings.arabic')})</div>
-              <Input value={nameAr} onChange={(e) => props.onUpdateData('name.ar', e.target.value)} />
-            </div>
-          </Row>
-          <Row gap={10}>
-            <div style={{ minWidth: 120 }}>
-              <div className="uiHelp">{t('data.cost')}</div>
-              <Input
-                type="number"
-                value={cost}
-                onChange={(e) => props.onUpdateData('cost', Number(e.target.value) || 0)}
+    <div className="flex flex-col h-full text-slate-100 bg-slate-900">
+      {/* ── Header ── */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60 bg-slate-800/50 backdrop-blur-sm flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+            <Layers size={12} className="text-white" />
+          </div>
+          <h3 className="font-bold text-slate-100 uppercase tracking-tighter text-sm">Inspector</h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onDuplicate}
+            title="Duplicate"
+            className="w-7 h-7 rounded-lg bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all duration-150"
+          >
+            <Copy size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Delete"
+            className="w-7 h-7 rounded-lg bg-rose-900/30 hover:bg-rose-700/50 text-rose-400 hover:text-rose-200 flex items-center justify-center transition-all duration-150"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </header>
+
+      {/* ── Scrollable body ── */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+
+        {/* ── Card Identity ── */}
+        <Section title={t('editor.inspector.card')} icon={<Type size={13} />} accent="violet">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel>{t('common.name')} (EN)</FieldLabel>
+              <StyledInput
+                value={nameEn}
+                onChange={(e) => handleUpdateData('name.en', e.target.value)}
+                placeholder="Card name…"
               />
             </div>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('cards.meta.type', { defaultValue: 'Type' })}</div>
-              <Select
+            <div>
+              <FieldLabel>{t('common.name')} (AR)</FieldLabel>
+              <StyledInput
+                value={nameAr}
+                onChange={(e) => handleUpdateData('name.ar', e.target.value)}
+                placeholder="اسم البطاقة…"
+                dir="rtl"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <FieldLabel>{t('data.cost')}</FieldLabel>
+              <StyledInput
+                type="number"
+                value={cost}
+                onChange={(e) => handleUpdateData('cost', Number(e.target.value) || 0)}
+                placeholder="0"
+              />
+            </div>
+            <div className="col-span-2">
+              <FieldLabel>{t('cards.meta.type', { defaultValue: 'Element' })}</FieldLabel>
+              <StyledSelect
                 value={element}
-                onChange={(e) => props.onUpdateData('element', e.target.value || undefined)}
+                onChange={(e) => handleUpdateData('element', e.target.value || undefined)}
               >
                 <option value="">{t('common.none')}</option>
                 {Object.keys(ELEMENTS).map((key) => (
@@ -159,14 +587,15 @@ export function CardInspector(props: Props) {
                     {t(`elements.${key}`, { defaultValue: key })}
                   </option>
                 ))}
-              </Select>
+              </StyledSelect>
             </div>
-          </Row>
+          </div>
+
           <div>
-            <div className="uiHelp">{t('cards.meta.race')}</div>
-            <Select
+            <FieldLabel>{t('cards.meta.race')}</FieldLabel>
+            <StyledSelect
               value={race}
-              onChange={(e) => props.onUpdateData('race', e.target.value || undefined)}
+              onChange={(e) => handleUpdateData('race', e.target.value || undefined)}
             >
               <option value="">{t('common.none')}</option>
               {RACE_OPTIONS.map((option) => (
@@ -174,162 +603,193 @@ export function CardInspector(props: Props) {
                   {t(`races.${option}`)}
                 </option>
               ))}
-            </Select>
+            </StyledSelect>
           </div>
+
           <div>
-            <div className="uiHelp">{t('cards.meta.class', { defaultValue: 'Class' })}</div>
-            <div className="uiStack" style={{ gap: 8 }}>
-              <Input
-                placeholder={t('cards.search')}
-                value={traitQuery}
-                onChange={(e) => setTraitQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (traitSuggestions.length) {
-                      addTrait(traitSuggestions[0]);
-                    } else {
-                      addTrait(traitQuery);
-                    }
-                  }
-                }}
+            <FieldLabel>{t('cards.meta.class', { defaultValue: 'Traits / Class' })}</FieldLabel>
+            <TraitPicker
+              selectedTraits={traits as TraitKey[]}
+              onAddTrait={addTrait}
+              onRemoveTrait={removeTrait}
+            />
+          </div>
+        </Section>
+
+        {/* ── Stats ── */}
+        <Section title={t('editor.inspector.stats')} icon={<Zap size={13} />} accent="amber">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel>
+                <span className="flex items-center gap-1.5">
+                  <Sword size={10} className="text-rose-400" />
+                  {t('editor.inspector.attack')}
+                </span>
+              </FieldLabel>
+              <StyledInput
+                type="number"
+                value={attack}
+                onChange={(e) => handleUpdateStat('attack', Number(e.target.value) || 0)}
+                className="text-center font-mono text-lg font-bold text-rose-300"
               />
-              {traitSuggestions.length ? (
-                <div className="traitsChips">
-                  {traitSuggestions.map((trait) => {
-                    const meta = TRAIT_META[trait];
-                    const label = t(meta?.labelKey ?? `traits.${trait}`, { defaultValue: trait });
-                    return (
-                      <button
-                        key={trait}
-                        type="button"
-                        className={`chip chip--suggestion ${meta ? `chip--${meta.tintClass}` : ''}`}
-                        onClick={() => addTrait(trait)}
-                      >
-                        <span className="chipIcon">
-                          <TraitIcon trait={trait} size={14} />
-                        </span>
-                        <span>{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-              <div className="traitsChips">
-                {traits.map((trait) => {
-                  const key = String(trait);
-                  const meta = TRAIT_META[key];
-                  const label = t(meta?.labelKey ?? `traits.${key}`, { defaultValue: key });
-                  return (
-                    <span key={key} className={`chip ${meta ? `chip--${meta.tintClass}` : ''}`}>
-                      <span className="chipIcon">
-                        <TraitIcon trait={key} size={14} />
-                      </span>
-                      <span>{label}</span>
-                      <button
-                        type="button"
-                        className="chipRemove"
-                        onClick={() => removeTrait(key)}
-                        aria-label={t('common.delete')}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  );
-                })}
+            </div>
+            <div>
+              <FieldLabel>
+                <span className="flex items-center gap-1.5">
+                  <Shield size={10} className="text-sky-400" />
+                  {t('editor.inspector.defense')}
+                </span>
+              </FieldLabel>
+              <StyledInput
+                type="number"
+                value={defense}
+                onChange={(e) => handleUpdateStat('defense', Number(e.target.value) || 0)}
+                className="text-center font-mono text-lg font-bold text-sky-300"
+              />
+            </div>
+          </div>
+          {/* Mini stat preview bar */}
+          <div className="flex items-center gap-2 pt-1">
+            <div className="flex-1">
+              <div className="flex justify-between mb-1">
+                <span className="text-[10px] text-slate-500 font-mono uppercase">ATK {attack}</span>
+              </div>
+              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-rose-500 to-orange-400 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (attack / 20) * 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex justify-between mb-1">
+                <span className="text-[10px] text-slate-500 font-mono uppercase">DEF {defense}</span>
+              </div>
+              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, (defense / 20) * 100)}%` }}
+                />
               </div>
             </div>
           </div>
-        </div>
-      </details>
+        </Section>
 
-      <details className="uiAccordion" open>
-        <summary className="uiAccordionHeader">{t('editor.inspector.stats')}</summary>
-        <div className="uiAccordionBody uiStack">
-          <Row gap={10}>
-            <div style={{ minWidth: 120 }}>
-              <div className="uiHelp">{t('editor.inspector.attack')}</div>
-              <Input
-                type="number"
-                value={attack}
-                onChange={(e) => props.onUpdateStat('attack', Number(e.target.value) || 0)}
+        {/* ── Text / Lore ── */}
+        <Section title={t('editor.inspector.text')} icon={<Type size={13} />} accent="cyan">
+          <div className="space-y-3">
+            <div>
+              <FieldLabel>{t('common.description')} (EN)</FieldLabel>
+              <StyledInput
+                value={descriptionEn}
+                onChange={(e) => handleUpdateData('desc.en', e.target.value)}
+                placeholder="Card description…"
               />
             </div>
-            <div style={{ minWidth: 120 }}>
-              <div className="uiHelp">{t('editor.inspector.defense')}</div>
-              <Input
-                type="number"
-                value={defense}
-                onChange={(e) => props.onUpdateStat('defense', Number(e.target.value) || 0)}
+            <div>
+              <FieldLabel>{t('common.description')} (AR)</FieldLabel>
+              <StyledInput
+                value={descriptionAr}
+                onChange={(e) => handleUpdateData('desc.ar', e.target.value)}
+                placeholder="وصف البطاقة…"
+                dir="rtl"
               />
             </div>
-          </Row>
-        </div>
-      </details>
+            <div>
+              <FieldLabel>{t('editor.inspector.ability', { defaultValue: 'Ability' })} (EN)</FieldLabel>
+              <StyledInput
+                value={abilityEn}
+                onChange={(e) => handleUpdateData('ability.en', e.target.value)}
+                placeholder="Ability text…"
+              />
+            </div>
+            <div>
+              <FieldLabel>{t('editor.inspector.ability', { defaultValue: 'Ability' })} (AR)</FieldLabel>
+              <StyledInput
+                value={abilityAr}
+                onChange={(e) => handleUpdateData('ability.ar', e.target.value)}
+                placeholder="نص الموهبة…"
+                dir="rtl"
+              />
+            </div>
+          </div>
+        </Section>
 
-      <details className="uiAccordion" open>
-        <summary className="uiAccordionHeader">{t('editor.inspector.text')}</summary>
-        <div className="uiAccordionBody uiStack">
-          <Row gap={10}>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('common.description')} ({t('settings.english')})</div>
-              <Input value={descriptionEn} onChange={(e) => props.onUpdateData('desc.en', e.target.value)} />
-            </div>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('common.description')} ({t('settings.arabic')})</div>
-              <Input value={descriptionAr} onChange={(e) => props.onUpdateData('desc.ar', e.target.value)} />
-            </div>
-          </Row>
-          <Row gap={10}>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('editor.inspector.ability', { defaultValue: 'Ability Text' })} ({t('settings.english')})</div>
-              <Input value={abilityEn} onChange={(e) => props.onUpdateData('ability.en', e.target.value)} />
-            </div>
-            <div style={{ minWidth: 200, flex: 1 }}>
-              <div className="uiHelp">{t('editor.inspector.ability', { defaultValue: 'Ability Text' })} ({t('settings.arabic')})</div>
-              <Input value={abilityAr} onChange={(e) => props.onUpdateData('ability.ar', e.target.value)} />
-            </div>
-          </Row>
-        </div>
-      </details>
-
-      <details className="uiAccordion" open>
-        <summary className="uiAccordionHeader">{t('editor.inspector.visuals', { defaultValue: 'Visuals' })}</summary>
-        <div className="uiAccordionBody uiStack">
+        {/* ── Visuals ── */}
+        <Section title={t('editor.inspector.visuals', { defaultValue: 'Visuals' })} icon={<ImageIcon size={13} />} accent="emerald">
+          {/* Template */}
           <div>
-            <div className="uiHelp">{t('editor.inspector.template')}</div>
+            <FieldLabel>{t('editor.inspector.template')}</FieldLabel>
             <TemplatePicker
               value={templateKey}
-              language={props.language}
-              onChange={(next) => props.onUpdateData('templateKey', next)}
+              language={language}
+              onChange={(next) => handleUpdateData('templateKey', next)}
             />
           </div>
+
+          {/* Rarity */}
           <div>
-            <div className="uiHelp">{t('editor.inspector.rarity')}</div>
-            <Select
-              value={rarity}
-              onChange={(e) => props.onUpdateData('rarity', e.target.value)}
-            >
+            <FieldLabel>{t('editor.inspector.rarity')}</FieldLabel>
+            <div className="grid grid-cols-4 gap-1.5">
               {RARITY_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {getRarityLabel(option, props.language)}
-                </option>
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleUpdateData('rarity', option)}
+                  className={[
+                    'py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200',
+                    rarity === option
+                      ? `bg-gradient-to-b ${RARITY_GRADIENT[option]} text-white shadow-lg scale-105`
+                      : 'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-slate-300 border border-slate-700',
+                  ].join(' ')}
+                >
+                  {getRarityLabel(option, language)}
+                </button>
               ))}
-            </Select>
+            </div>
           </div>
+
+          {/* Artwork */}
           <div>
-            <div className="uiHelp">{t('data.uploadImage')}</div>
-            <Row gap={8}>
-              <Button variant="outline" size="sm" onClick={props.onPickImage}>{t('data.uploadImage')}</Button>
-            </Row>
-          </div>
-          {assetOptions.length ? (
-            <div className="uiStack" style={{ gap: 8 }}>
-              <div className="uiHelp">{t('assets.title', { defaultValue: 'Assets' })}</div>
-              <div
-                className="assets-grid"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}
+            <FieldLabel>{t('data.uploadImage')}</FieldLabel>
+            <div className="flex items-center gap-2">
+              <GradientButton onClick={onPickImage} variant="ghost" className="flex-1">
+                <UploadCloud size={14} />
+                {t('data.uploadImage')}
+              </GradientButton>
+              <GradientButton
+                variant="magic"
+                onClick={() => { console.log('[Vibe Sync] AI magic triggered ✨'); }}
+                className="flex-shrink-0"
               >
+                <Sparkles size={13} />
+                Vibe Sync ✨
+              </GradientButton>
+            </div>
+
+            {/* Art status pill */}
+            <div className={[
+              'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+              art?.kind === 'image' ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/40' :
+                art?.kind === 'video' ? 'bg-blue-900/40 text-blue-400 border border-blue-700/40' :
+                  'bg-slate-800/60 text-slate-500 border border-slate-700/40',
+            ].join(' ')}>
+              {art?.kind === 'image' ? <CheckCircle2 size={12} /> :
+                art?.kind === 'video' ? <Eye size={12} /> :
+                  <ImageIcon size={12} />}
+              {art?.kind === 'video'
+                ? t('data.videoUsesPoster')
+                : art?.kind === 'image'
+                  ? t('data.imageSelected')
+                  : t('data.noArtwork')}
+            </div>
+          </div>
+
+          {/* Asset grid */}
+          {assetOptions.length > 0 && (
+            <div>
+              <FieldLabel>{t('assets.title', { defaultValue: 'Project Assets' })}</FieldLabel>
+              <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5">
                 {assetOptions.map((asset) => {
                   const isSelected =
                     art?.kind === 'image' && (art.src === asset.resolvedSrc || art.src === asset.src);
@@ -337,303 +797,95 @@ export function CardInspector(props: Props) {
                     <button
                       key={asset.id}
                       type="button"
-                      className={`asset-card ${isSelected ? 'asset-card-active' : ''}`}
-                      onClick={() => props.onUpdateRow({ art: { kind: 'image', src: asset.resolvedSrc } })}
+                      onClick={() => {
+                        if (cardData) onChange({ ...cardData, art: { kind: 'image', src: asset.resolvedSrc } });
+                      }}
+                      className={[
+                        'group relative rounded-lg overflow-hidden border-2 transition-all duration-200 aspect-square',
+                        isSelected
+                          ? 'border-violet-500 shadow-lg shadow-violet-900/50 scale-95'
+                          : 'border-slate-700 hover:border-slate-500 hover:scale-105',
+                      ].join(' ')}
                     >
                       <div
-                        className="asset-thumb"
+                        className="w-full h-full bg-center bg-cover"
                         style={{ backgroundImage: `url("${asset.resolvedSrc}")` }}
                       />
-                      <div className="asset-meta">
-                        <div className="asset-name">{asset.name}</div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[9px] text-white font-bold truncate">{asset.name}</p>
                       </div>
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center">
+                          <CheckCircle2 size={10} className="text-white" />
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
             </div>
-          ) : (
-            <div className="uiHelp">{t('assets.noAssets', { defaultValue: 'No assets yet.' })}</div>
           )}
-          <div className="uiHelp">
-            {art?.kind === 'video'
-              ? t('data.videoUsesPoster')
-              : art?.kind === 'image'
-                ? t('data.imageSelected')
-                : t('data.noArtwork')}
-          </div>
-        </div>
-      </details>
+        </Section>
 
-      <details className="uiAccordion">
-        <summary className="uiAccordionHeader">🎨 BADGE STYLING</summary>
-        <div className="uiAccordionBody uiStack">
-          <div className="uiStack" style={{ gap: 10 }}>
-            <Select 
-              value={selectedBadgeId} 
-              onChange={(e) => setSelectedBadgeId(e.target.value as any)}
-              style={{ fontWeight: 'bold' }}
-            >
-              <option value="attackBadge">{t('editor.inspector.attack', { defaultValue: 'Attack' })}</option>
-              <option value="defenseBadge">{t('editor.inspector.defense', { defaultValue: 'Defense' })}</option>
-              <option value="elementBadge">{t('cards.element', { defaultValue: 'Element' })}</option>
-              <option value="tribe">أيقونات الفئة (Traits)</option>
-            </Select>
-<UltimateBadgeEditor
-  badges={Object.entries(badgeStyles).map(([id, style]) => ({
-    id,
-    type: 'icon',
-    name: id,
-    x: 50,
-    y: 50,
-    scale: 1,
-    rotation: 0,
-    opacity: 1,
-    backgroundOpacity: 0.2,
-    color: '#ffffff',
-    gradientType: 'linear',
-    gradientAngle: 135,
-    borderWidth: 0,
-    shadowIntensity: 0,
-    zIndex: 1,
-    ...style
-  }))}
- onUpdate={(badges) => {
-  console.log('💾 Saving badges:', badges);  // ✅ للاختبار
-  
-  // 🔥 تحويل badges للـ badgeStyles format
-  const badgeStyles = {};
-  badges.forEach(badge => {
-    badgeStyles[badge.id] = {
-      color: badge.color,
-      scale: badge.scale,
-      rotation: badge.rotation,
-      opacity: badge.opacity,
-      // باقي الخصائص اللي تبيها
-    };
-  });
-  
-  // 🔥 حفظ في الـ card
-  props.onChange({
-    badgeStyles
-  });
-}}
-
-/>
-          </div>
-        </div>
-      </details>
-
-    </div>
-  );
-}
-
-const BADGE_PRESETS = [
-  { id: 'default', name: 'Default', style: { scale: 1, color: '', shadow: 'none', borderWidth: 0 } },
-  { id: 'neon', name: 'Neon', style: { scale: 1.1, color: '#00ffcc', shadow: 'neon', borderWidth: 2, borderColor: '#00ffcc', glow: 5 } },
-  { id: 'dark', name: 'Dark', style: { scale: 1, color: '#1a1a1a', shadow: 'strong', borderWidth: 1, borderColor: '#444' } },
-  { id: 'glass', name: 'Glass', style: { scale: 1, color: 'rgba(255,255,255,0.2)', shadow: 'soft', borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', opacity: 0.9 } },
-  { id: 'flat', name: 'Flat', style: { scale: 1, color: '#3b82f6', shadow: 'none', borderWidth: 0, borderRadius: 4 } },
-];
-
-const ICON_LIBRARY = [
-  { id: 'shield', icon: Shield }, { id: 'sword', icon: Sword }, { id: 'heart', icon: Heart },
-  { id: 'zap', icon: Zap }, { id: 'flame', icon: Flame }, { id: 'droplets', Droplets },
-  { id: 'crown', icon: Crown }, { id: 'star', icon: Star }, { id: 'moon', icon: Moon },
-  { id: 'sun', icon: Sun }, { id: 'diamond', icon: Diamond }, { id: 'skull', icon: Skull },
-  { id: 'ghost', icon: Ghost }, { id: 'anchor', icon: Anchor }, { id: 'mic', icon: Mic },
-  { id: 'arrowRight', icon: ArrowRight }, { id: 'circle', icon: Circle }
-];
-
-interface BadgeStylingPanelProps {
-  badge: any;
-  onChange: (newStyle: any) => void;
-  assetOptions: { id: string; name: string; resolvedSrc: string }[];
-  t: (key: string, options?: any) => string;
-}
-
-function BadgeStylingPanel({ badge, onChange, assetOptions, t }: BadgeStylingPanelProps) {
-  const [activeTab, setActiveTab] = useState<'presets' | 'layout' | 'colors' | 'effects' | 'content'>('layout');
-  
-  const update = (key: string, val: any) => onChange({ ...badge, [key]: val });
-  const [showColor, setShowColor] = useState(false);
-  const [showColor2, setShowColor2] = useState(false);
-  const [showBorderColor, setShowBorderColor] = useState(false);
-
-  return (
-    <div className="uiStack" style={{ gap: 12 }}>
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200">
-        {[
-          { id: 'presets', icon: Layout },
-          { id: 'layout', icon: Move },
-          { id: 'colors', icon: Palette },
-          { id: 'effects', icon: Wand2 },
-          { id: 'content', icon: Type },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 p-2 flex justify-center ${activeTab === tab.id ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title={tab.id}
-          >
-            <tab.icon size={16} />
-          </button>
-        ))}
-      </div>
-
-      {/* PRESETS TAB */}
-      {activeTab === 'presets' && (
-        <div className="grid grid-cols-3 gap-2">
-          {BADGE_PRESETS.map(preset => (
-            <button
-              key={preset.id}
-              onClick={() => onChange({ ...badge, ...preset.style })}
-              className="p-2 border rounded hover:bg-slate-50 text-xs text-center"
-            >
-              {preset.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* LAYOUT TAB */}
-      {activeTab === 'layout' && (
-        <div className="uiStack" style={{ gap: 8 }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <span className="uiSub">Visibility</span>
-            <button onClick={() => update('visible', !badge.visible)} className="iconButton">
-              {badge.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-          </Row>
-          <ControlRow label="Scale" icon={<Maximize size={14} />}>
-            <Input type="range" min={0.2} max={3} step={0.1} value={badge.scale ?? 1} onChange={e => update('scale', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.scale ?? 1}x</span>
-          </ControlRow>
-          <ControlRow label="Rotation" icon={<RotateCcw size={14} />}>
-            <Input type="range" min={-180} max={180} step={5} value={badge.rotation ?? 0} onChange={e => update('rotation', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.rotation ?? 0}°</span>
-          </ControlRow>
-          <ControlRow label="X Offset" icon={<MoveHorizontal size={14} />}>
-            <Input type="range" min={-100} max={100} value={badge.xOffset ?? 0} onChange={e => update('xOffset', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.xOffset ?? 0}</span>
-          </ControlRow>
-          <ControlRow label="Y Offset" icon={<Move size={14} />}>
-            <Input type="range" min={-100} max={100} value={badge.yOffset ?? 0} onChange={e => update('yOffset', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.yOffset ?? 0}</span>
-          </ControlRow>
-          <ControlRow label="Gap" icon={<Layout size={14} />}>
-            <Input type="range" min={0} max={20} value={badge.gap ?? 4} onChange={e => update('gap', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.gap ?? 4}</span>
-          </ControlRow>
-        </div>
-      )}
-
-      {/* COLORS TAB */}
-      {activeTab === 'colors' && (
-        <div className="uiStack" style={{ gap: 8 }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <span className="uiSub">Gradient</span>
-            <input type="checkbox" checked={!!badge.gradient} onChange={e => update('gradient', e.target.checked)} />
-          </Row>
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-1"><span className="uiSub">Primary</span></div>
-            <button onClick={() => setShowColor(!showColor)} className="w-full h-8 rounded border" style={{ backgroundColor: badge.color || '#fff' }} />
-            {showColor && <div className="absolute z-10 mt-1"><div className="fixed inset-0" onClick={() => setShowColor(false)} /><HexColorPicker color={badge.color || '#fff'} onChange={c => update('color', c)} /></div>}
-          </div>
-          {badge.gradient && (
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-1"><span className="uiSub">Secondary</span></div>
-              <button onClick={() => setShowColor2(!showColor2)} className="w-full h-8 rounded border" style={{ backgroundColor: badge.color2 || '#fff' }} />
-              {showColor2 && <div className="absolute z-10 mt-1"><div className="fixed inset-0" onClick={() => setShowColor2(false)} /><HexColorPicker color={badge.color2 || '#fff'} onChange={c => update('color2', c)} /></div>}
+        {/* ── Badge Designer ── */}
+        <Section title="Badge Designer" icon={<Palette size={13} />} accent="rose" defaultOpen={false}>
+          <div className="space-y-3">
+            <div>
+              <FieldLabel>Badge Target</FieldLabel>
+              <div className="grid grid-cols-2 gap-1.5">
+                {([
+                  { id: 'attackBadge', label: 'Attack', icon: Sword },
+                  { id: 'defenseBadge', label: 'Defense', icon: Shield },
+                  { id: 'elementBadge', label: 'Element', icon: Zap },
+                  { id: 'tribe', label: 'Tribe', icon: Crown },
+                ] as const).map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSelectedBadgeId(id)}
+                    className={[
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200',
+                      selectedBadgeId === id
+                        ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 border border-slate-700',
+                    ].join(' ')}
+                  >
+                    <Icon size={12} />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-          <ControlRow label="Opacity" icon={<Eye size={14} />}>
-            <Input type="range" min={0} max={1} step={0.1} value={badge.opacity ?? 1} onChange={e => update('opacity', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.opacity ?? 1}</span>
-          </ControlRow>
-        </div>
-      )}
-
-      {/* EFFECTS TAB */}
-      {activeTab === 'effects' && (
-        <div className="uiStack" style={{ gap: 8 }}>
-          <ControlRow label="Border Width" icon={<Square size={14} />}>
-            <Input type="range" min={0} max={10} step={0.5} value={badge.borderWidth ?? 0} onChange={e => update('borderWidth', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.borderWidth ?? 0}</span>
-          </ControlRow>
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-1"><span className="uiSub">Border Color</span></div>
-            <button onClick={() => setShowBorderColor(!showBorderColor)} className="w-full h-8 rounded border" style={{ backgroundColor: badge.borderColor || 'transparent' }} />
-            {showBorderColor && <div className="absolute z-10 mt-1"><div className="fixed inset-0" onClick={() => setShowBorderColor(false)} /><HexColorPicker color={badge.borderColor || '#fff'} onChange={c => update('borderColor', c)} /></div>}
+            <BadgeStylingPanel badge={selectedBadgeStyle} onChange={handleBadgeChange} />
           </div>
-          <div className="uiSub">Shadow Preset</div>
-          <Select value={badge.shadow ?? 'none'} onChange={e => update('shadow', e.target.value)}>
-            <option value="none">None</option>
-            <option value="soft">Soft</option>
-            <option value="strong">Strong</option>
-            <option value="neon">Neon</option>
-          </Select>
-          <ControlRow label="Glow Intensity" icon={<Wand2 size={14} />}>
-            <Input type="range" min={0} max={20} value={badge.glow ?? 0} onChange={e => update('glow', +e.target.value)} />
-            <span className="w-8 text-right text-xs">{badge.glow ?? 0}</span>
-          </ControlRow>
-        </div>
-      )}
+        </Section>
 
-      {/* CONTENT TAB */}
-      {activeTab === 'content' && (
-        <div className="uiStack" style={{ gap: 8 }}>
-          <div className="uiSub">Label Text</div>
-          <Input value={badge.text || ''} onChange={e => update('text', e.target.value)} placeholder="e.g. ATK" />
-          
-          <div className="uiSub">Icon</div>
-          <div className="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-1 border rounded">
-            <button 
-              onClick={() => update('iconId', '')} 
-              className={`p-2 rounded flex justify-center items-center hover:bg-slate-100 ${!badge.iconId ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
-              title="None"
-            >
-              <X size={16} />
-            </button>
-            {ICON_LIBRARY.map(item => (
-              <button
-                key={item.id}
-                onClick={() => update('iconId', item.id)}
-                className={`p-2 rounded flex justify-center items-center hover:bg-slate-100 ${badge.iconId === item.id ? 'bg-blue-100 ring-2 ring-blue-500' : ''}`}
-                title={item.id}
-              >
-                {item.icon && <item.icon size={16} />}
-              </button>
-            ))}
-          </div>
-          
-          <div className="uiSub">Custom Icon</div>
-          <Select
-            value={assetOptions.find((a: any) => a.resolvedSrc === badge.iconUrl)?.id || ''}
-            onChange={(e) => {
-              const asset = assetOptions.find((a: any) => a.id === e.target.value);
-              update('iconUrl', asset ? asset.resolvedSrc : '');
-            }}
-          >
-            <option value="">{t('common.none')}</option>
-            {assetOptions.map((a: any) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </Select>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function ControlRow({ label, icon, children }: { label: string, icon: any, children: any }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="text-slate-400" title={label}>{icon}</div>
-      {children}
-    </div>
-  );
+// --- Helper Functions ---
+function setPathValue(data: Record<string, any>, path: string, value: any) {
+  if (!path.includes('.')) {
+    return { ...data, [path]: value };
+  }
+  const result: Record<string, any> = { ...data };
+  const parts = path.split('.');
+  let cursor: Record<string, any> = result;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const part = parts[i];
+    const next = cursor[part];
+    if (next && typeof next === 'object' && !Array.isArray(next)) {
+      cursor[part] = { ...next };
+    } else {
+      cursor[part] = {};
+    }
+    cursor = cursor[part];
+  }
+  cursor[parts[parts.length - 1]] = value;
+  return result;
 }
 
 function getLocalizedValue(value: any, language: 'en' | 'ar') {
@@ -657,50 +909,34 @@ function normalizeRarity(value: any): Rarity {
   return 'common';
 }
 
-function normalizeRace(value: any) {
+function normalizeRace(value: any): CardRace {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (!cleaned) return '';
   return cleaned as CardRace;
 }
 
-function normalizeElement(value: any) {
+function normalizeElement(value: any): ElementKey {
   const cleaned = String(value || '').toLowerCase().trim();
-  if (!cleaned) return '';
   return cleaned as ElementKey;
 }
 
-function normalizeTraits(value: any) {
+function normalizeTraits(value: any): CardTrait[] {
   if (Array.isArray(value)) {
     return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean) as CardTrait[];
   }
   const raw = String(value || '').trim();
-  if (!raw) return [] as CardTrait[];
+  if (!raw) return [];
   return raw
     .split(/[,|]/g)
     .map((trait) => trait.trim().toLowerCase())
     .filter(Boolean) as CardTrait[];
 }
 
-function normalizeNumber(value: any) {
+function normalizeNumber(value: any): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function clampNumber(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) return min;
-  return Math.max(min, Math.min(max, value));
-}
-
-function fileToDataUrl(file: File, errorMessage: string) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error(errorMessage));
-    reader.onload = () => resolve(String(reader.result));
-    reader.readAsDataURL(file);
-  });
-}
-
-function getRarityLabel(rarity: Rarity, language: 'en' | 'ar') {
+function getRarityLabel(rarity: Rarity, language: 'en' | 'ar'): string {
   const labels = {
     common: { en: 'Common', ar: 'عادي' },
     rare: { en: 'Rare', ar: 'نادر' },
