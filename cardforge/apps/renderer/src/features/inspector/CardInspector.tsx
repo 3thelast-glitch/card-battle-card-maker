@@ -1,15 +1,14 @@
-﻿﻿import { useMemo, useState, useCallback, ReactNode } from 'react';
+﻿﻿import { useMemo, useState, type ReactNode } from 'react';
 import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from '../../../../../packages/core/src/index';
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
 import {
-  Palette, Maximize, Image as ImageIcon, X, RotateCcw, MoveHorizontal, Square, Move,
-  Layout, Wand2, Type, Eye, EyeOff, Layers, Shield, Zap, Star, Heart, Sword, Flame, Moon,
-  Droplets, Diamond, Mic, Skull, Ghost, Anchor, Sun, Crown, ArrowRight, Circle, Pen,
-  Sparkles, Copy, Trash2, UploadCloud, CheckCircle2,
+  Palette, Image as ImageIcon, X, Eye,
+  Layout, Wand2, Type, Shield, Zap, Sword,
+  Crown, Pen, Sparkles, Copy, Trash2, UploadCloud, CheckCircle2,
 } from 'lucide-react';
-import { Button, Input, Row, Select } from '../../components/ui';
+
 import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
 import { TemplatePicker } from '../templates/TemplatePicker';
@@ -67,7 +66,7 @@ const defaultBadgeStyle: Omit<BadgeModel, 'id'> = {
 
 function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+    <label className="block text-[11px] font-medium text-slate-500 mb-1.5 select-none">
       {children}
     </label>
   );
@@ -78,10 +77,10 @@ function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={[
-        'w-full bg-slate-800/80 border border-slate-700/80 text-slate-100 text-sm',
-        'rounded-lg px-3 py-2 placeholder-slate-600',
-        'focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30',
-        'transition-all duration-200',
+        'w-full bg-[#12151E] border border-[#252A3A] text-slate-200 text-sm',
+        'rounded-md px-2.5 py-1.5 placeholder-slate-600',
+        'focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30',
+        'hover:border-[#2E3550] transition-colors duration-150',
         props.className ?? '',
       ].join(' ')}
     />
@@ -93,10 +92,10 @@ function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={[
-        'w-full bg-slate-800/80 border border-slate-700/80 text-slate-100 text-sm',
-        'rounded-lg px-3 py-2 appearance-none cursor-pointer',
-        'focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30',
-        'transition-all duration-200',
+        'w-full bg-[#12151E] border border-[#252A3A] text-slate-200 text-sm',
+        'rounded-md px-2.5 py-1.5 pr-7 appearance-none cursor-pointer',
+        'focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30',
+        'hover:border-[#2E3550] transition-colors duration-150',
         props.className ?? '',
       ].join(' ')}
     />
@@ -115,18 +114,18 @@ function GradientButton({
   variant?: 'default' | 'magic' | 'danger' | 'ghost';
 }) {
   const variants = {
-    default: 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-900/40',
-    magic: 'bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-400 hover:via-orange-400 hover:to-pink-400 text-white shadow-lg shadow-orange-900/40',
-    danger: 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-900/40',
-    ghost: 'bg-slate-800/70 hover:bg-slate-700/70 text-slate-300 border border-slate-700 hover:border-slate-600',
+    default: 'bg-blue-600 hover:bg-blue-700 text-white',
+    magic: 'bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:brightness-110 text-white',
+    danger: 'bg-rose-600 hover:bg-rose-700 text-white',
+    ghost: 'bg-white/[0.06] hover:bg-white/[0.10] text-slate-300 border border-white/[0.09] hover:border-white/[0.15]',
   };
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        'flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold tracking-wide',
-        'transition-all duration-200 active:scale-95',
+        'flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium',
+        'transition-colors duration-150 active:scale-[0.98]',
         variants[variant],
         className,
       ].join(' ')}
@@ -151,26 +150,36 @@ function Section({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const accents: Record<string, string> = {
-    violet: 'from-violet-500/20 to-transparent border-violet-500/30 text-violet-400',
-    amber: 'from-amber-500/20 to-transparent border-amber-500/30 text-amber-400',
-    cyan: 'from-cyan-500/20 to-transparent border-cyan-500/30 text-cyan-400',
-    rose: 'from-rose-500/20 to-transparent border-rose-500/30 text-rose-400',
-    emerald: 'from-emerald-500/20 to-transparent border-emerald-500/30 text-emerald-400',
+  // Accent maps: icon+label color | active-bar color
+  const iconColors: Record<string, string> = {
+    violet: 'text-violet-400',
+    amber: 'text-amber-400',
+    cyan: 'text-cyan-400',
+    rose: 'text-rose-400',
+    emerald: 'text-emerald-400',
+  };
+  const barColors: Record<string, string> = {
+    violet: 'bg-violet-500',
+    amber: 'bg-amber-500',
+    cyan: 'bg-cyan-500',
+    rose: 'bg-rose-500',
+    emerald: 'bg-emerald-500',
   };
   return (
-    <div className="rounded-xl border border-slate-700/60 overflow-hidden">
+    /* Flat Figma-panel section: bottom border separator, no heavy box */
+    <div className="border-b border-[#1A1F2E] last:border-b-0">
+      {/* Section heading row */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`w-full flex items-center gap-2 px-4 py-3 bg-gradient-to-r ${accents[accent]} border-b text-left transition-all duration-200 hover:brightness-110`}
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors duration-150 group"
       >
-        <span className="flex-shrink-0">{icon}</span>
-        <span className="flex-1 text-xs font-bold uppercase tracking-widest">{title}</span>
-        <span className={`text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>▾</span>
+        <span className={`flex-shrink-0 ${iconColors[accent]}`}>{icon}</span>
+        <span className="flex-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</span>
+        <span className={`text-slate-600 group-hover:text-slate-400 transition-colors text-[10px] ${open ? 'rotate-180' : ''} inline-block`}>▾</span>
       </button>
       {open && (
-        <div className="px-4 py-4 bg-slate-900/60 space-y-4">
+        <div className="px-4 pb-4 space-y-3">
           {children}
         </div>
       )}
@@ -224,25 +233,25 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
   );
 
   return (
-    <div dir="rtl" className="w-full rounded-xl border border-slate-700/60 overflow-hidden bg-slate-900/60">
+    <div dir="rtl" className="w-full rounded-xl border border-white/[0.08] overflow-hidden bg-black/20">
       {/* Tab bar */}
-      <div className="flex bg-slate-800/80 border-b border-slate-700/60">
+      <div className="flex bg-white/[0.04] border-b border-white/[0.07]">
         {Object.entries(tabs).map(([key, { label, icon: Icon }]) => (
           <button
             key={key}
             type="button"
             onClick={() => setActiveTab(key as any)}
             className={[
-              'relative flex-1 flex items-center justify-center gap-1.5 px-2 py-3 text-xs font-bold transition-all duration-200',
+              'relative flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[11px] font-semibold transition-all duration-200',
               activeTab === key
-                ? 'text-amber-400 bg-slate-900/70'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800',
+                ? 'text-indigo-300 bg-indigo-500/10'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]',
             ].join(' ')}
           >
-            <Icon size={13} />
+            <Icon size={12} />
             <span>{label}</span>
             {activeTab === key && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
             )}
           </button>
         ))}
@@ -339,7 +348,7 @@ const TraitPicker = ({
   onRemoveTrait: (trait: TraitKey) => void;
   maxTraits?: number;
 }) => {
-  const availableTraits = TRAIT_OPTIONS.filter((trait) => !selectedTraits.includes(trait));
+  const availableOptions = TRAIT_OPTIONS.filter((option) => !selectedTraits.includes(option.value));
 
   return (
     <div className="space-y-3">
@@ -347,23 +356,24 @@ const TraitPicker = ({
         <div>
           <div className="flex items-center justify-between mb-2">
             <FieldLabel>Active Traits</FieldLabel>
-            <span className="text-[10px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-mono text-slate-500 bg-white/[0.06] border border-white/[0.08] px-2 py-0.5 rounded-full">
               {selectedTraits.length}/{maxTraits}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
             {selectedTraits.map((trait) => (
-              <div key={trait} className="relative group">
-                <TraitIcon
-                  trait={trait}
-                  selected={true}
-                  onClick={() => onRemoveTrait(trait)}
-                  className="w-9 h-9 ring-2 ring-violet-500/60 ring-offset-1 ring-offset-slate-900"
-                />
+              <button
+                key={trait}
+                type="button"
+                onClick={() => onRemoveTrait(trait)}
+                className="relative group w-9 h-9 rounded-lg ring-2 ring-indigo-500/50 ring-offset-1 ring-offset-black/50 hover:ring-rose-500/60 transition-all flex items-center justify-center bg-white/[0.07]"
+                title={`Remove ${trait}`}
+              >
+                <TraitIcon trait={trait} size={18} />
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                   <X size={8} className="text-white" />
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -371,16 +381,19 @@ const TraitPicker = ({
 
       <div>
         <FieldLabel>Add Trait</FieldLabel>
-        <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto p-2 bg-slate-800/60 rounded-lg border border-slate-700/60">
-          {availableTraits.slice(0, 18).map((trait) => (
-            <TraitIcon
-              key={trait}
-              trait={trait}
+        <div className="grid grid-cols-5 gap-1.5 max-h-40 overflow-y-auto p-2 bg-black/20 rounded-lg border border-white/[0.07]">
+          {availableOptions.slice(0, 18).map((option) => (
+            <button
+              key={option.value}
+              type="button"
               onClick={() => {
-                if (selectedTraits.length < maxTraits) onAddTrait(trait);
+                if (selectedTraits.length < maxTraits) onAddTrait(option.value);
               }}
-              className="w-10 h-10 hover:scale-110 transition-transform duration-150"
-            />
+              className="w-full aspect-square rounded-lg flex items-center justify-center bg-white/[0.05] hover:bg-indigo-500/20 hover:scale-110 transition-all duration-150 border border-white/[0.07] hover:border-indigo-500/40"
+              title={option.label}
+            >
+              <TraitIcon trait={option.value} size={18} />
+            </button>
           ))}
         </div>
       </div>
@@ -394,6 +407,7 @@ export function CardInspector(props: {
   cardData: DataRow | null;
   project: Project;
   language: 'en' | 'ar';
+  columns?: string[];
   onChange: (newCardData: DataRow) => void;
   onPickImage: () => void;
   onDuplicate: () => void;
@@ -500,48 +514,46 @@ export function CardInspector(props: {
 
   if (!cardData) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center">
-          <ImageIcon size={22} className="text-slate-500" />
+      <div className="flex flex-col items-center justify-center gap-3 py-20 px-6 text-center">
+        <div className="w-12 h-12 rounded-xl bg-[#12151E] border border-[#1E2435] flex items-center justify-center">
+          <ImageIcon size={20} className="text-slate-600" />
         </div>
         <p className="text-sm font-medium text-slate-500">{t('cards.empty')}</p>
-        <p className="text-xs text-slate-600">Select a card from the list to inspect it</p>
+        <p className="text-xs text-slate-700 leading-relaxed">Select a card from the list to inspect it</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full text-slate-100 bg-slate-900">
+    <div className="flex flex-col h-full text-slate-200">
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-slate-700/60 bg-slate-800/50 backdrop-blur-sm flex-shrink-0">
+      <header className="flex items-center justify-between px-4 py-2.5 border-b border-[#1A1F2E] flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-            <Layers size={12} className="text-white" />
-          </div>
-          <h3 className="font-bold text-slate-100 uppercase tracking-tighter text-sm">Inspector</h3>
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inspector</h3>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onDuplicate}
-            title="Duplicate"
-            className="w-7 h-7 rounded-lg bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all duration-150"
+            title="Duplicate card"
+            className="w-6 h-6 rounded-md bg-white/[0.04] hover:bg-white/[0.09] text-slate-500 hover:text-slate-300 flex items-center justify-center transition-colors duration-150"
           >
-            <Copy size={13} />
+            <Copy size={12} />
           </button>
           <button
             type="button"
             onClick={onDelete}
-            title="Delete"
-            className="w-7 h-7 rounded-lg bg-rose-900/30 hover:bg-rose-700/50 text-rose-400 hover:text-rose-200 flex items-center justify-center transition-all duration-150"
+            title="Delete card"
+            className="w-6 h-6 rounded-md bg-rose-500/[0.08] hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 flex items-center justify-center transition-colors duration-150"
           >
-            <Trash2 size={13} />
+            <Trash2 size={12} />
           </button>
         </div>
       </header>
 
       {/* ── Scrollable body ── */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+      <div className="flex-1 overflow-y-auto divide-y divide-[#1A1F2E]">
 
         {/* ── Card Identity ── */}
         <Section title={t('editor.inspector.card')} icon={<Type size={13} />} accent="violet">
@@ -618,11 +630,13 @@ export function CardInspector(props: {
 
         {/* ── Stats ── */}
         <Section title={t('editor.inspector.stats')} icon={<Zap size={13} />} accent="amber">
+          {/* Stat orbs */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            {/* ATK */}
+            <div className="bg-rose-500/[0.07] border border-rose-500/20 rounded-xl p-3">
               <FieldLabel>
-                <span className="flex items-center gap-1.5">
-                  <Sword size={10} className="text-rose-400" />
+                <span className="flex items-center gap-1.5 text-rose-400">
+                  <Sword size={10} />
                   {t('editor.inspector.attack')}
                 </span>
               </FieldLabel>
@@ -630,13 +644,20 @@ export function CardInspector(props: {
                 type="number"
                 value={attack}
                 onChange={(e) => handleUpdateStat('attack', Number(e.target.value) || 0)}
-                className="text-center font-mono text-lg font-bold text-rose-300"
+                className="text-center font-mono text-xl font-bold text-rose-300 bg-transparent border-rose-500/30 focus:border-rose-400"
               />
+              <div className="mt-2 h-1 bg-black/30 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-rose-500 to-orange-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (attack / 20) * 100)}%` }}
+                />
+              </div>
             </div>
-            <div>
+            {/* DEF */}
+            <div className="bg-sky-500/[0.07] border border-sky-500/20 rounded-xl p-3">
               <FieldLabel>
-                <span className="flex items-center gap-1.5">
-                  <Shield size={10} className="text-sky-400" />
+                <span className="flex items-center gap-1.5 text-sky-400">
+                  <Shield size={10} />
                   {t('editor.inspector.defense')}
                 </span>
               </FieldLabel>
@@ -644,30 +665,11 @@ export function CardInspector(props: {
                 type="number"
                 value={defense}
                 onChange={(e) => handleUpdateStat('defense', Number(e.target.value) || 0)}
-                className="text-center font-mono text-lg font-bold text-sky-300"
+                className="text-center font-mono text-xl font-bold text-sky-300 bg-transparent border-sky-500/30 focus:border-sky-400"
               />
-            </div>
-          </div>
-          {/* Mini stat preview bar */}
-          <div className="flex items-center gap-2 pt-1">
-            <div className="flex-1">
-              <div className="flex justify-between mb-1">
-                <span className="text-[10px] text-slate-500 font-mono uppercase">ATK {attack}</span>
-              </div>
-              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="mt-2 h-1 bg-black/30 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-rose-500 to-orange-400 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(100, (attack / 20) * 100)}%` }}
-                />
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex justify-between mb-1">
-                <span className="text-[10px] text-slate-500 font-mono uppercase">DEF {defense}</span>
-              </div>
-              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-sky-500 to-cyan-400 rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, (defense / 20) * 100)}%` }}
                 />
               </div>
@@ -737,10 +739,10 @@ export function CardInspector(props: {
                   type="button"
                   onClick={() => handleUpdateData('rarity', option)}
                   className={[
-                    'py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200',
+                    'py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200',
                     rarity === option
-                      ? `bg-gradient-to-b ${RARITY_GRADIENT[option]} text-white shadow-lg scale-105`
-                      : 'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-slate-300 border border-slate-700',
+                      ? `bg-gradient-to-b ${RARITY_GRADIENT[option]} text-white shadow-lg shadow-black/40 scale-105 border border-white/20`
+                      : 'bg-white/[0.05] text-slate-500 hover:bg-white/[0.09] hover:text-slate-300 border border-white/[0.07]',
                   ].join(' ')}
                 >
                   {getRarityLabel(option, language)}
@@ -753,7 +755,7 @@ export function CardInspector(props: {
           <div>
             <FieldLabel>{t('data.uploadImage')}</FieldLabel>
             <div className="flex items-center gap-2">
-              <GradientButton onClick={onPickImage} variant="ghost" className="flex-1">
+              <GradientButton onClick={onPickImage} variant="default" className="flex-1">
                 <UploadCloud size={14} />
                 {t('data.uploadImage')}
               </GradientButton>
@@ -845,10 +847,10 @@ export function CardInspector(props: {
                     type="button"
                     onClick={() => setSelectedBadgeId(id)}
                     className={[
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200',
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 border',
                       selectedBadgeId === id
-                        ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-md'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 border border-slate-700',
+                        ? 'bg-rose-600 text-white shadow-md border-rose-500/60'
+                        : 'bg-white/[0.05] text-slate-400 hover:bg-white/[0.09] hover:text-slate-200 border-white/[0.08]',
                     ].join(' ')}
                   >
                     <Icon size={12} />

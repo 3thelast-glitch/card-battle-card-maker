@@ -1,4 +1,5 @@
-import { useRef, type PointerEvent } from 'react';
+import { useRef, useState, type PointerEvent } from 'react';
+import { LayoutTemplate, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import type { ArtTransform, CardArt, DataRow } from '../../../../../packages/core/src/index';
 import { CardFrame } from '../../components/cards/CardFrame';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,19 @@ export function CardPreviewPanel(props: {
   } | null>(null);
 
   if (!props.row) {
-    return <div className="empty">{t('cards.selectPreview')}</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 py-16 text-center select-none">
+        <div className="w-16 h-16 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset]">
+          <LayoutTemplate size={28} className="text-slate-600" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-slate-400">{t('cards.selectPreview')}</p>
+          <p className="text-xs text-slate-600 max-w-[200px] mx-auto leading-relaxed">
+            Select a card from the list to preview it here
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
@@ -45,6 +58,15 @@ export function CardPreviewPanel(props: {
   const dragEnabled = canDrag && !(art?.kind === 'video' && props.showControls);
   const previewWidth = 320;
   const previewHeight = 430;
+
+  // — Zoom state (UI-only, does not affect CardFrame data) —
+  const ZOOM_STEPS = [0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5];
+  const DEFAULT_ZOOM_IDX = 4; // 1.0
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX);
+  const zoom = ZOOM_STEPS[zoomIdx];
+  const zoomIn = () => setZoomIdx((i) => Math.min(i + 1, ZOOM_STEPS.length - 1));
+  const zoomOut = () => setZoomIdx((i) => Math.max(i - 1, 0));
+  const zoomFit = () => setZoomIdx(DEFAULT_ZOOM_IDX);
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragEnabled) return;
@@ -83,43 +105,129 @@ export function CardPreviewPanel(props: {
   };
 
   return (
-    <div className="previewPanel">
-      <div className="previewCanvas">
-        <CardFrame
-          rarity={rarity as any}
-          bgColor={bgColor}
-          art={art}
-          templateKey={templateKey}
-          title={title}
-          description={desc}
-          element={element as any}
-          race={race as any}
-          traits={traits as any}
-          attack={attack}
-          defense={defense}
-          posterWarning={props.posterWarning}
-          showControls={props.showControls}
-          width={previewWidth}
-          height={previewHeight}
-          artInteractive={Boolean(props.onUpdateArtTransform)}
-          onArtPointerDown={handlePointerDown}
-          onArtPointerMove={handlePointerMove}
-          onArtPointerUp={handlePointerUp}
-          onArtPointerLeave={handlePointerUp}
-        />
-      </div>
-      {art?.kind === 'video' ? (
-        <div className="uiRow" style={{ marginTop: 12 }}>
-          <Toggle
-            checked={props.showControls}
-            onChange={props.onToggleControls}
-            label={t('data.showVideoControls')}
+    /* Designer canvas stage */
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      {/* Flat dark canvas — Figma workspace feel */}
+      <div
+        className="flex-1 flex items-center justify-center min-h-0 relative overflow-hidden"
+        style={{
+          backgroundColor: '#0C1018',
+          backgroundImage: 'radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      >
+        {/* Card — deep shadow so it pops like a physical card on a desk */}
+        <div
+          className="flex-shrink-0 rounded-[inherit]"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+            filter: 'drop-shadow(0 20px 48px rgba(0,0,0,0.80)) drop-shadow(0 4px 12px rgba(0,0,0,0.50))',
+          }}
+        >
+          <CardFrame
+            rarity={rarity as any}
+            bgColor={bgColor}
+            art={art}
+            templateKey={templateKey}
+            title={title}
+            description={desc}
+            element={element as any}
+            race={race as any}
+            traits={traits as any}
+            attack={attack}
+            defense={defense}
+            posterWarning={props.posterWarning}
+            showControls={props.showControls}
+            width={previewWidth}
+            height={previewHeight}
+            artInteractive={Boolean(props.onUpdateArtTransform)}
+            onArtPointerDown={handlePointerDown}
+            onArtPointerMove={handlePointerMove}
+            onArtPointerUp={handlePointerUp}
+            onArtPointerLeave={handlePointerUp}
           />
         </div>
-      ) : null}
-      <div className="uiHelp" style={{ marginTop: 8 }}>
-        {language === 'ar' ? getLocalizedValue(desc, 'ar') : getLocalizedValue(desc, 'en')}
+
+        {/* Video controls — flat pill matching dark panel borders */}
+        {art?.kind === 'video' && (
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-[#0F1520]/90 backdrop-blur-md border border-[#2A3040] shadow-xl">
+              <Toggle
+                checked={props.showControls}
+                onChange={props.onToggleControls}
+                label={t('data.showVideoControls')}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── Floating Zoom Toolbar ─── */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center">
+          <div className={[
+            'flex items-center gap-0.5 px-1.5 py-1.5 rounded-full',
+            'bg-[#0F1520]/90 backdrop-blur-md',
+            'border border-[#2A3040]',
+            'shadow-[0_8px_24px_rgba(0,0,0,0.60)]',
+          ].join(' ')}>
+
+            {/* Zoom Out */}
+            <button
+              type="button"
+              onClick={zoomOut}
+              disabled={zoomIdx === 0}
+              title="Zoom out"
+              className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ZoomOut size={13} />
+            </button>
+
+            {/* Zoom level label */}
+            <button
+              type="button"
+              onClick={zoomFit}
+              title="Reset to 100%"
+              className="px-2 py-0.5 rounded-md text-xs font-semibold font-mono text-slate-300 hover:text-white hover:bg-white/[0.08] transition-colors min-w-[44px] text-center"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+
+            {/* Zoom In */}
+            <button
+              type="button"
+              onClick={zoomIn}
+              disabled={zoomIdx === ZOOM_STEPS.length - 1}
+              title="Zoom in"
+              className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ZoomIn size={13} />
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-4 bg-[#2A3040] mx-1" />
+
+            {/* Fit / Reset */}
+            <button
+              type="button"
+              onClick={zoomFit}
+              title="Reset zoom"
+              className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] transition-colors"
+            >
+              <Maximize2 size={13} />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Description strip */}
+      {desc && (
+        <div className="flex-shrink-0 px-4 py-2.5 border-t border-[#1A1F2E]">
+          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+            {language === 'ar' ? getLocalizedValue(desc, 'ar') : getLocalizedValue(desc, 'en')}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

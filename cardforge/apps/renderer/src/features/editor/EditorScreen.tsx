@@ -284,7 +284,7 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
 
   const updateSelectedAll = useCallback(
     (patch: Partial<ElementModel>) => {
-      updateSelectedBy((el) => ({ ...el, ...patch }));
+      updateSelectedBy((el) => ({ ...el, ...patch } as ElementModel));
     },
     [updateSelectedBy],
   );
@@ -503,10 +503,10 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
           setVideoJob((prev) =>
             prev
               ? {
-                  ...prev,
-                  pct: typeof payload.pct === 'number' ? Math.max(0, Math.min(100, payload.pct)) : prev.pct,
-                  detail: payload.time ? `${payload.time}` : prev.detail,
-                }
+                ...prev,
+                pct: typeof payload.pct === 'number' ? Math.max(0, Math.min(100, payload.pct)) : prev.pct,
+                detail: payload.time ? `${payload.time}` : prev.detail,
+              }
               : prev,
           );
         });
@@ -604,344 +604,345 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
   };
 
   return (
-    <div className="screen uiApp">
-      <div className="editorShell">
-        <main className="editorPanel editorCenter">
-          <div className="editorPanelHeader">
-            <div>
-              <div className="uiTitle">{t('editor.canvasTitle')}</div>
-              <div className="uiSub">{t('editor.canvasSubtitle')}</div>
-            </div>
-            <div className="uiRow" style={{ justifyContent: 'flex-end' }}>
-              <Button
-                size="sm"
-                variant="outline"
-                className="onlySmallRight"
-                onClick={() => setRightDrawerOpen(true)}
-              >
-                {t('cards.inspector')}
-              </Button>
-            </div>
-          </div>
-          <div className="editorPanelBody editorCenterBody">
-            <div className="editorCenterStage">
-              {!activeRow ? (
-                <div className="empty">{t('data.selectCardHint')}</div>
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '100%',
-                    height: '100%',
-                    padding: 24,
-                  }}
-                >
-                  <div style={{ boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)', borderRadius: 16 }}>
-                    <CardFrame
-                      rarity={inspectorRarity}
-                      art={resolvedArt}
-                      templateKey={inspectorTemplateKey}
-                      title={previewTitle}
-                      description={previewDesc}
-                      race={previewRace}
-                      traits={previewTraits}
-                      element={previewElement}
-                      attack={previewAttack}
-                      defense={previewDefense}
-                      badgeStyle={previewBadgeStyle}
-                      bgColor={inspectorBgColor}
-                      posterWarning={posterWarning}
-                      width={420}
-                      height={540}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
+    <div className="flex w-full h-full min-h-0 overflow-hidden bg-[#070A14]">
 
-        <aside className={`editorPanel editorRight ${rightDrawerOpen ? 'drawerOpen' : ''}`}>
-          <div className="editorPanelHeader">
-            <div>
-              <div className="uiTitle">{t('editor.propertiesTitle')}</div>
-              <div className="uiSub">{selectionLabel}</div>
-            </div>
-            <Button size="sm" variant="outline" className="panelClose" onClick={() => setRightDrawerOpen(false)}>
-              {t('common.close')}
+      {/* ══ Center Canvas (Middle Column) ══ */}
+      <main className="flex-1 flex flex-col items-center justify-center relative min-h-0 overflow-auto border-x border-white/10 bg-[radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]">
+        <div className="absolute top-0 w-full shrink-0 p-4 border-b border-white/10 bg-[#0D1117] flex justify-between z-20">
+          <div>
+            <div className="text-sm font-bold text-slate-200">{t('editor.canvasTitle')}</div>
+            <div className="text-xs text-slate-500">{t('editor.canvasSubtitle')}</div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              className="onlySmallRight"
+              onClick={() => setRightDrawerOpen(true)}
+            >
+              {t('cards.inspector')}
             </Button>
           </div>
-          <div className="editorPanelBody">
-            {!activeRow ? (
-              <div className="empty">{t('data.noData')}</div>
-            ) : (
-              <details className="uiAccordion" open>
-                <summary className="uiAccordionHeader">{t('editor.inspector.card')}</summary>
-                <div className="uiAccordionBody uiStack">
-                  <div>
-                    <div className="uiHelp">{t('common.row')}</div>
-                    <Select value={activeRow.id} onChange={(e) => setPreviewRowId(e.target.value)}>
-                      {activeTable?.rows?.map((row) => (
-                        <option key={row.id} value={row.id}>{row.id}</option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className="uiStack">
-                    <div className="uiSub">{t('editor.inspector.card')}</div>
-                    <div className="uiRow">
-                      <div style={{ minWidth: 200 }}>
-                        <div className="uiHelp">{t('editor.inspector.template')}</div>
-                        <Select
-                          value={inspectorTemplateKey}
-                          onChange={(e) => updateActiveRowData('templateKey', e.target.value)}
-                        >
-                          {Object.values(CARD_TEMPLATES).map((template) => (
-                            <option key={template.key} value={template.key}>
-                              {template.label[editorLanguage] ?? template.label.en}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      <div style={{ minWidth: 180 }}>
-                        <div className="uiHelp">{t('editor.inspector.rarity')}</div>
-                        <Select
-                          value={inspectorRarity}
-                          onChange={(e) => updateActiveRowData('rarity', e.target.value)}
-                        >
-                          <option value="common">{t('editor.inspector.rarityCommon')}</option>
-                          <option value="rare">{t('editor.inspector.rarityRare')}</option>
-                          <option value="epic">{t('editor.inspector.rarityEpic')}</option>
-                          <option value="legendary">{t('editor.inspector.rarityLegendary')}</option>
-                        </Select>
-                      </div>
-                      <div style={{ minWidth: 180 }}>
-                        <div className="uiHelp">{t('editor.inspector.background')}</div>
-                        <Input
-                          value={inspectorBgColor}
-                          onChange={(e) => updateActiveRowData('bgColor', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
+        </div>
 
-                  <div className="uiStack">
-                    <div className="uiSub">{t('editor.inspector.stats')}</div>
-                    <div className="uiRow">
-                      <div style={{ minWidth: 140 }}>
-                        <div className="uiHelp">{t('editor.inspector.attack')}</div>
-                        <Input
-                          type="number"
-                          value={inspectorData.baseAttack ?? inspectorData.attack ?? 0}
-                          onChange={(e) => {
-                            const next = e.target.value === '' ? 0 : Number(e.target.value);
-                            updateBaseStats({ attack: next });
-                          }}
-                        />
-                      </div>
-                      <div style={{ minWidth: 140 }}>
-                        <div className="uiHelp">{t('editor.inspector.defense')}</div>
-                        <Input
-                          type="number"
-                          value={inspectorData.baseDefense ?? inspectorData.defense ?? 0}
-                          onChange={(e) => {
-                            const next = e.target.value === '' ? 0 : Number(e.target.value);
-                            updateBaseStats({ defense: next });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+        <div className="flex-1 flex items-center justify-center w-full relative z-10 pt-20">
+          {!activeRow ? (
+            <div className="text-slate-500 text-sm">{t('data.selectCardHint')}</div>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                padding: 24,
+              }}
+            >
+              <div style={{ boxShadow: '0 24px 60px rgba(0, 0, 0, 0.35)', borderRadius: 16 }}>
+                <CardFrame
+                  rarity={inspectorRarity}
+                  art={resolvedArt}
+                  templateKey={inspectorTemplateKey}
+                  title={previewTitle}
+                  description={previewDesc}
+                  race={previewRace}
+                  traits={previewTraits}
+                  element={previewElement}
+                  attack={previewAttack}
+                  defense={previewDefense}
+                  badgeStyle={previewBadgeStyle}
+                  bgColor={inspectorBgColor}
+                  posterWarning={posterWarning}
+                  width={420}
+                  height={540}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
 
-                  <div className="uiStack">
-                    <div className="uiSub">{t('traitSystem.title')}</div>
-                    <TraitSelector
-                      baseTraits={traitState.baseTraits}
-                      derivedTraits={traitState.derivedTraits}
-                      onChange={updateTraits}
-                    />
-                    <div className="uiHelp">{t('traitSystem.previewTitle')}</div>
-                    <div className="smallPreviewWrap">
-                      <div style={{ width: previewScaledWidth, height: previewScaledHeight }}>
-                        <div
-                          style={{
-                            width: previewWidth,
-                            height: previewHeight,
-                            transform: `scale(${previewScale})`,
-                            transformOrigin: 'top left',
-                          }}
-                        >
-                          <CardFrame
-                            rarity={inspectorRarity}
-                            art={resolvedArt}
-                            templateKey={inspectorTemplateKey}
-                            title={previewTitle}
-                            description={previewDesc}
-                            race={previewRace}
-                            traits={previewTraits}
-                            element={previewElement}
-                            attack={previewAttack}
-                            defense={previewDefense}
-                            badgeStyle={previewBadgeStyle}
-                            bgColor={inspectorBgColor}
-                            posterWarning={posterWarning}
-                            width={previewWidth}
-                            height={previewHeight}
-                          />
-                        </div>
-                      </div>
+      {/* ══ Right Column (The Inspector) ══ */}
+      <aside className={`w-80 shrink-0 flex flex-col h-full bg-[#0D1117] z-10 ${rightDrawerOpen ? 'block' : 'hidden md:flex'}`}>
+        <div className="shrink-0 p-4 border-b border-white/10 flex justify-between">
+          <div>
+            <div className="text-sm font-bold text-slate-200">{t('editor.propertiesTitle')}</div>
+            <div className="text-xs text-slate-500">{selectionLabel}</div>
+          </div>
+          <Button size="sm" variant="outline" className="panelClose md:hidden" onClick={() => setRightDrawerOpen(false)}>
+            {t('common.close')}
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+          {!activeRow ? (
+            <div className="empty">{t('data.noData')}</div>
+          ) : (
+            <details className="uiAccordion" open>
+              <summary className="uiAccordionHeader">{t('editor.inspector.card')}</summary>
+              <div className="uiAccordionBody uiStack">
+                <div>
+                  <div className="uiHelp">{t('common.row')}</div>
+                  <Select value={activeRow.id} onChange={(e) => setPreviewRowId(e.target.value)}>
+                    {activeTable?.rows?.map((row) => (
+                      <option key={row.id} value={row.id}>{row.id}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="uiStack">
+                  <div className="uiSub">{t('editor.inspector.card')}</div>
+                  <div className="uiRow">
+                    <div style={{ minWidth: 200 }}>
+                      <div className="uiHelp">{t('editor.inspector.template')}</div>
+                      <Select
+                        value={inspectorTemplateKey}
+                        onChange={(e) => updateActiveRowData('templateKey', e.target.value)}
+                      >
+                        {Object.values(CARD_TEMPLATES).map((template) => (
+                          <option key={template.key} value={template.key}>
+                            {template.label[editorLanguage] ?? template.label.en}
+                          </option>
+                        ))}
+                      </Select>
                     </div>
-                  </div>
-
-                  <div className="uiStack">
-                    <div className="uiSub">{t('ai.title')}</div>
-                    <div className="uiRow">
-                      <Button variant="outline" onClick={handleGenerateSmart} disabled={aiLoading}>
-                        {aiLoading ? t('ai.working') : t('ai.generateSmart')}
-                      </Button>
-                      {aiSuggestion ? (
-                        <span className="uiBadge uiBadgeWarn">
-                          ATK {aiSuggestion.atk} / DEF {aiSuggestion.def}
-                        </span>
-                      ) : null}
+                    <div style={{ minWidth: 180 }}>
+                      <div className="uiHelp">{t('editor.inspector.rarity')}</div>
+                      <Select
+                        value={inspectorRarity}
+                        onChange={(e) => updateActiveRowData('rarity', e.target.value)}
+                      >
+                        <option value="common">{t('editor.inspector.rarityCommon')}</option>
+                        <option value="rare">{t('editor.inspector.rarityRare')}</option>
+                        <option value="epic">{t('editor.inspector.rarityEpic')}</option>
+                        <option value="legendary">{t('editor.inspector.rarityLegendary')}</option>
+                      </Select>
                     </div>
-                    {aiSuggestion?.note ? <div className="uiHelp">{aiSuggestion.note}</div> : null}
-                    {aiError ? <div className="uiHelp" style={{ color: 'var(--bad)' }}>{aiError}</div> : null}
-                  </div>
-
-                  <div className="uiStack">
-                    <div className="uiSub">{t('editor.inspector.text')}</div>
-                    <div className="uiRow">
-                      <div style={{ minWidth: 200, flex: 1 }}>
-                        <div className="uiHelp">{t('common.name')} ({t('settings.english')})</div>
-                        <Input
-                          value={getLocalizedValue(inspectorData.name, 'en')}
-                          onChange={(e) => updateActiveRowData('name.en', e.target.value)}
-                        />
-                      </div>
-                      <div style={{ minWidth: 200, flex: 1 }}>
-                        <div className="uiHelp">{t('common.name')} ({t('settings.arabic')})</div>
-                        <Input
-                          value={getLocalizedValue(inspectorData.name, 'ar')}
-                          onChange={(e) => updateActiveRowData('name.ar', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="uiRow">
-                      <div style={{ minWidth: 200, flex: 1 }}>
-                        <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.english')})</div>
-                        <Input
-                          value={getLocalizedValue(inspectorData.desc, 'en')}
-                          onChange={(e) => updateActiveRowData('desc.en', e.target.value)}
-                        />
-                      </div>
-                      <div style={{ minWidth: 200, flex: 1 }}>
-                        <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.arabic')})</div>
-                        <Input
-                          value={getLocalizedValue(inspectorData.desc, 'ar')}
-                          onChange={(e) => updateActiveRowData('desc.ar', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="uiStack">
-                    <div className="uiSub">{t('editor.inspector.media')}</div>
-                    <Row gap={8}>
-                      <Button variant="outline" onClick={pickInspectorImage}>{t('data.uploadImage')}</Button>
-                      <Button variant="outline" onClick={pickInspectorVideo}>{t('data.uploadVideo')}</Button>
-                    </Row>
-                    <div className="uiHelp">
-                      {activeRow.art?.kind === 'video'
-                        ? t('data.videoUsesPoster')
-                        : activeRow.art?.kind === 'image'
-                          ? t('data.imageSelected')
-                          : t('data.noArtwork')}
-                    </div>
-                    {inspectorVideoMeta ? (
-                      <div className="uiHelp">
-                        {t('data.videoDetails')}: {formatVideoMeta(inspectorVideoMeta)}
-                      </div>
-                    ) : null}
-                    <div className="uiHelp">{t('ui.tip.videoPoster')}</div>
-                    <Row gap={8}>
-                      <Button variant="outline" onClick={regenerateInspectorPoster} disabled={!activeRow.art || activeRow.art.kind !== 'video'}>
-                        {t('data.generatePoster')}
-                      </Button>
-                      <Toggle
-                        checked={keepVideoAudio}
-                        onChange={setKeepVideoAudio}
-                        label={t('data.keepVideoAudio')}
+                    <div style={{ minWidth: 180 }}>
+                      <div className="uiHelp">{t('editor.inspector.background')}</div>
+                      <Input
+                        value={inspectorBgColor}
+                        onChange={(e) => updateActiveRowData('bgColor', e.target.value)}
                       />
-                    </Row>
+                    </div>
                   </div>
                 </div>
-              </details>
-            )}
 
-            <Divider />
+                <div className="uiStack">
+                  <div className="uiSub">{t('editor.inspector.stats')}</div>
+                  <div className="uiRow">
+                    <div style={{ minWidth: 140 }}>
+                      <div className="uiHelp">{t('editor.inspector.attack')}</div>
+                      <Input
+                        type="number"
+                        value={inspectorData.baseAttack ?? inspectorData.attack ?? 0}
+                        onChange={(e) => {
+                          const next = e.target.value === '' ? 0 : Number(e.target.value);
+                          updateBaseStats({ attack: next });
+                        }}
+                      />
+                    </div>
+                    <div style={{ minWidth: 140 }}>
+                      <div className="uiHelp">{t('editor.inspector.defense')}</div>
+                      <Input
+                        type="number"
+                        value={inspectorData.baseDefense ?? inspectorData.defense ?? 0}
+                        onChange={(e) => {
+                          const next = e.target.value === '' ? 0 : Number(e.target.value);
+                          updateBaseStats({ defense: next });
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            {!hasSelection ? (
-              <div className="empty">
-                {t('editor.propertiesEmpty')} <code>{'{{name}}'}</code>.
+                <div className="uiStack">
+                  <div className="uiSub">{t('traitSystem.title')}</div>
+                  <TraitSelector
+                    baseTraits={traitState.baseTraits}
+                    derivedTraits={traitState.derivedTraits}
+                    onChange={updateTraits}
+                  />
+                  <div className="uiHelp">{t('traitSystem.previewTitle')}</div>
+                  <div className="smallPreviewWrap">
+                    <div style={{ width: previewScaledWidth, height: previewScaledHeight }}>
+                      <div
+                        style={{
+                          width: previewWidth,
+                          height: previewHeight,
+                          transform: `scale(${previewScale})`,
+                          transformOrigin: 'top left',
+                        }}
+                      >
+                        <CardFrame
+                          rarity={inspectorRarity}
+                          art={resolvedArt}
+                          templateKey={inspectorTemplateKey}
+                          title={previewTitle}
+                          description={previewDesc}
+                          race={previewRace}
+                          traits={previewTraits}
+                          element={previewElement}
+                          attack={previewAttack}
+                          defense={previewDefense}
+                          badgeStyle={previewBadgeStyle}
+                          bgColor={inspectorBgColor}
+                          posterWarning={posterWarning}
+                          width={previewWidth}
+                          height={previewHeight}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="uiStack">
+                  <div className="uiSub">{t('ai.title')}</div>
+                  <div className="uiRow">
+                    <Button variant="outline" onClick={handleGenerateSmart} disabled={aiLoading}>
+                      {aiLoading ? t('ai.working') : t('ai.generateSmart')}
+                    </Button>
+                    {aiSuggestion ? (
+                      <span className="uiBadge uiBadgeWarn">
+                        ATK {aiSuggestion.atk} / DEF {aiSuggestion.def}
+                      </span>
+                    ) : null}
+                  </div>
+                  {aiSuggestion?.note ? <div className="uiHelp">{aiSuggestion.note}</div> : null}
+                  {aiError ? <div className="uiHelp" style={{ color: 'var(--bad)' }}>{aiError}</div> : null}
+                </div>
+
+                <div className="uiStack">
+                  <div className="uiSub">{t('editor.inspector.text')}</div>
+                  <div className="uiRow">
+                    <div style={{ minWidth: 200, flex: 1 }}>
+                      <div className="uiHelp">{t('common.name')} ({t('settings.english')})</div>
+                      <Input
+                        value={getLocalizedValue(inspectorData.name, 'en')}
+                        onChange={(e) => updateActiveRowData('name.en', e.target.value)}
+                      />
+                    </div>
+                    <div style={{ minWidth: 200, flex: 1 }}>
+                      <div className="uiHelp">{t('common.name')} ({t('settings.arabic')})</div>
+                      <Input
+                        value={getLocalizedValue(inspectorData.name, 'ar')}
+                        onChange={(e) => updateActiveRowData('name.ar', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="uiRow">
+                    <div style={{ minWidth: 200, flex: 1 }}>
+                      <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.english')})</div>
+                      <Input
+                        value={getLocalizedValue(inspectorData.desc, 'en')}
+                        onChange={(e) => updateActiveRowData('desc.en', e.target.value)}
+                      />
+                    </div>
+                    <div style={{ minWidth: 200, flex: 1 }}>
+                      <div className="uiHelp">{t('editor.inspector.ability')} ({t('settings.arabic')})</div>
+                      <Input
+                        value={getLocalizedValue(inspectorData.desc, 'ar')}
+                        onChange={(e) => updateActiveRowData('desc.ar', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="uiStack">
+                  <div className="uiSub">{t('editor.inspector.media')}</div>
+                  <Row gap={8}>
+                    <Button variant="outline" onClick={pickInspectorImage}>{t('data.uploadImage')}</Button>
+                    <Button variant="outline" onClick={pickInspectorVideo}>{t('data.uploadVideo')}</Button>
+                  </Row>
+                  <div className="uiHelp">
+                    {activeRow.art?.kind === 'video'
+                      ? t('data.videoUsesPoster')
+                      : activeRow.art?.kind === 'image'
+                        ? t('data.imageSelected')
+                        : t('data.noArtwork')}
+                  </div>
+                  {inspectorVideoMeta ? (
+                    <div className="uiHelp">
+                      {t('data.videoDetails')}: {formatVideoMeta(inspectorVideoMeta)}
+                    </div>
+                  ) : null}
+                  <div className="uiHelp">{t('ui.tip.videoPoster')}</div>
+                  <Row gap={8}>
+                    <Button variant="outline" onClick={regenerateInspectorPoster} disabled={!activeRow.art || activeRow.art.kind !== 'video'}>
+                      {t('data.generatePoster')}
+                    </Button>
+                    <Toggle
+                      checked={keepVideoAudio}
+                      onChange={setKeepVideoAudio}
+                      label={t('data.keepVideoAudio')}
+                    />
+                  </Row>
+                </div>
               </div>
-            ) : (
-              <div className="uiStack">
-                {selectionTypes.length > 1 ? (
-                  <div className="hint">{t('editor.propertiesMultiHint')}</div>
-                ) : null}
+            </details>
+          )}
 
-                {selected ? (
-                  <div>
-                    <div className="hint">{t('editor.name')}</div>
-                    <Input value={selected.name} onChange={(e) => updateSelectedAll({ name: e.target.value })} />
-                  </div>
-                ) : null}
+          <Divider />
 
-                <details className="uiAccordion" open>
-                  <summary className="uiAccordionHeader">{t('editor.sections.position')}</summary>
-                  <div className="uiAccordionBody">
-                    <Row gap={10}>
-                      <Toggle
-                        checked={allVisible}
-                        onChange={(next) => updateSelectedAll({ visible: next })}
-                        label={`${t('editor.visible')}${anyVisible && !allVisible ? t('common.mixedSuffix') : ''}`}
+          {!hasSelection ? (
+            <div className="text-slate-500 text-sm text-center py-8">
+              {t('editor.propertiesEmpty')} <code>{'{{name}}'}</code>.
+            </div>
+          ) : (
+            <div className="uiStack">
+              {selectionTypes.length > 1 ? (
+                <div className="hint">{t('editor.propertiesMultiHint')}</div>
+              ) : null}
+
+              {selected ? (
+                <div>
+                  <div className="hint">{t('editor.name')}</div>
+                  <Input value={selected.name} onChange={(e) => updateSelectedAll({ name: e.target.value })} />
+                </div>
+              ) : null}
+
+              <details className="uiAccordion" open>
+                <summary className="uiAccordionHeader">{t('editor.sections.position')}</summary>
+                <div className="uiAccordionBody">
+                  <Row gap={10}>
+                    <Toggle
+                      checked={allVisible}
+                      onChange={(next) => updateSelectedAll({ visible: next })}
+                      label={`${t('editor.visible')}${anyVisible && !allVisible ? t('common.mixedSuffix') : ''}`}
+                    />
+                    <Toggle
+                      checked={allLocked}
+                      onChange={(next) => updateSelectedAll({ locked: next })}
+                      label={`${t('editor.locked')}${anyLocked && !allLocked ? t('common.mixedSuffix') : ''}`}
+                    />
+                  </Row>
+                  <Row gap={10}>
+                    <div style={{ flex: 1 }}>
+                      <div className="hint">{t('editor.x')}</div>
+                      <Input
+                        type="number"
+                        value={mixedX.mixed ? '' : mixedX.value ?? ''}
+                        placeholder={mixedX.mixed ? t('common.mixed') : undefined}
+                        onChange={(e) => {
+                          if (e.target.value === '') return;
+                          updateSelectedAll({ x: Number(e.target.value) });
+                        }}
                       />
-                      <Toggle
-                        checked={allLocked}
-                        onChange={(next) => updateSelectedAll({ locked: next })}
-                        label={`${t('editor.locked')}${anyLocked && !allLocked ? t('common.mixedSuffix') : ''}`}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="hint">{t('editor.y')}</div>
+                      <Input
+                        type="number"
+                        value={mixedY.mixed ? '' : mixedY.value ?? ''}
+                        placeholder={mixedY.mixed ? t('common.mixed') : undefined}
+                        onChange={(e) => {
+                          if (e.target.value === '') return;
+                          updateSelectedAll({ y: Number(e.target.value) });
+                        }}
                       />
-                    </Row>
-                    <Row gap={10}>
-                      <div style={{ flex: 1 }}>
-                        <div className="hint">{t('editor.x')}</div>
-                        <Input
-                          type="number"
-                          value={mixedX.mixed ? '' : mixedX.value ?? ''}
-                          placeholder={mixedX.mixed ? t('common.mixed') : undefined}
-                          onChange={(e) => {
-                            if (e.target.value === '') return;
-                            updateSelectedAll({ x: Number(e.target.value) });
-                          }}
-                        />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div className="hint">{t('editor.y')}</div>
-                        <Input
-                          type="number"
-                          value={mixedY.mixed ? '' : mixedY.value ?? ''}
-                          placeholder={mixedY.mixed ? t('common.mixed') : undefined}
-                          onChange={(e) => {
-                            if (e.target.value === '') return;
-                            updateSelectedAll({ y: Number(e.target.value) });
-                          }}
-                        />
-                      </div>
-                    </Row>
-                  </div>
-                </details>
+                    </div>
+                  </Row>
+                </div>
+              </details>
 
               <details className="uiAccordion" open>
                 <summary className="uiAccordionHeader">{t('editor.sections.size')}</summary>
@@ -1245,26 +1246,33 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
               </details>
             </div>
           )}
-          </div>
-        </aside>
-      </div>
-      <div
-        className={`drawerOverlay ${rightDrawerOpen ? 'open' : ''}`}
-        onClick={() => {
-          setRightDrawerOpen(false);
-        }}
-      />
-      {videoJob ? (
-        <div className="videoJobOverlay">
-          <div className="videoJobPanel uiPanel">
-            <div className="uiTitle">{videoJob.title}</div>
-            {videoJob.detail ? <div className="uiSub">{videoJob.detail}</div> : null}
-            <div className="videoJobBar">
-              <div className="videoJobBarFill" style={{ width: `${Math.round(videoJob.pct ?? 0)}%` }} />
+        </div>
+      </aside >
+
+      {/* Mobile Drawer Overlay */}
+      {
+        rightDrawerOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-0 md:hidden"
+            onClick={() => setRightDrawerOpen(false)}
+          />
+        )
+      }
+
+      {
+        videoJob ? (
+          <div className="videoJobOverlay">
+            <div className="videoJobPanel uiPanel">
+              <div className="uiTitle">{videoJob.title}</div>
+              {videoJob.detail ? <div className="uiSub">{videoJob.detail}</div> : null}
+              <div className="videoJobBar">
+                <div className="videoJobBarFill" style={{ width: `${Math.round(videoJob.pct ?? 0)}%` }} />
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null
+      }
+
       <Dialog
         open={aiConfirmOpen}
         title={t('ai.confirmBalanceTitle')}
@@ -1277,7 +1285,7 @@ export function EditorScreen(props: { project: Project; onChange: (project: Proj
         onConfirm={applyAiBalance}
         onClose={() => setAiConfirmOpen(false)}
       />
-    </div>
+    </div >
   );
 }
 
@@ -1306,9 +1314,9 @@ function normalizeRarity(value: any): Rarity {
 function isCardArt(value: any): value is CardArt {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      ((value.kind === 'image' && typeof value.src === 'string') ||
-        (value.kind === 'video' && typeof value.src === 'string')),
+    typeof value === 'object' &&
+    ((value.kind === 'image' && typeof value.src === 'string') ||
+      (value.kind === 'video' && typeof value.src === 'string')),
   );
 }
 

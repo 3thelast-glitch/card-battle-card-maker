@@ -105,7 +105,7 @@ export function SimulatorScreen(props: { project: Project }) {
 
   return (
     <div className="screen uiApp min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="simShell grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <aside className="uiPanel simPanel bg-white/70 backdrop-blur-sm shadow-xl rounded-2xl p-6 border border-slate-200/50">
           <div className="uiPanelHeader">
             <div>

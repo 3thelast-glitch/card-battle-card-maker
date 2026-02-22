@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import type {
   ArtTransform,
   Blueprint,
@@ -13,6 +13,9 @@ import { getParentPath } from '../../../../../packages/storage/src/index';
 import { useAppStore } from '../../state/appStore';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
+import { ToastContainer, type ToastData } from '../../components/ui/Toast';
+import { GenerationModal } from '../../components/ui/GenerationModal';
+import { Plus, Upload, FileSpreadsheet, Zap, Download, BarChart2, PanelLeft, PanelRight, Layers, Loader2 } from 'lucide-react';
 import { parseCsvFile, parseXlsxFile, mapRowsToCards } from '../../lib/bulkImport';
 import {
   copyImageToProjectAssets,
@@ -58,9 +61,9 @@ type CopySummary = {
   failed: number;
 };
 
-export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void }) {
+export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void; currentView?: string }) {
   const { t, i18n } = useTranslation();
-  const { project, onChange } = props;
+  const { project, onChange, currentView = 'design' } = props;
   const {
     activeBlueprintId,
     activeTableId,
@@ -95,6 +98,16 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const [lastGeneratedId, setLastGeneratedId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // — Micro-interaction states (UI only, no logic impact) —
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [generationCardCount, setGenerationCardCount] = useState(0);
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const toastIdRef = useRef(0);
+  const pushToast = (message: string, type: ToastData['type'] = 'success') => {
+    setToasts((prev) => [...prev, { id: toastIdRef.current++, message, type }]);
+  };
+  const dismissToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
   const artDragRef = useRef<{
     startX: number;
     startY: number;
@@ -214,6 +227,11 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const items = tables.flatMap((tbl) => buildItemsFromTable(tbl, project, blueprint, fallback));
     onChange({ ...project, dataTables: tables, items });
     setActiveTableId(nextTable.id);
+  };
+
+  const updateRows = (nextRows: DataRow[]) => {
+    if (!table) return;
+    updateTable({ ...table, rows: nextRows });
   };
 
   useEffect(() => {
@@ -521,54 +539,82 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = accept;
-    input.onchange = () => {
+    input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
-      handleImport(file, mode);
+      setIsImporting(true);
+      try {
+        await handleImport(file, mode);
+        pushToast(
+          mode === 'csv'
+            ? `📥 ${t('data.importCsv')} — imported successfully`
+            : `📥 ${t('data.importXlsx')} — imported successfully`,
+          'success',
+        );
+      } catch {
+        pushToast('Import failed — check the file format', 'error');
+      } finally {
+        setIsImporting(false);
+      }
     };
     input.click();
   };
 
-  const handleGenerateDeck = () => {
+  const handleGenerateDeck = async () => {
     const safeSize = Math.max(1, Math.floor(Number(deckSize) || 1));
     if (safeSize !== deckSize) setDeckSize(safeSize);
-    const templates = Object.keys(CARD_TEMPLATES);
-    const result = generateDeck({
-      size: safeSize,
-      distribution: dist,
-      templates,
-      lang: language,
-      advancedBalance,
-      cost: defaultCost,
-      abilityKey: defaultAbility,
-      rangesConfig,
-    });
-
-    const existingIds = new Set(rows.map((row) => row.id));
-    const nextRows = [...rows];
-    let firstGeneratedId: string | undefined;
-    result.cards.forEach((card) => {
-      const nextId = ensureUniqueRowId(card.id, existingIds);
-      if (!firstGeneratedId) firstGeneratedId = nextId;
-      nextRows.push({
-        id: nextId,
-        data: { ...card.data, id: nextId },
-        quantity: 1,
-        setId: project.sets[0]?.id,
-        blueprintId: blueprint?.id,
+    setGenerationCardCount(safeSize);
+    setIsGenerating(true);
+    // Enforce minimum modal display time (800ms) + one paint frame
+    const minDisplay = new Promise<void>((resolve) => setTimeout(resolve, 800));
+    await new Promise<void>((resolve) => setTimeout(resolve, 60));
+    try {
+      const templates = Object.keys(CARD_TEMPLATES);
+      const result = generateDeck({
+        size: safeSize,
+        distribution: dist,
+        templates,
+        lang: language,
+        advancedBalance,
+        cost: defaultCost,
+        abilityKey: defaultAbility,
+        rangesConfig,
       });
-    });
 
-    const nextTable: DataTable = table
-      ? { ...table, rows: nextRows, columns: collectColumns(nextRows.map((row) => row.data ?? {})) }
-      : { id: createId('table'), name: t('data.mainTable'), columns: collectColumns(nextRows.map((row) => row.data ?? {})), rows: nextRows };
-    updateTable(nextTable);
-    setDeckAutoBalanced(result.autoBalanced);
-    setImportSummary(null);
-    if (firstGeneratedId) {
-      setSelectedId(firstGeneratedId);
+      const existingIds = new Set(rows.map((row) => row.id));
+      const nextRows = [...rows];
+      let firstGeneratedId: string | undefined;
+      result.cards.forEach((card) => {
+        const nextId = ensureUniqueRowId(card.id, existingIds);
+        if (!firstGeneratedId) firstGeneratedId = nextId;
+        nextRows.push({
+          id: nextId,
+          data: { ...card.data, id: nextId },
+          quantity: 1,
+          setId: project.sets[0]?.id,
+          blueprintId: blueprint?.id,
+        });
+      });
+
+      const nextTable: DataTable = table
+        ? { ...table, rows: nextRows, columns: collectColumns(nextRows.map((row) => row.data ?? {})) }
+        : { id: createId('table'), name: t('data.mainTable'), columns: collectColumns(nextRows.map((row) => row.data ?? {})), rows: nextRows };
+
+      // Wait for minimum display time before committing
+      await minDisplay;
+      updateTable(nextTable);
+      setDeckAutoBalanced(result.autoBalanced);
+      setImportSummary(null);
+      if (firstGeneratedId) setSelectedId(firstGeneratedId);
+      setLastGeneratedId(firstGeneratedId ?? null);
+
+      pushToast(`⚡ ${result.cards.length} cards generated successfully`, 'success');
+    } catch {
+      await minDisplay;
+      pushToast('Generation failed — check settings', 'error');
+    } finally {
+      setIsGenerating(false);
     }
-    setLastGeneratedId(firstGeneratedId ?? null);
   };
 
   const total = dist.common + dist.rare + dist.epic + dist.legendary;
@@ -639,60 +685,129 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     setDist(scaled);
   };
   const header = (
-    <div className="topBarContent">
-      <div className="topBarGroup">
-        <Button
-          size="sm"
-          variant="outline"
-          className="onlySmallLeft"
+    <div className="flex items-center justify-between w-full gap-3 h-full">
+
+      {/* ── LEFT GROUP: Brand + count ── */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Mobile left drawer toggle */}
+        <button
+          type="button"
           onClick={() => setLeftDrawerOpen(true)}
+          className="onlySmallLeft w-8 h-8 flex items-center justify-center rounded-md bg-[#12151E] hover:bg-[#1A2030] border border-[#1E2435] text-slate-500 hover:text-slate-300 transition-colors"
         >
-          {t('cards.title')}
-        </Button>
-        <div>
-          <div className="uiTitle">{t('cards.title')}</div>
-          <div className="uiSub">{t('cards.count', { count: filteredRows.length })}</div>
+          <PanelLeft size={15} />
+        </button>
+        {/* Brand chip */}
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <Layers size={14} className="text-white" />
+          </div>
+          <div className="hidden sm:block leading-none">
+            <div className="text-sm font-semibold text-slate-200 leading-none">{t('cards.title')}</div>
+            <div className="text-[10px] text-slate-600 mt-0.5">
+              {t('cards.count', { count: filteredRows.length })}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="topBarGroup">
-        <Button size="sm" variant="outline" onClick={addRow}>{t('data.addRow')}</Button>
-        <Button size="sm" variant="outline" onClick={() => pickImport('.csv,text/csv', 'csv')}>{t('data.importCsv')}</Button>
-        <Button size="sm" variant="outline" onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}>
-          {t('data.importXlsx')}
-        </Button>
-        <Button size="sm" onClick={handleGenerateDeck}>{t('data.generateDeck')}</Button>
-      </div>
-      <div className="topBarGroup">
-        <Button size="sm" variant="outline" onClick={() => setScreen('export')}>
-          {t('app.nav.export')}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => setScreen('simulator')}>
-          {t('app.nav.simulator')}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="onlySmallRight"
-          onClick={() => setRightDrawerOpen(true)}
+
+      {/* ── CENTER GROUP: Import / Add / Generate ── */}
+      <div className="flex items-center gap-2">
+        {/* Add Row */}
+        <button
+          type="button"
+          onClick={addRow}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors active:scale-95"
         >
-          {t('cards.openInspector')}
-        </Button>
+          <Plus size={13} />
+          <span className="hidden md:inline">{t('data.addRow')}</span>
+        </button>
+        {/* Import CSV */}
+        <button
+          type="button"
+          onClick={() => pickImport('.csv,text/csv', 'csv')}
+          disabled={isImporting}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {isImporting ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+          <span className="hidden md:inline">{t('data.importCsv')}</span>
+        </button>
+        {/* Import Excel */}
+        <button
+          type="button"
+          onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}
+          disabled={isImporting}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {isImporting ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
+          <span className="hidden md:inline">{t('data.importXlsx')}</span>
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-[#252A3A] mx-0.5" />
+
+        {/* Generate Deck — PRIMARY */}
+        <button
+          type="button"
+          onClick={handleGenerateDeck}
+          disabled={isGenerating}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors border border-blue-500/40 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {isGenerating
+            ? <Loader2 size={13} className="animate-spin" />
+            : <Zap size={13} />}
+          <span>{isGenerating ? 'Generating…' : t('data.generateDeck')}</span>
+        </button>
       </div>
+
+      {/* ── RIGHT GROUP: Nav + mobile inspector ── */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setScreen('export')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors hidden sm:flex"
+        >
+          <Download size={13} />
+          <span className="hidden lg:inline">{t('app.nav.export')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setScreen('simulator')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors hidden sm:flex"
+        >
+          <BarChart2 size={13} />
+          <span className="hidden lg:inline">{t('app.nav.simulator')}</span>
+        </button>
+        {/* Mobile right drawer toggle */}
+        <button
+          type="button"
+          onClick={() => setRightDrawerOpen(true)}
+          className="onlySmallRight w-8 h-8 flex items-center justify-center rounded-md bg-[#12151E] hover:bg-[#1A2030] border border-[#1E2435] text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          <PanelRight size={15} />
+        </button>
+      </div>
+
     </div>
   );
 
   const leftPanel = (
-    <div className="panelShell">
-      <div className="panelHeaderSticky uiPanelHeader">
+    <>
+      {/* Left panel sticky header */}
+      <div className="shrink-0 p-4 border-b border-white/10 flex items-center justify-between">
         <div>
-          <div className="uiTitle">{t('cards.title')}</div>
-          <div className="uiSub">{t('cards.count', { count: filteredRows.length })}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t('cards.title')}</div>
+          <div className="text-[10px] text-slate-600 mt-0.5">{t('cards.count', { count: filteredRows.length })}</div>
         </div>
-        <Button size="sm" variant="outline" className="panelClose" onClick={() => setLeftDrawerOpen(false)}>
+        <button
+          type="button"
+          onClick={() => setLeftDrawerOpen(false)}
+          className="panelClose px-2.5 py-1 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-500 hover:text-slate-300 border border-[#1E2435] transition-colors"
+        >
           {t('common.close')}
-        </Button>
+        </button>
       </div>
-      <div className="panelScroll uiPanelBody">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 overflow-x-hidden">
         <ToolSection title={t('cards.filters')} defaultOpen>
           <div className="uiStack">
             <Input
@@ -1144,68 +1259,99 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           </ToolSection>
         </div>
       </div>
-    </div>
+    </>
   );
 
   const centerPanel = (
-    <div className="panelShell">
-      <div className="panelHeaderSticky uiPanelHeader">
+    <div className="flex flex-col h-full w-full">
+      {/* Center panel sticky header */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0D1117]">
         <div>
-          <div className="uiTitle">{t('cards.preview')}</div>
-          <div className="uiSub">{selectedRow ? getRowTitle(selectedRow.data ?? {}, language) : t('cards.empty')}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t('cards.preview')}</div>
+          <div className="text-[10px] text-slate-600 mt-0.5 truncate max-w-[180px]">
+            {selectedRow ? getRowTitle(selectedRow.data ?? {}, language) : t('cards.empty')}
+          </div>
         </div>
-        <div className="uiRow bigPreviewTools">
-          <div className="uiRow" style={{ gap: 6 }}>
-            <Button
-              size="sm"
-              variant={previewMode === 'preview' ? 'primary' : 'outline'}
+        <div className="flex items-center gap-3">
+          {/* Preview / Edit toggle */}
+          <div className="flex items-center gap-0.5 p-1 rounded-md bg-[#12151E] border border-[#252A3A]">
+            <button
+              type="button"
               onClick={() => setPreviewMode('preview')}
               disabled={!selectedRow}
+              className={[
+                'px-3 py-1 rounded text-xs font-medium transition-colors duration-150',
+                previewMode === 'preview'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-500 hover:text-slate-300 disabled:opacity-40',
+              ].join(' ')}
             >
               {t('data.preview')}
-            </Button>
-            <Button
-              size="sm"
-              variant={previewMode === 'edit' ? 'primary' : 'outline'}
+            </button>
+            <button
+              type="button"
               onClick={() => setPreviewMode('edit')}
               disabled={!selectedRow || !blueprint}
+              className={[
+                'px-3 py-1 rounded text-xs font-medium transition-colors duration-150',
+                previewMode === 'edit'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-500 hover:text-slate-300 disabled:opacity-40',
+              ].join(' ')}
             >
               {t('data.edit')}
-            </Button>
+            </button>
           </div>
-          <div className="uiRow" style={{ gap: 8 }}>
-            <Button size="sm" variant="outline" onClick={() => selectedRow && duplicateRow(selectedRow.id)} disabled={!selectedRow}>
+          {/* Action buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => selectedRow && duplicateRow(selectedRow.id)}
+              disabled={!selectedRow}
+              className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] transition-colors disabled:opacity-40"
+            >
               {t('cards.duplicate')}
-            </Button>
-            <Button size="sm" variant="danger" onClick={() => requestDelete(selectedRow?.id)} disabled={!selectedRow}>
+            </button>
+            <button
+              type="button"
+              onClick={() => requestDelete(selectedRow?.id)}
+              disabled={!selectedRow}
+              className="px-2.5 py-1 rounded-md text-xs font-medium bg-rose-500/[0.08] hover:bg-rose-500/20 text-rose-500 border border-rose-800/40 transition-colors disabled:opacity-40"
+            >
               {t('common.delete')}
-            </Button>
+            </button>
           </div>
         </div>
       </div>
-      <div className="panelScroll uiPanelBody">
+
+      {/* Canvas body */}
+      <div className="flex-1 overflow-auto flex items-center justify-center relative p-8">
         {!selectedRow ? (
-          <div className="empty">{t('data.selectCardHint')}</div>
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl bg-[#12151E] border border-[#1E2435] flex items-center justify-center text-2xl">🃏</div>
+            <p className="text-sm text-slate-500">{t('data.selectCardHint')}</p>
+          </div>
         ) : previewMode === 'preview' ? (
-          <div className="bigPreviewWrap">
-            <div className="bigPreviewCard">
-            <CardFrame
-              rarity={previewRarity}
-              art={resolvedArt}
-              templateKey={previewTemplateKey}
-              title={previewTitle}
-              description={previewDesc}
-              race={previewRace}
-              traits={previewTraits}
-              element={previewElement}
-              attack={previewAttack}
-              defense={previewDefense}
-              badgeStyle={previewBadgeStyle}
-              bgColor={previewBgColor}
-              posterWarning={posterWarning}
-              width={420}
-              height={540}
-            />
+          /* ── Preview stage: drop-shadow card ── */
+          <div className="flex items-center justify-center w-full h-full relative">
+            <div className="drop-shadow-2xl shadow-black/50">
+              <CardFrame
+                rarity={previewRarity}
+                art={resolvedArt}
+                templateKey={previewTemplateKey}
+                title={previewTitle}
+                description={previewDesc}
+                race={previewRace}
+                traits={previewTraits}
+                element={previewElement}
+                attack={previewAttack}
+                defense={previewDefense}
+                badgeStyle={previewBadgeStyle}
+                bgColor={previewBgColor}
+                posterWarning={posterWarning}
+                width={420}
+                height={540}
+              />
             </div>
           </div>
         ) : blueprint ? (
@@ -1226,15 +1372,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             />
           </div>
         ) : (
-          <div className="empty">{t('data.selectCardHint')}</div>
+          <div className="flex items-center justify-center py-16">
+            <p className="text-sm text-slate-500">{t('data.selectCardHint')}</p>
+          </div>
         )}
       </div>
     </div>
   );
 
   const rightPanel = (
-    <div className="panelShell">
-      <div className="panelHeaderSticky uiPanelHeader">
+    <>
+      <div className="shrink-0 p-4 border-b border-white/10 flex items-center justify-between">
         <div>
           <div className="uiTitle">{t('cards.inspector')}</div>
           <div className="uiSub">{inspectorData ? getRowTitle(inspectorData.data ?? {}, language) : t('cards.empty')}</div>
@@ -1243,7 +1391,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           {t('common.close')}
         </Button>
       </div>
-      <div className="panelScroll uiPanelBody">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
         {!inspectorData ? (
           <div className="empty">{t('data.selectCardHint')}</div>
         ) : (
@@ -1285,19 +1433,307 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           </div>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  const renderDataGrid = () => (
+    <main className="flex flex-col h-full w-full min-h-0 overflow-hidden bg-[#070A14] p-4 sm:p-6 gap-4">
+      {/* The Data Toolbar */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
+        <div>
+          <div className="text-xl font-semibold text-white tracking-tight">{t('app.nav.data')} Manager</div>
+          <div className="text-sm text-slate-400 mt-1">{t('cards.count', { count: rows.length })} rows total</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => pickImport('.csv,text/csv', 'csv')}
+            disabled={isImporting}
+            className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-50"
+          >
+            {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+            {t('data.importCsv')}
+          </button>
+          <button
+            type="button"
+            onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}
+            disabled={isImporting}
+            className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-50"
+          >
+            {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
+            {t('data.importXlsx')}
+          </button>
+          <button
+            type="button"
+            onClick={addRow}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors shadow-sm shadow-indigo-900/20"
+          >
+            <Plus size={16} />
+            {t('data.addRow')}
+          </button>
+        </div>
+      </div>
+
+      {/* The Table Container */}
+      <div className="flex-1 min-h-0 overflow-auto border border-white/10 rounded-xl bg-[#0D1117] relative custom-scrollbar shadow-xl">
+        <table className="w-full text-sm whitespace-nowrap text-slate-300 text-right">
+          <thead className="sticky top-0 bg-[#121624] text-slate-400 font-semibold uppercase text-xs z-10 shadow-sm ring-1 ring-white/5">
+            <tr>
+              <th className="px-4 py-3 border-b border-white/5 font-medium w-16 text-center">ID</th>
+              {columns.map((col) => (
+                <th key={col} className="px-4 py-3 border-b border-white/5 font-medium">{col}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
+                <td className="px-4 py-3 border-b border-white/5 text-slate-500 font-mono text-xs text-center">{row.id.substring(0, 4)}</td>
+                {columns.map((col) => {
+                  const val = String(row.data?.[col] ?? '');
+                  return (
+                    <td key={col} className="px-4 py-3 border-b border-white/5 truncate max-w-[200px]" title={val}>
+                      {val || <span className="text-slate-600 italic">Empty</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-slate-500 border-b border-white/5">
+                  {t('data.selectCardHint')}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  );
+  const renderGenerateStudio = () => (
+    <main className="flex-1 overflow-y-auto min-h-0 bg-[#070A14] custom-scrollbar">
+      <div className="max-w-4xl mx-auto w-full p-6 lg:p-12 flex flex-col gap-8">
+
+        {/* Header Section */}
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Generation Studio</h1>
+          <p className="text-sm text-slate-400">Configure your deck balance, rarity distribution, and export settings.</p>
+        </div>
+
+        {/* Deck Configuration Card */}
+        <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
+          <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('ui.deckGen.title')}</h2>
+
+          <div className="flex flex-col gap-6">
+            <div className="flex justify-between items-end">
+              <div className="w-48">
+                <label className="block text-xs text-slate-400 mb-1.5">{t('data.deckSize')}</label>
+                <input
+                  type="number" min={1} value={deckSize}
+                  onChange={(e) => setDeckSize(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
+                />
+              </div>
+              <div className="flex gap-4 items-center">
+                <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${totalDisplay === 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                  {t('cards.deck.total')}: {totalDisplay}%
+                </span>
+                <button onClick={normalizeDistribution} className="text-xs text-slate-400 hover:text-white transition-colors underline decoration-white/20 underline-offset-2">
+                  {t('cards.deck.normalize')}
+                </button>
+              </div>
+            </div>
+
+            {/* Rarity Grid Container */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { key: 'common', label: t('cards.rarity.common'), val: dist.common },
+                { key: 'rare', label: t('cards.rarity.rare'), val: dist.rare },
+                { key: 'epic', label: t('cards.rarity.epic'), val: dist.epic },
+                { key: 'legendary', label: t('cards.rarity.legendary'), val: dist.legendary }
+              ].map((r) => (
+                <div key={r.key} className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-3">
+                  <div className="text-sm font-medium text-slate-300">{r.label}</div>
+                  <div className="relative">
+                    <input
+                      type="number" min={0} max={100}
+                      value={r.val}
+                      onChange={(e) => setDist({ ...dist, [r.key]: Number(e.target.value) || 0 })}
+                      className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {(totalDisplay !== 100 || deckAutoBalanced) && (
+              <div className="px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium w-fit">
+                {t('data.autoBalanced')}
+              </div>
+            )}
+            {zeroRarity && (
+              <div className="px-3 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-medium w-fit">
+                {t('data.zeroRarityWarning')}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Advanced Balance Card */}
+        <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('data.advancedBalance')}</h2>
+            <Toggle checked={advancedBalance} onChange={setAdvancedBalance} />
+          </div>
+
+          {advancedBalance && (
+            <div className="flex flex-col gap-5">
+              <div className="flex gap-6">
+                <div className="w-32">
+                  <label className="block text-xs text-slate-400 mb-1.5">{t('data.cost')}</label>
+                  <input
+                    type="number" min={0} value={defaultCost}
+                    onChange={(e) => setDefaultCost(Number(e.target.value) || 0)}
+                    className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex-1 max-w-[240px]">
+                  <label className="block text-xs text-slate-400 mb-1.5">{t('data.ability')}</label>
+                  <Select value={defaultAbility} onChange={(e) => setDefaultAbility(e.target.value as AbilityKey)} className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors">
+                    {ABILITY_OPTIONS.map((ability) => (
+                      <option key={ability} value={ability}>{t(`abilities.${ability}`)}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">{t('data.autoBalancedStats')}</p>
+              {balancePreview && (
+                <div className="px-3 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-mono w-fit">
+                  {t('data.balanceDetails')}: total {balancePreview.total} / +{balancePreview.costBonus} / -{balancePreview.abilityPenalty}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Value Ranges (Only rendered minimally if disabled) */}
+        <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
+            <div className="flex flex-col">
+              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('cards.deck.ranges.title')}</h2>
+              <div className="text-xs text-slate-500 mt-0.5">{t('cards.deck.ranges.enable')}</div>
+            </div>
+            <Toggle checked={rangesConfig.enabled} onChange={(next) => setRangesConfig((prev) => ({ ...prev, enabled: next }))} />
+          </div>
+
+          {rangesConfig.enabled && (
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-wrap gap-6 items-end">
+                <Toggle checked={rangesConfig.lowDuplicate} onChange={(next) => setRangesConfig((prev) => ({ ...prev, lowDuplicate: next }))} label={t('cards.deck.ranges.lowDuplicate')} />
+                <div className="w-32">
+                  <label className="block text-xs text-slate-400 mb-1.5">{t('cards.deck.ranges.duplicateBudget')}</label>
+                  <input
+                    type="number" min={0} max={999} value={rangesConfig.duplicateBudget}
+                    onChange={(e) => setRangesConfig((prev) => ({ ...prev, duplicateBudget: clampRangeValue(Number(e.target.value)) }))}
+                    className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none"
+                  />
+                </div>
+                <div className="w-48">
+                  <label className="block text-xs text-slate-400 mb-1.5">{t('cards.deck.ranges.seed')}</label>
+                  <input
+                    value={rangesConfig.seed ?? ''}
+                    onChange={(e) => setRangesConfig((prev) => ({ ...prev, seed: e.target.value }))}
+                    className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none"
+                  />
+                </div>
+              </div>
+              {rangesZeroWarning && <div className="text-rose-400 text-xs">{t('data.zeroRarityWarning')}</div>}
+
+              {/* Rarity Value Grid (simplified layout for dark mode) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {RARITY_OPTIONS.map((rarity) => {
+                  const range = rangesConfig.perRarity[rarity];
+                  return (
+                    <div key={rarity} className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-bold text-slate-300">{t(`cards.rarity.${rarity}`)}</div>
+                        <Toggle checked={range.enabled} onChange={(next) => updateRangeToggle(rarity, next)} />
+                      </div>
+                      {range.enabled && (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.attack')}</span>
+                            <div className="flex items-center gap-2">
+                              <input type="number" min={0} max={999} value={range.attack.min} onChange={(e) => updateRangeValue(rarity, 'attack', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <span className="text-slate-500">-</span>
+                              <input type="number" min={0} max={999} value={range.attack.max} onChange={(e) => updateRangeValue(rarity, 'attack', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.defense')}</span>
+                            <div className="flex items-center gap-2">
+                              <input type="number" min={0} max={999} value={range.defense.min} onChange={(e) => updateRangeValue(rarity, 'defense', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <span className="text-slate-500">-</span>
+                              <input type="number" min={0} max={999} value={range.defense.max} onChange={(e) => updateRangeValue(rarity, 'defense', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.cost')}</span>
+                            <div className="flex items-center gap-2">
+                              <input type="number" min={0} max={999} value={range.cost?.min ?? 0} onChange={(e) => updateRangeValue(rarity, 'cost', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <span className="text-slate-500">-</span>
+                              <input type="number" min={0} max={999} value={range.cost?.max ?? 0} onChange={(e) => updateRangeValue(rarity, 'cost', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Generation Review (Inline Card Preview inside modal) */}
+        {generatorRow && (
+          <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col items-center gap-5">
+            <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider w-full text-center">{t('cards.deck.previewGenerated')}</h2>
+            <CardFrame
+              rarity={generatorRarity} art={generatorArt} templateKey={generatorTemplateKey} title={generatorTitle} description={generatorDesc} race={generatorData.race} traits={generatorTraits} element={generatorData.element} attack={generatorAttack} defense={generatorDefense} badgeStyle={generatorBadgeStyle} bgColor={generatorData.bgColor} width={260} height={360}
+            />
+          </section>
+        )}
+
+        {/* ── MASSIVE CTA BUTTON ── */}
+        <button
+          onClick={handleGenerateDeck}
+          className="w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl py-4 text-lg font-bold shadow-lg hover:shadow-indigo-500/25 transition-all transform active:scale-[0.98]"
+        >
+          <div className="flex items-center justify-center gap-3">
+            {t('data.generateDeck')}
+            <span className="text-blue-200/50">({deckSize} Cards)</span>
+          </div>
+        </button>
+
+      </div>
+    </main>
   );
 
   return (
-    <div className="screen uiApp">
-      <AppShell
-        header={header}
-        left={leftPanel}
-        center={centerPanel}
-        right={rightPanel}
-        leftClassName={leftDrawerOpen ? 'drawerOpen' : ''}
-        rightClassName={rightDrawerOpen ? 'drawerOpen' : ''}
-      />
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden w-full uiApp">
+      {currentView === 'data' ? renderDataGrid() : currentView === 'generate' ? renderGenerateStudio() : (
+        <AppShell
+          header={header}
+          left={leftPanel}
+          center={centerPanel}
+          right={rightPanel}
+          leftClassName={leftDrawerOpen ? 'drawerOpen' : ''}
+          rightClassName={rightDrawerOpen ? 'drawerOpen' : ''}
+        />
+      )}
       <div
         className={`drawerOverlay ${(leftDrawerOpen || rightDrawerOpen) ? 'open' : ''}`}
         onClick={() => {
@@ -1315,6 +1751,8 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         onConfirm={confirmDelete}
         onClose={cancelDelete}
       />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <GenerationModal open={isGenerating} cardCount={generationCardCount} />
     </div>
   );
 }
@@ -1403,9 +1841,9 @@ function buildItemsFromTable(
 function isCardArt(value: any): value is CardArt {
   return Boolean(
     value &&
-      typeof value === 'object' &&
-      ((value.kind === 'image' && typeof value.src === 'string') ||
-        (value.kind === 'video' && typeof value.src === 'string')),
+    typeof value === 'object' &&
+    ((value.kind === 'image' && typeof value.src === 'string') ||
+      (value.kind === 'video' && typeof value.src === 'string')),
   );
 }
 

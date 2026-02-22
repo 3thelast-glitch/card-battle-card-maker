@@ -1,14 +1,17 @@
 .uiApp {
   font-family: var(--font);
   color: var(--text);
-  background: radial-gradient(1200px 600px at 30% 0%, rgba(155,77,255,0.14), transparent 55%),
-              radial-gradient(900px 500px at 80% 20%, rgba(46,134,255,0.12), transparent 60%),
-              var(--bg);
-  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 30% 0%, rgba(155, 77, 255, 0.14), transparent 55%),
+    radial-gradient(900px 500px at 80% 20%, rgba(46, 134, 255, 0.12), transparent 60%),
+    var(--bg);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .uiPanel {
-  background: linear-gradient(180deg, var(--panel), rgba(255,255,255,0.04));
+  background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.04));
   border: 1px solid var(--stroke);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-soft);
@@ -62,7 +65,7 @@
 .uiBtn {
   appearance: none;
   border: 1px solid var(--stroke-2);
-  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.05));
   color: var(--text);
   border-radius: var(--r-md);
   padding: 10px 12px;
@@ -72,18 +75,29 @@
   transition: transform .08s ease, border-color .15s ease, background .15s ease, opacity .15s ease;
 }
 
-.uiBtn:hover { border-color: rgba(255,255,255,0.26); transform: translateY(-1px); }
-.uiBtn:active { transform: translateY(0px); opacity: 0.92; }
-.uiBtn:focus { outline: none; box-shadow: var(--focus); }
+.uiBtn:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  transform: translateY(-1px);
+}
+
+.uiBtn:active {
+  transform: translateY(0px);
+  opacity: 0.92;
+}
+
+.uiBtn:focus {
+  outline: none;
+  box-shadow: var(--focus);
+}
 
 .uiBtnPrimary {
-  border-color: rgba(155,77,255,0.45);
-  background: linear-gradient(180deg, rgba(155,77,255,0.32), rgba(155,77,255,0.16));
+  border-color: rgba(155, 77, 255, 0.45);
+  background: linear-gradient(180deg, rgba(155, 77, 255, 0.32), rgba(155, 77, 255, 0.16));
 }
 
 .uiBtnDanger {
-  border-color: rgba(255,77,79,0.55);
-  background: linear-gradient(180deg, rgba(255,77,79,0.22), rgba(255,77,79,0.10));
+  border-color: rgba(255, 77, 79, 0.55);
+  background: linear-gradient(180deg, rgba(255, 77, 79, 0.22), rgba(255, 77, 79, 0.10));
 }
 
 .uiBtnOutline {
@@ -108,8 +122,9 @@
   transform: none;
 }
 
-.uiInput, .uiSelect {
-  background: rgba(0,0,0,0.25);
+.uiInput,
+.uiSelect {
+  background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--stroke);
   color: var(--text);
   border-radius: var(--r-md);
@@ -118,7 +133,12 @@
   min-width: 220px;
 }
 
-.uiInput:focus, .uiSelect:focus { outline: none; box-shadow: var(--focus); border-color: rgba(155,77,255,0.4); }
+.uiInput:focus,
+.uiSelect:focus {
+  outline: none;
+  box-shadow: var(--focus);
+  border-color: rgba(155, 77, 255, 0.4);
+}
 
 .uiKbd {
   font-family: var(--mono);
@@ -126,7 +146,7 @@
   padding: 2px 6px;
   border-radius: 8px;
   border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--muted);
 }
 
@@ -137,22 +157,22 @@
   padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--muted);
   font-size: var(--small);
   white-space: nowrap;
 }
 
 .uiBadgeWarn {
-  border-color: rgba(255,176,32,0.5);
-  background: rgba(255,176,32,0.10);
-  color: rgba(255,220,160,0.95);
+  border-color: rgba(255, 176, 32, 0.5);
+  background: rgba(255, 176, 32, 0.10);
+  color: rgba(255, 220, 160, 0.95);
 }
 
 .uiBadgeGood {
-  border-color: rgba(39,208,125,0.45);
-  background: rgba(39,208,125,0.10);
-  color: rgba(200,255,228,0.95);
+  border-color: rgba(39, 208, 125, 0.45);
+  background: rgba(39, 208, 125, 0.10);
+  color: rgba(200, 255, 228, 0.95);
 }
 
 .uiDivider {
@@ -179,9 +199,9 @@
   min-width: 0;
 }
 
-.workspace > *,
-.dataShell > *,
-.editorShell > * {
+.workspace>*,
+.dataShell>*,
+.editorShell>* {
   min-width: 0;
 }
 
@@ -198,7 +218,9 @@
 }
 
 .editorShell {
-  height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 280px minmax(520px, 1fr) 340px;
   gap: 14px;
@@ -444,7 +466,7 @@
   padding: var(--s-4);
 }
 
-.workspace > * {
+.workspace>* {
   min-width: 0;
   min-height: 0;
 }
@@ -454,10 +476,12 @@
   grid-template-columns: 320px minmax(0, 1fr) 320px;
   gap: var(--s-4);
   padding: var(--s-4);
-  min-height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.simShell > * {
+.simShell>* {
   min-width: 0;
   min-height: 0;
 }
@@ -504,7 +528,7 @@
   z-index: 0;
 }
 
-.panelHeaderSticky > * {
+.panelHeaderSticky>* {
   position: relative;
   z-index: 1;
 }
@@ -1083,6 +1107,7 @@
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.16);
 }
+
 .previewPanel {
   display: flex;
   flex-direction: column;
@@ -1401,4 +1426,250 @@ html[dir='rtl'] .cardListItem {
 
 html[dir='rtl'] .cardListMeta {
   text-align: right;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FIGMA PREMIUM OVERRIDES — Layout, Panels, Controls
+   Everything below enhances visual quality without
+   breaking any existing class names or component logic.
+═══════════════════════════════════════════════════════ */
+
+/* ── Layout shell: strict 3-column fixed sidebar ──────── */
+.workspace {
+  grid-template-columns: 280px minmax(0, 1fr) 380px;
+  gap: 12px;
+  padding: 12px;
+  background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(99, 60, 180, 0.07), transparent);
+}
+
+/* ── Panels: elevated glass with premium border ─────────── */
+.uiPanel,
+.editorPanel {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 48px rgba(0, 0, 0, 0.38),
+    0 4px 12px rgba(0, 0, 0, 0.24);
+  background: linear-gradient(160deg,
+      rgba(20, 24, 38, 0.95) 0%,
+      rgba(14, 18, 30, 0.92) 100%);
+  backdrop-filter: blur(16px);
+}
+
+/* ── Panel headers: sticky glass with tight typography ──── */
+.uiPanelHeader,
+.editorPanelHeader,
+.panelHeaderSticky.uiPanelHeader {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.uiTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.uiSub {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* ── Inputs & Selects: deeper bg, purple focus ring ──────── */
+.uiInput,
+.uiSelect {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  min-width: unset;
+  width: 100%;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.uiInput:focus,
+.uiSelect:focus {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+}
+
+/* ── Buttons: upgraded gradient primary ──────────────────── */
+.uiBtnPrimary {
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.4), rgba(99, 60, 230, 0.22));
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+}
+
+.uiBtnPrimary:hover {
+  border-color: rgba(139, 92, 246, 0.72);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.32);
+}
+
+/* ── Card list: tighter, more readable items ─────────────── */
+.cardListItem {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.cardListItem:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.cardListItem.isSelected {
+  border-color: rgba(139, 92, 246, 0.55);
+  background: rgba(139, 92, 246, 0.1);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2) inset;
+}
+
+.cardListThumb {
+  border-radius: 8px;
+  border-color: rgba(255, 255, 255, 0.07);
+  width: 48px;
+  height: 48px;
+}
+
+/* ── Preview canvas: distinct dark stage with grid ────────── */
+.bigPreviewWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99, 60, 180, 0.06), transparent 70%),
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 26px,
+      rgba(255, 255, 255, 0.025) 27px),
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 26px,
+      rgba(255, 255, 255, 0.025) 27px);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.bigPreviewCard {
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.65));
+}
+
+/* ── Inspector small preview area ─────────────────────────── */
+.smallPreviewWrap {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99, 60, 180, 0.06), transparent 70%),
+    rgba(0, 0, 0, 0.18);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+/* ── AccordionSection & collapse ─────────────────────────── */
+.uiAccordion {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.uiAccordionHeader {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.uiAccordionHeader:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.uiAccordionBody {
+  padding: 12px 14px;
+}
+
+.uiStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Panel scroll: smooth momentum ───────────────────────── */
+.panelScroll {
+  scroll-behavior: smooth;
+  scroll-padding: 8px;
+}
+
+/* ── Top bar: more refined header ────────────────────────── */
+.topBar::before {
+  background: rgba(9, 11, 18, 0.92);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Help text ───────────────────────────────────────────── */
+.uiHelp {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.75);
+  line-height: 1.5;
+}
+
+/* ── Divider: faint and elegant ──────────────────────────── */
+.uiDivider {
+  background: rgba(255, 255, 255, 0.05);
+  margin: 10px 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CUSTOM SCROLLBARS — slim, dark, premium
+   ══════════════════════════════════════════════════════════ */
+
+/* Width */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+/* Track — fully transparent */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb — dark frosted glass, indigo tint on hover */
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.45);
+}
+
+/* Corner — completely hidden */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
 }

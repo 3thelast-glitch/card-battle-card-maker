@@ -51,15 +51,26 @@ export function CardList(props: {
 
   if (!filtered.length) {
     return (
-      <div className="empty">
-        {t('cards.empty')}
-        <div className="uiHelp">{t('cards.emptyHint')}</div>
+      <div className="flex flex-col items-center justify-center gap-2 py-10 px-4 text-center">
+        <div className="w-10 h-10 rounded-xl bg-[#12151E] border border-[#1E2435] flex items-center justify-center text-slate-600 text-lg">
+          🃏
+        </div>
+        <p className="text-sm font-medium text-slate-500">{t('cards.empty')}</p>
+        <p className="text-xs text-slate-700">{t('cards.emptyHint')}</p>
       </div>
     );
   }
 
+  /* Rarity accent colours (dark-mode safe) */
+  const rarityColor: Record<string, string> = {
+    common: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+    rare: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    epic: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    legendary: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  };
+
   return (
-    <div className="cardList">
+    <div className="flex flex-col gap-1.5">
       {filtered.map((row) => {
         const data = row.data ?? {};
         const art = row.art ?? (data as any).art;
@@ -68,10 +79,11 @@ export function CardList(props: {
         const template = resolveTemplate(data);
         const stats = resolveStats(data);
         const thumb = resolveThumb(art);
+        const isSelected = row.id === props.selectedId;
+
         return (
           <div
             key={row.id}
-            className={`cardListItem ${row.id === props.selectedId ? 'isSelected' : ''}`}
             role="button"
             tabIndex={0}
             onClick={() => props.onSelect(row.id)}
@@ -81,21 +93,61 @@ export function CardList(props: {
                 props.onSelect(row.id);
               }
             }}
+            className={[
+              'flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer',
+              'transition-all duration-150 select-none outline-none',
+              'focus-visible:ring-1 focus-visible:ring-blue-500/50',
+              isSelected
+                ? 'border-blue-500/50 bg-blue-500/[0.07] ring-1 ring-blue-500/20'
+                : 'border-[#1E2435] bg-[#0D1117] hover:border-[#2D3A5A] hover:bg-[#0F1520]',
+            ].join(' ')}
           >
-            <div
-              className="cardListThumb"
+            {/* Thumbnail */}
+            < div
+              className={[
+                'w-12 h-12 flex-shrink-0 rounded-md border bg-[#12151E] bg-cover bg-center',
+                isSelected ? 'border-blue-500/40' : 'border-[#1E2435]',
+              ].join(' ')}
               style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}
-            />
-            <div className="cardListMeta">
-              <div className="cardListTitle">{title}</div>
-              <div className="cardListBadges">
-                <span className="cardListBadge">{getRarityLabel(rarity, props.language)}</span>
-                <span className="cardListBadge">{getTemplateLabel(template, props.language)}</span>
+            >
+              {!thumb && (
+                <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg">🃏</div>
+              )}
+            </div>
+
+            {/* Meta */}
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              {/* Title */}
+              <div className={[
+                'text-sm font-semibold truncate leading-tight',
+                isSelected ? 'text-blue-300' : 'text-slate-200',
+              ].join(' ')}>
+                {title}
               </div>
-              <div className="cardListStats">
-                <span>ATK {stats.attack}</span>
-                <span>DEF {stats.defense}</span>
-                {stats.cost != null ? <span>COST {stats.cost}</span> : null}
+
+              {/* Badges row */}
+              <div className="flex flex-wrap gap-1">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${rarityColor[rarity] ?? rarityColor.common}`}>
+                  {getRarityLabel(rarity, props.language)}
+                </span>
+                {template && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md border border-[#1E2435] bg-[#12151E] text-[10px] font-medium text-slate-500">
+                    {getTemplateLabel(template, props.language)}
+                  </span>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="flex items-center gap-2.5 text-[10px] font-mono">
+                <span className="flex items-center gap-0.5 text-rose-400/80">
+                  ⚔ {stats.attack}
+                </span>
+                <span className="flex items-center gap-0.5 text-sky-400/80">
+                  🛡 {stats.defense}
+                </span>
+                {stats.cost != null && (
+                  <span className="text-amber-400/70">✦ {stats.cost}</span>
+                )}
               </div>
             </div>
           </div>
