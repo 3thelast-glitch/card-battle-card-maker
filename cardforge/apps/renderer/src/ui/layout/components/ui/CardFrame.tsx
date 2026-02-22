@@ -1,6 +1,6 @@
-// src/ui/layout/components/ui/CardFrame.tsx
 import React, { memo } from 'react';
 import type { CSSProperties } from 'react';
+import { StarRating } from './StarRating';
 
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 export type Element = 'fire' | 'water' | 'nature' | 'dark' | 'light' | 'neutral';
@@ -178,7 +178,7 @@ export const CardFrame = memo<CardFrameProps>(({
                 }} />
             </div>
 
-            {/* ── Title & Description ── */}
+            {/* ── Title only (no description here) ── */}
             <div style={{
                 position: 'absolute', left: pad, right: pad,
                 top: artTop + artH + 10 * scale, zIndex: 5,
@@ -190,25 +190,49 @@ export const CardFrame = memo<CardFrameProps>(({
                     textShadow: '0 2px 8px rgba(0,0,0,0.8)',
                     letterSpacing: 0.3, lineHeight: 1.2,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    direction: 'rtl', textAlign: 'right',
+                    direction: 'rtl', textAlign: 'center',
                 }}>
                     {data.title || 'اسم البطاقة'}
                 </div>
 
                 {/* Divider */}
                 <div style={{
-                    height: 1, margin: `${6 * scale}px 0`,
+                    height: 1, margin: `${5 * scale}px 0`,
                     background: `linear-gradient(to right, transparent, ${elCfg.accent}60, transparent)`,
                 }} />
+            </div>
 
-                {/* Description */}
-                <div style={{
-                    fontFamily: 'Cairo, sans-serif', fontWeight: 400,
-                    fontSize: 9 * scale * fs, color: 'rgba(203,213,225,0.8)',
-                    lineHeight: 1.5, direction: 'rtl', textAlign: 'right',
-                    display: '-webkit-box', WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical' as const, overflow: 'hidden',
-                }}>
+            {/* ── Description & Stars Container ── */}
+            <div style={{
+                position: 'absolute',
+                left: pad,
+                right: pad,
+                bottom: showStats ? (58 + (data.traits?.length ? 28 : 8)) * scale : (data.traits?.length ? 32 : 12) * scale,
+                zIndex: 5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: `0 ${4 * scale}px`,
+            }}>
+                {/* Description Text */}
+                <div
+                    className="whitespace-normal break-words leading-relaxed"
+                    style={{
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.45)',
+                        backdropFilter: 'blur(6px)',
+                        borderRadius: 8 * scale,
+                        border: `1px solid rgba(255,255,255,0.07)`,
+                        padding: `${6 * scale}px ${8 * scale}px`,
+                        fontFamily: 'Cairo, sans-serif',
+                        fontWeight: 500,
+                        fontSize: Math.max(11, 12 * scale) * fs,
+                        color: 'rgba(255,255,255,0.90)',
+                        direction: 'rtl',
+                        textAlign: 'center',
+                        textShadow: '0 1px 6px rgba(0,0,0,0.9)',
+                    }}>
                     {data.description || 'نص وصف البطاقة يظهر هنا'}
                 </div>
             </div>
@@ -258,17 +282,10 @@ export const CardFrame = memo<CardFrameProps>(({
                         </div>
                     </div>
 
-                    {/* Cost */}
-                    {data.cost !== undefined && (
-                        <div style={{
-                            width: 28 * scale, height: 28 * scale, borderRadius: 999,
-                            background: 'radial-gradient(circle, rgba(251,191,36,0.2), rgba(0,0,0,0.5))',
-                            border: '1.5px solid rgba(251,191,36,0.5)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12 * scale, fontWeight: 900, color: '#fbbf24',
-                            boxShadow: '0 0 10px rgba(251,191,36,0.3)',
-                        }}>
-                            {data.cost}
+                    {/* Cost Placeholder - Stars perfectly centered */}
+                    {data.cost !== undefined && data.cost > 0 && (
+                        <div className="flex justify-center items-center flex-wrap gap-1 bg-transparent border-none outline-none shadow-none">
+                            <StarRating stars={data.cost} scale={scale * 0.9} />
                         </div>
                     )}
 

@@ -58,5 +58,16 @@ export function useCardEditor() {
         applyCard,
         resetCard: store.resetCard,
         markClean: store.markClean,
+
+        // Layer State & Actions
+        layers: store.layers,
+        activeLayerId: store.activeLayerId,
+        isTransformMode: store.isTransformMode,
+        setLayers: store.setLayers,
+        addLayer: store.addLayer,
+        removeLayer: store.removeLayer,
+        toggleLayerVisibility: store.toggleLayerVisibility,
+        setActiveLayerId: store.setActiveLayerId,
+        setTransformMode: store.setTransformMode,
     };
 }

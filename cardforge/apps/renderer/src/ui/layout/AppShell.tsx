@@ -54,11 +54,12 @@ export const AppShell = () => {
     const res = await api.openFile();
     if (res.canceled || !res.text || !res.filePath) return;
     try {
-      const proj = parseProject(res.text, res.filePath);
-      setProject(proj);
-      const next = addRecentProject(proj, res.filePath);
+      const proj = parseProject(res.text);
+      const projWithPath = { ...proj, meta: { ...proj.meta, filePath: res.filePath } };
+      setProject(projWithPath);
+      const next = addRecentProject(projWithPath, res.filePath);
       setRecents(next);
-      loadRecentProjects(); // sync cache
+      loadRecentProjects();
     } catch {
       alert('تعذّر فتح الملف — تأكد من أنه ملف .cardsmith.json صالح');
     }
@@ -71,15 +72,16 @@ export const AppShell = () => {
     if (!api?.writeFile) return;
     setSaving(true);
     try {
-      let filePath = project.meta.filePath;
+      let filePath: string | undefined = project.meta.filePath;
       if (!filePath) {
         const res = await api.saveFile();
         if (res.canceled || !res.filePath) return;
-        filePath = res.filePath;
+        filePath = res.filePath as string;
       }
-      const text = stringifyProject({ ...project, meta: { ...project.meta, filePath } });
-      await api.writeFile(filePath, { text });
-      const next = addRecentProject({ ...project, meta: { ...project.meta, filePath } }, filePath);
+      const savedProject = { ...project, meta: { ...project.meta, filePath: filePath! } };
+      const text = stringifyProject(savedProject);
+      await api.writeFile(filePath!, { text });
+      const next = addRecentProject(savedProject, filePath!);
       setRecents(next);
       markClean();
       setSaveOk(true);

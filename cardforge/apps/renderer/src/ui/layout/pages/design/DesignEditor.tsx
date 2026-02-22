@@ -1,8 +1,5 @@
-// src/ui/layout/pages/design/DesignEditor.tsx
-// Design page wired to cardEditorStore via useCardEditor hook.
-// The left panel shows layers/tools, center shows a live CardFrame preview,
 // and the right panel controls all card properties.
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useRef } from 'react';
 import {
     Layers, ChevronLeft, ChevronRight, Plus, Trash2, Eye, EyeOff,
     GripVertical, Sliders, Type, Sparkles, Palette, Image, Move,
@@ -22,14 +19,7 @@ const ELEMENT_LABELS: Record<Element, string> = {
 };
 const ALL_TRAITS = ['محارب', 'ساحر', 'طائر', 'أسطوري', 'شيطان', 'ملاك', 'حيوان', 'آلي', 'ماء', 'نار', 'متسلل', 'دفاعي'];
 
-type Layer = { id: string; name: string; type: 'art' | 'text' | 'element' | 'stats'; visible: boolean };
-const INITIAL_LAYERS: Layer[] = [
-    { id: 'l1', name: 'الفن الرئيسي', type: 'art', visible: true },
-    { id: 'l2', name: 'العنوان', type: 'text', visible: true },
-    { id: 'l3', name: 'العنصر', type: 'element', visible: true },
-    { id: 'l4', name: 'الإحصائيات', type: 'stats', visible: true },
-];
-
+// Store handles layers now
 // ── Panel wrappers ──────────────────────────────────────────
 const Panel = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
     <div className={`bg-white/[0.04] border border-white/[0.07] rounded-2xl overflow-hidden ${className}`}>{children}</div>
@@ -42,36 +32,45 @@ const PanelHeader = ({ title, icon }: { title: string; icon: React.ReactNode }) 
 );
 
 // ── Left Panel ──────────────────────────────────────────────
-const LeftPanel = memo(({
-    layers, setLayers,
-}: { layers: Layer[]; setLayers: React.Dispatch<React.SetStateAction<Layer[]>> }) => {
-    const toggleVisible = useCallback((id: string) => {
-        setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
-    }, [setLayers]);
+const LeftPanel = memo(() => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const {
+        layers,
+        activeLayerId,
+        isTransformMode,
+        setTransformMode,
+        setImageUrl,
+        setActiveLayerId,
+        toggleLayerVisibility,
+        addLayer,
+        removeLayer
+    } = useCardEditor();
 
-    const LAYER_ICONS: Record<Layer['type'], React.ReactNode> = {
+    const LAYER_ICONS: Record<string, React.ReactNode> = {
         art: <Image size={11} />, text: <Type size={11} />,
-        element: <Sparkles size={11} />, stats: <Sliders size={11} />,
+        element: <Sparkles size={11} />, stats: <Sliders size={11} />, image: <Image size={11} />,
     };
 
     return (
-        <div className="h-full flex flex-col gap-3 p-3 overflow-y-auto">
+        <div className="h-full flex flex-col gap-3 p-3 overflow-y-auto pointer-events-auto">
             <Panel className="flex-1">
                 <PanelHeader title="الطبقات" icon={<Layers size={13} />} />
                 <div className="p-2 flex flex-col gap-1">
                     {layers.map((layer) => (
                         <div key={layer.id}
-                            className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/[0.06] group transition-colors cursor-pointer">
+                            onClick={() => setActiveLayerId(layer.id)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl group transition-colors cursor-pointer ${activeLayerId === layer.id ? 'bg-purple-500/20 border border-purple-500/30' : 'hover:bg-white/[0.06] border border-transparent'}`}>
                             <GripVertical size={12} className="text-slate-600 group-hover:text-slate-400 cursor-grab" />
-                            <span className="text-slate-500 group-hover:text-slate-400 text-[10px]">{LAYER_ICONS[layer.type]}</span>
-                            <span className="flex-1 text-xs text-slate-300 truncate">{layer.name}</span>
-                            <button onClick={() => toggleVisible(layer.id)}
-                                className="text-slate-600 hover:text-slate-300 transition-colors opacity-0 group-hover:opacity-100">
+                            <span className={`${activeLayerId === layer.id ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-400'} text-[10px]`}>{LAYER_ICONS[layer.type] || <Layers size={11} />}</span>
+                            <span className={`flex-1 text-xs truncate ${activeLayerId === layer.id ? 'text-white font-medium' : 'text-slate-300'}`}>{layer.name}</span>
+                            <button onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
+                                className={`transition-colors ${activeLayerId === layer.id ? 'text-purple-300 hover:text-white opacity-100' : 'text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100'}`}>
                                 {layer.visible ? <Eye size={11} /> : <EyeOff size={11} />}
                             </button>
                         </div>
                     ))}
-                    <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-400 hover:bg-white/[0.04] transition-colors mt-1">
+                    <button onClick={() => addLayer({ name: 'طبقة جديدة', type: 'art', visible: true })}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-400 hover:bg-white/[0.04] transition-colors mt-1 active:scale-95">
                         <Plus size={11} />
                         <span className="text-xs">إضافة طبقة</span>
                     </button>
@@ -81,20 +80,65 @@ const LeftPanel = memo(({
             <Panel>
                 <PanelHeader title="الأدوات" icon={<Palette size={13} />} />
                 <div className="p-3 grid grid-cols-3 gap-2">
-                    {[
-                        { icon: <Move size={14} />, label: 'تحريك' },
-                        { icon: <Type size={14} />, label: 'نص' },
-                        { icon: <Image size={14} />, label: 'صورة' },
-                        { icon: <Sparkles size={14} />, label: 'تأثير' },
-                        { icon: <Sliders size={14} />, label: 'فلتر' },
-                        { icon: <Trash2 size={14} />, label: 'حذف' },
-                    ].map(({ icon, label }) => (
-                        <button key={label}
-                            className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200">
-                            {icon}
-                            <span className="text-[8px]">{label}</span>
-                        </button>
-                    ))}
+                    {/* Hidden Image Upload for Main Art Zone */}
+                    <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                    if (typeof event.target?.result === 'string') {
+                                        setImageUrl(event.target.result);
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                                e.target.value = ''; // Reset
+                            }
+                        }}
+                    />
+
+                    <button
+                        onClick={() => setTransformMode(!isTransformMode)}
+                        className={`flex flex-col items-center gap-1 py-2 rounded-xl border transition-all active:scale-95 ${isTransformMode
+                            ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
+                            : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.05] hover:border-white/[0.12] text-slate-400 hover:text-slate-200'
+                            }`}>
+                        <Move size={14} />
+                        <span className="text-[8px]">تحريك</span>
+                    </button>
+                    <button onClick={() => addLayer({ name: 'نص جديد', type: 'text', visible: true })}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95">
+                        <Type size={14} />
+                        <span className="text-[8px]">نص</span>
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95">
+                        <Image size={14} />
+                        <span className="text-[8px]">صورة</span>
+                    </button>
+                    <button
+                        onClick={() => console.log('Open Effect Panel')}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95">
+                        <Sparkles size={14} />
+                        <span className="text-[8px]">تأثير</span>
+                    </button>
+                    <button
+                        onClick={() => console.log('Open Filter Panel')}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95">
+                        <Sliders size={14} />
+                        <span className="text-[8px]">فلتر</span>
+                    </button>
+                    <button
+                        onClick={() => activeLayerId && removeLayer(activeLayerId)}
+                        disabled={!activeLayerId}
+                        className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-red-500/10 border border-white/[0.05] hover:border-red-500/30 transition-all text-slate-400 hover:text-red-400 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Trash2 size={14} />
+                        <span className="text-[8px]">حذف</span>
+                    </button>
                 </div>
             </Panel>
         </div>
@@ -288,7 +332,6 @@ RightPanel.displayName = 'RightPanel';
 
 // ══ Main DesignEditor ═══════════════════════════════════════
 export const DesignEditor = memo(() => {
-    const [layers, setLayers] = useState<Layer[]>(INITIAL_LAYERS);
     const [zoom, setZoom] = useState(1);
     const [leftOpen, setLeftOpen] = useState(true);
     const [rightOpen, setRightOpen] = useState(true);
@@ -298,10 +341,10 @@ export const DesignEditor = memo(() => {
 
             {/* ── Left Panel ── */}
             <aside
-                className="shrink-0 flex flex-col border-r border-white/[0.06] bg-[#0b0e1a] transition-all duration-300 overflow-hidden"
+                className="relative z-50 pointer-events-auto shrink-0 flex flex-col border-r border-white/[0.06] bg-[#0b0e1a] transition-all duration-300"
                 style={{ width: leftOpen ? 240 : 0, minWidth: leftOpen ? 220 : 0 }}
             >
-                <LeftPanel layers={layers} setLayers={setLayers} />
+                <LeftPanel />
             </aside>
 
             {/* Left collapse button */}
@@ -327,7 +370,7 @@ export const DesignEditor = memo(() => {
 
             {/* ── Right Panel ── */}
             <aside
-                className="shrink-0 flex flex-col border-l border-white/[0.06] bg-[#0b0e1a] transition-all duration-300 overflow-hidden"
+                className="relative z-20 shrink-0 flex flex-col border-l border-white/[0.06] bg-[#0b0e1a] transition-all duration-300"
                 style={{ width: rightOpen ? 280 : 0, minWidth: rightOpen ? 260 : 0 }}
             >
                 <RightPanel />
