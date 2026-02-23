@@ -56,7 +56,7 @@ const CardThumbnail = memo(({
         </button>
 
         <div className="flex justify-center">
-            <CardFrame data={card} width={130} height={178} scale={0.75} showGlow={selected} showStats />
+            <CardFrame data={card} scale={0.37} showGlow={selected} showStats />
         </div>
         <div className="text-center">
             <div className="text-xs font-bold text-slate-200 truncate">{card.title}</div>
@@ -93,7 +93,7 @@ const CardListRow = memo(({
             className="shrink-0 text-slate-600 hover:text-purple-400 transition-colors">
             {selected ? <CheckSquare size={14} className="text-purple-400" /> : <Square size={14} />}
         </button>
-        <CardFrame data={card} width={40} height={56} scale={0.5} showGlow={false} showStats={false} />
+        <CardFrame data={card} scale={0.12} showGlow={false} showStats={false} />
         <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-slate-200 truncate">{card.title}</div>
             <div className="flex items-center gap-2 mt-1">

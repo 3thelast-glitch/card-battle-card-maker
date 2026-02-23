@@ -1,14 +1,17 @@
 // and the right panel controls all card properties.
 import { memo, useState, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
     Layers, ChevronLeft, ChevronRight, Plus, Trash2, Eye, EyeOff,
     GripVertical, Sliders, Type, Sparkles, Palette, Image, Move,
 } from 'lucide-react';
 import { CardFrame } from '../../components/ui/CardFrame';
 import type { Rarity, Element } from '../../components/ui/CardFrame';
+import { TemplateGallery } from '../../components/ui/TemplateGallery';
 import { Button } from '../../components/ui/Button';
 import { RarityBadge } from '../../components/ui/Badge';
 import { useCardEditor } from '../../../../hooks/useCardEditor';
+import { CARD_TEMPLATES, type TemplateKey } from '../../../../templates/cardTemplates';
 
 // ── Constants ───────────────────────────────────────────────
 const RARITIES: Rarity[] = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
@@ -38,12 +41,14 @@ const LeftPanel = memo(() => {
         layers,
         activeLayerId,
         isTransformMode,
+        imageUrl,
         setTransformMode,
         setImageUrl,
         setActiveLayerId,
         toggleLayerVisibility,
         addLayer,
-        removeLayer
+        removeLayer,
+        clearArtImage
     } = useCardEditor();
 
     const LAYER_ICONS: Record<string, React.ReactNode> = {
@@ -56,6 +61,18 @@ const LeftPanel = memo(() => {
             <Panel className="flex-1">
                 <PanelHeader title="الطبقات" icon={<Layers size={13} />} />
                 <div className="p-2 flex flex-col gap-1">
+                    {/* Special Art Zone Layer (conditionally rendered) */}
+                    {imageUrl && (
+                        <div
+                            onClick={() => setActiveLayerId('main-art-image')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-xl group transition-colors cursor-pointer ${activeLayerId === 'main-art-image' ? 'bg-purple-500/20 border border-purple-500/30' : 'hover:bg-white/[0.06] border border-transparent'}`}>
+                            <div className="w-3" /> {/* Spacer for grip area since we can't drag it */}
+                            <span className={`${activeLayerId === 'main-art-image' ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-400'} text-[10px]`}><Image size={11} /></span>
+                            <span className={`flex-1 text-xs truncate ${activeLayerId === 'main-art-image' ? 'text-white font-medium' : 'text-slate-300'}`}>الفن الرئيسي</span>
+                            <Eye size={11} className="text-slate-600 opacity-50" />
+                        </div>
+                    )}
+
                     {layers.map((layer) => (
                         <div key={layer.id}
                             onClick={() => setActiveLayerId(layer.id)}
@@ -133,7 +150,13 @@ const LeftPanel = memo(() => {
                         <span className="text-[8px]">فلتر</span>
                     </button>
                     <button
-                        onClick={() => activeLayerId && removeLayer(activeLayerId)}
+                        onClick={() => {
+                            if (activeLayerId === 'main-art-image') {
+                                clearArtImage();
+                            } else if (activeLayerId) {
+                                removeLayer(activeLayerId);
+                            }
+                        }}
                         disabled={!activeLayerId}
                         className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-red-500/10 border border-white/[0.05] hover:border-red-500/30 transition-all text-slate-400 hover:text-red-400 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Trash2 size={14} />
@@ -147,44 +170,96 @@ const LeftPanel = memo(() => {
 LeftPanel.displayName = 'LeftPanel';
 
 // ── Center Canvas ───────────────────────────────────────────
-const CenterCanvas = memo(({ zoom, setZoom }: { zoom: number; setZoom: (z: number) => void }) => {
-    const { cardData } = useCardEditor();
+const CenterCanvas = memo(() => {
+    const {
+        cardData,
+        isTransformMode,
+        badgePositions,
+        activeLayerId,
+        setActiveLayerId,
+        updateBadgePosition,
+        showDescription,
+        artZoneHeight,
+        isTemplateGalleryOpen,
+        activeTemplateId,
+        zoomLevel,
+        zoomIn,
+        zoomOut,
+        resetZoom,
+    } = useCardEditor();
+
+    const currentTemplate = CARD_TEMPLATES[activeTemplateId as TemplateKey] || CARD_TEMPLATES.classic;
 
     return (
         <div className="h-full flex flex-col">
             {/* Toolbar */}
             <div className="flex items-center justify-center gap-2 py-2 border-b border-white/[0.06] bg-black/20 px-4 shrink-0">
-                <Button size="xs" variant="ghost" onClick={() => setZoom(Math.max(0.4, zoom - 0.1))}>−</Button>
-                <span className="text-xs text-slate-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
-                <Button size="xs" variant="ghost" onClick={() => setZoom(Math.min(2.5, zoom + 0.1))}>+</Button>
+                <Button size="xs" variant="ghost" onClick={zoomOut}>−</Button>
+                <span className="text-xs text-slate-400 w-10 text-center">{Math.round(zoomLevel * 100)}%</span>
+                <Button size="xs" variant="ghost" onClick={zoomIn}>+</Button>
                 <div className="w-px h-4 bg-white/10 mx-1" />
-                <Button size="xs" variant="ghost" onClick={() => setZoom(1)}>تهيئة</Button>
+                <Button size="xs" variant="ghost" onClick={resetZoom}>تهيئة</Button>
+                {isTransformMode && (
+                    <span className="text-[10px] text-purple-400 font-semibold animate-pulse ml-2">
+                        ✦ وضع التحريك
+                    </span>
+                )}
             </div>
 
             {/* Canvas */}
             <div className="flex-1 flex items-center justify-center overflow-hidden bg-[#070b14] relative">
                 <div className="absolute inset-0 pointer-events-none"
                     style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div style={{ transform: `scale(${zoom})`, transition: 'transform 0.2s ease' }}
-                    className="drop-shadow-2xl">
-                    <CardFrame data={cardData} width={280} height={380} showGlow showStats />
-                </div>
+
+                {/* Template Gallery (فلواتس أبسولوت inside canvas) */}
+                {isTemplateGalleryOpen && <TemplateGallery />}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTemplateId || 'default'}
+                        style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center', transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                        className="drop-shadow-2xl"
+                        initial={{ opacity: 0.8, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0.8, scale: 0.98 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    >
+                        <CardFrame
+                            data={cardData}
+                            showGlow
+                            showStats
+                            isTransformMode={isTransformMode}
+                            badgePositions={badgePositions}
+                            activeBadgeId={activeLayerId}
+                            onBadgeSelect={(badge) => setActiveLayerId(`badge-${badge}`)}
+                            onBadgeMove={updateBadgePosition}
+                            showDescription={showDescription}
+                            artZoneHeight={artZoneHeight}
+                            layout={currentTemplate.layout || 'standard'}
+                        />
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     );
 });
 CenterCanvas.displayName = 'CenterCanvas';
 
+
 // ── Right Properties Panel ──────────────────────────────────
 const RightPanel = memo(() => {
-    const [tab, setTab] = useState<'stats' | 'text' | 'traits' | 'template'>('stats');
+    const [tab, setTab] = useState<'card' | 'stats' | 'text' | 'traits' | 'template'>('card');
     const {
         cardData,
         setTitle, setDescription, setElement, setRarity,
         setAttack, setHp, setCost, toggleTrait,
+        layers, activeLayerId, isTransformMode, setTransformMode,
+        bringLayerForward, sendLayerBackward,
+        showDescription, artZoneHeight, toggleDescription, setArtZoneHeight,
+        toggleTemplateGallery,
     } = useCardEditor();
 
     const TABS = [
+        { id: 'card' as const, label: 'البطاقة' },
         { id: 'stats' as const, label: 'إحصائيات' },
         { id: 'text' as const, label: 'نصوص' },
         { id: 'traits' as const, label: 'سمات' },
@@ -194,10 +269,10 @@ const RightPanel = memo(() => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Tab bar */}
-            <div className="flex border-b border-white/[0.06] bg-black/20 px-2 pt-2 gap-1 shrink-0 flex-wrap">
+            <div className="flex border-b border-white/[0.06] bg-black/20 px-2 pt-2 gap-1 shrink-0 overflow-x-auto no-scrollbar">
                 {TABS.map(({ id, label }) => (
                     <button key={id} onClick={() => setTab(id)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-t-xl transition-all
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-t-xl transition-all whitespace-nowrap
               ${tab === id ? 'bg-white/[0.08] text-slate-200 border-b-2 border-purple-500' : 'text-slate-500 hover:text-slate-300'}`}>
                         {label}
                     </button>
@@ -206,8 +281,8 @@ const RightPanel = memo(() => {
 
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
 
-                {/* ── Stats tab ── */}
-                {tab === 'stats' && (<>
+                {/* ── Card tab ── */}
+                {tab === 'card' && (<>
                     <Panel>
                         <PanelHeader title="الندرة" icon={<Sparkles size={13} />} />
                         <div className="p-3 grid grid-cols-1 gap-1.5">
@@ -225,6 +300,86 @@ const RightPanel = memo(() => {
                     </Panel>
 
                     <Panel>
+                        <PanelHeader title="العنصر" icon={<Palette size={13} />} />
+                        <div className="p-3 grid grid-cols-3 gap-1.5">
+                            {ELEMENTS.map(el => (
+                                <button key={el} onClick={() => setElement(el)}
+                                    className={`py-2 rounded-xl text-[10px] font-medium transition-all text-center
+                    ${cardData.element === el
+                                            ? 'bg-purple-600/30 border border-purple-500/50 text-white'
+                                            : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:bg-white/[0.07]'}`}>
+                                    {ELEMENT_LABELS[el]}
+                                </button>
+                            ))}
+                        </div>
+                    </Panel>
+
+                    {/* ★ Template Gallery trigger button — placed exactly between العنصر and تخطيط البطاقة */}
+                    <button
+                        onClick={toggleTemplateGallery}
+                        className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white transition-all active:scale-95 hover:scale-[1.02] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg"
+                        style={{ boxShadow: '0 0 20px rgba(139,92,246,0.35), 0 4px 14px rgba(0,0,0,0.4)' }}
+                    >
+                        استعراض معرض القوالب 🎨
+                    </button>
+
+                    <Panel>
+                        <PanelHeader title="تخطيط البطاقة" icon={<Sliders size={13} />} />
+                        <div className="p-3 flex flex-col gap-4">
+                            {/* Art Zone Height Slider */}
+                            <div>
+                                <div className="flex justify-between mb-1.5">
+                                    <span className="text-[10px] text-slate-400">🖼️ ارتفاع الصورة</span>
+                                    <span className="text-[10px] font-bold text-slate-200">{artZoneHeight}px</span>
+                                </div>
+                                <input type="range" min={80} max={260} value={artZoneHeight}
+                                    onChange={e => setArtZoneHeight(parseInt(e.target.value))}
+                                    className="w-full h-1.5 rounded-full accent-purple-500 cursor-pointer" />
+                            </div>
+                            {/* Show Description Toggle */}
+                            <button
+                                onClick={toggleDescription}
+                                className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all text-xs font-medium ${showDescription
+                                    ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
+                                    : 'bg-white/[0.03] border-white/[0.06] text-slate-500'
+                                    }`}>
+                                <span>إظهار الوصف</span>
+                                <span className={`w-8 h-4 rounded-full relative transition-all ${showDescription ? 'bg-purple-500' : 'bg-slate-700'
+                                    }`}>
+                                    <span className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${showDescription ? 'right-0.5' : 'left-0.5'
+                                        }`} />
+                                </span>
+                            </button>
+                        </div>
+                    </Panel>
+
+                    <Panel>
+                        <PanelHeader title="أدوات العنصر المحددة" icon={<Move size={13} />} />
+                        <div className="p-3 flex flex-col gap-3">
+                            <span className="text-[10px] text-slate-400 font-medium">
+                                {activeLayerId
+                                    ? `العنصر المحدد: ${layers.find(l => l.id === activeLayerId)?.name || (activeLayerId === 'main-art-image' ? 'الفن الرئيسي' : 'غير معروف')}`
+                                    : 'لا يوجد عنصر محدد'}
+                            </span>
+                            <Button
+                                variant={isTransformMode ? 'primary' : 'outline'}
+                                size="sm"
+                                onClick={() => setTransformMode(!isTransformMode)}
+                                className={`w-full ${isTransformMode ? 'bg-purple-600 hover:bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.4)] border-purple-400' : ''}`}
+                            >
+                                وضع التحريك
+                            </Button>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                                <Button size="xs" variant="outline" onClick={() => activeLayerId && bringLayerForward(activeLayerId)} disabled={!activeLayerId || activeLayerId === 'main-art-image'}>إحضار للأمام</Button>
+                                <Button size="xs" variant="outline" onClick={() => activeLayerId && sendLayerBackward(activeLayerId)} disabled={!activeLayerId || activeLayerId === 'main-art-image'}>إرسال للخلف</Button>
+                            </div>
+                        </div>
+                    </Panel>
+                </>)}
+
+                {/* ── Stats tab ── */}
+                {tab === 'stats' && (<>
+                    <Panel>
                         <PanelHeader title="القوة" icon={<Sliders size={13} />} />
                         <div className="p-3 flex flex-col gap-3">
                             {([
@@ -241,21 +396,6 @@ const RightPanel = memo(() => {
                                         onChange={e => setter(parseInt(e.target.value))}
                                         className="w-full h-1.5 rounded-full accent-purple-500 cursor-pointer" />
                                 </div>
-                            ))}
-                        </div>
-                    </Panel>
-
-                    <Panel>
-                        <PanelHeader title="العنصر" icon={<Palette size={13} />} />
-                        <div className="p-3 grid grid-cols-3 gap-1.5">
-                            {ELEMENTS.map(el => (
-                                <button key={el} onClick={() => setElement(el)}
-                                    className={`py-2 rounded-xl text-[10px] font-medium transition-all text-center
-                    ${cardData.element === el
-                                            ? 'bg-purple-600/30 border border-purple-500/50 text-white'
-                                            : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:bg-white/[0.07]'}`}>
-                                    {ELEMENT_LABELS[el]}
-                                </button>
                             ))}
                         </div>
                     </Panel>
@@ -332,7 +472,6 @@ RightPanel.displayName = 'RightPanel';
 
 // ══ Main DesignEditor ═══════════════════════════════════════
 export const DesignEditor = memo(() => {
-    const [zoom, setZoom] = useState(1);
     const [leftOpen, setLeftOpen] = useState(true);
     const [rightOpen, setRightOpen] = useState(true);
 
@@ -357,7 +496,7 @@ export const DesignEditor = memo(() => {
 
             {/* ── Center Canvas ── */}
             <main className="flex-1 min-w-0 overflow-hidden">
-                <CenterCanvas zoom={zoom} setZoom={setZoom} />
+                <CenterCanvas />
             </main>
 
             {/* Right collapse button */}

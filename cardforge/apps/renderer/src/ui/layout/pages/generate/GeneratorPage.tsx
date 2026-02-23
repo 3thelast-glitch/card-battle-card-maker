@@ -41,7 +41,7 @@ const ResultCard = memo(({ card, onUseInEditor }: {
 }) => (
     <div className="group flex flex-col items-center gap-2 animate-scale-in">
         <div className="relative">
-            <CardFrame data={card} width={160} height={218} showGlow showStats />
+            <CardFrame data={card} scale={0.45} showGlow showStats />
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200
         bg-black/50 rounded-2xl flex items-center justify-center">
                 <Button
@@ -91,7 +91,7 @@ const HistoryItem = memo(({ entry }: { entry: HistoryEntry }) => {
                 <div className="px-2 pb-2 pt-1 flex flex-wrap gap-1.5 border-t border-white/[0.06]">
                     {entry.cards.map((c) => (
                         <div key={c.id} className="flex-shrink-0">
-                            <CardFrame data={c} width={60} height={83} scale={0.55} showGlow={false} showStats={false} />
+                            <CardFrame data={c} scale={0.17} showGlow={false} showStats={false} />
                         </div>
                     ))}
                 </div>

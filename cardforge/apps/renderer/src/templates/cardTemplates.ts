@@ -7,11 +7,14 @@ export type TemplateKey =
   | 'forest'
   | 'ember'
   | 'frost'
-  | 'storm';
+  | 'storm'
+  | 'modern-dark'
+  | 'steampunk';
 
 export type CardTemplate = {
   key: TemplateKey;
   label: { en: string; ar: string };
+  layout?: 'standard' | 'full-bleed';
   titleKey?: string;
   descKey?: string;
   thumbnail?: string;
@@ -123,5 +126,25 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
     artRect: { left: 20, top: 56, right: 20, bottom: 72, radius: 12 },
     title: { x: 22, y: 16, size: 18 },
     desc: { x: 22, y: 288, size: 12 },
+  },
+  'modern-dark': {
+    key: 'modern-dark',
+    label: { en: 'Modern Dark', ar: 'حديث داكن' },
+    layout: 'full-bleed',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#0a0a0c',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  steampunk: {
+    key: 'steampunk',
+    label: { en: 'Steampunk', ar: 'ستيم بانك' },
+    layout: 'steampunk',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#2C1810',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
   },
 };

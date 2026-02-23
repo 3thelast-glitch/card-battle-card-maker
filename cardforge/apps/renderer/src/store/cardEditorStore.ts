@@ -6,6 +6,8 @@ import type { CardFrameData, Rarity, Element } from '../ui/layout/components/ui/
 
 export type LayerType = 'art' | 'text' | 'element' | 'stats' | 'image';
 export type EditorLayer = { id: string; name: string; type: LayerType; visible: boolean };
+export type BadgeKey = 'element' | 'rarity' | 'attack' | 'hp';
+export type BadgePos = { x: number; y: number };
 
 export type CardEditorState = Required<Pick<CardFrameData,
     'title' | 'description' | 'element' | 'rarity' | 'attack' | 'hp' | 'cost'
@@ -16,6 +18,12 @@ export type CardEditorState = Required<Pick<CardFrameData,
     layers: EditorLayer[];
     activeLayerId: string | null;
     isTransformMode: boolean;
+    badgePositions: Record<BadgeKey, BadgePos>;
+    showDescription: boolean;
+    artZoneHeight: number;
+    isTemplateGalleryOpen: boolean;
+    activeTemplateId: string;
+    zoomLevel: number;
 };
 
 type CardEditorActions = {
@@ -39,6 +47,18 @@ type CardEditorActions = {
     toggleLayerVisibility: (id: string) => void;
     setActiveLayerId: (id: string | null) => void;
     setTransformMode: (isTransformMode: boolean) => void;
+    clearArtImage: () => void;
+    bringLayerForward: (id: string) => void;
+    sendLayerBackward: (id: string) => void;
+    updateBadgePosition: (badge: BadgeKey, pos: BadgePos) => void;
+    toggleDescription: () => void;
+    setArtZoneHeight: (height: number) => void;
+    toggleTemplateGallery: () => void;
+    closeTemplateGallery: () => void;
+    applyTemplate: (id: string) => void;
+    zoomIn: () => void;
+    zoomOut: () => void;
+    resetZoom: () => void;
 };
 
 const DEFAULT_STATE: CardEditorState = {
@@ -60,6 +80,17 @@ const DEFAULT_STATE: CardEditorState = {
     ],
     activeLayerId: null,
     isTransformMode: false,
+    badgePositions: {
+        element: { x: 0, y: 0 },
+        rarity: { x: 0, y: 0 },
+        attack: { x: 0, y: 0 },
+        hp: { x: 0, y: 0 },
+    },
+    showDescription: true,
+    artZoneHeight: 240,
+    isTemplateGalleryOpen: false,
+    activeTemplateId: 'classic',
+    zoomLevel: 1,
 };
 
 export const useCardEditorStore = create<CardEditorState & CardEditorActions>((set) => ({
@@ -111,4 +142,47 @@ export const useCardEditorStore = create<CardEditorState & CardEditorActions>((s
     setActiveLayerId: (activeLayerId) => set({ activeLayerId }),
 
     setTransformMode: (isTransformMode) => set({ isTransformMode }),
+
+    clearArtImage: () => set((state) => ({
+        imageUrl: undefined,
+        activeLayerId: state.activeLayerId === 'main-art-image' ? null : state.activeLayerId,
+        isDirty: true
+    })),
+
+    bringLayerForward: (id) => set((state) => {
+        const index = state.layers.findIndex(l => l.id === id);
+        if (index <= 0) return state;
+        const newLayers = [...state.layers];
+        [newLayers[index - 1], newLayers[index]] = [newLayers[index], newLayers[index - 1]];
+        return { layers: newLayers, isDirty: true };
+    }),
+
+    sendLayerBackward: (id) => set((state) => {
+        const index = state.layers.findIndex(l => l.id === id);
+        if (index === -1 || index >= state.layers.length - 1) return state;
+        const newLayers = [...state.layers];
+        [newLayers[index], newLayers[index + 1]] = [newLayers[index + 1], newLayers[index]];
+        return { layers: newLayers, isDirty: true };
+    }),
+
+    updateBadgePosition: (badge, pos) => set((state) => ({
+        badgePositions: { ...state.badgePositions, [badge]: pos },
+        isDirty: true,
+    })),
+
+    toggleDescription: () => set((state) => ({ showDescription: !state.showDescription, isDirty: true })),
+
+    setArtZoneHeight: (artZoneHeight) => set({ artZoneHeight, isDirty: true }),
+
+    toggleTemplateGallery: () => set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
+
+    closeTemplateGallery: () => set({ isTemplateGalleryOpen: false }),
+
+    applyTemplate: (id) => set({ activeTemplateId: id, isDirty: true }),
+
+    zoomIn: () => set((state) => ({ zoomLevel: Math.min(state.zoomLevel + 0.1, 2.5) })),
+
+    zoomOut: () => set((state) => ({ zoomLevel: Math.max(state.zoomLevel - 0.1, 0.4) })),
+
+    resetZoom: () => set({ zoomLevel: 1 }),
 }));
