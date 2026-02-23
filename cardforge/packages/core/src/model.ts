@@ -53,7 +53,13 @@ export type ArtTransform = {
 
 export type CardArt =
   | { kind: 'image'; src: string; transform?: ArtTransform }
-  | { kind: 'video'; src: string; poster?: string; meta?: CardArtVideoMeta; transform?: ArtTransform };
+  | {
+      kind: 'video';
+      src: string;
+      poster?: string;
+      meta?: CardArtVideoMeta;
+      transform?: ArtTransform;
+    };
 
 export type CardRace =
   | 'human'
@@ -167,7 +173,11 @@ export type IconElement = ElementBase & {
   fill?: string;
 };
 
-export type ElementModel = TextElement | ImageElement | ShapeElement | IconElement;
+export type ElementModel =
+  | TextElement
+  | ImageElement
+  | ShapeElement
+  | IconElement;
 
 export type DataRow = {
   id: Id;

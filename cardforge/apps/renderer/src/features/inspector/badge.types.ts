@@ -25,7 +25,18 @@ export interface BadgeElement {
   glowColor?: string;
   zIndex: number;
   customImage?: string;
-  animation?: 'none' | 'pulse' | 'spin' | 'float' | 'wiggle' | 'glow' | 'pulse-glow' | 'sparkle' | 'flame' | 'star' | 'crystal';
+  animation?:
+    | 'none'
+    | 'pulse'
+    | 'spin'
+    | 'float'
+    | 'wiggle'
+    | 'glow'
+    | 'pulse-glow'
+    | 'sparkle'
+    | 'flame'
+    | 'star'
+    | 'crystal';
   animationDuration?: number;
 }
 

@@ -26,10 +26,19 @@ export function toFileUrl(filePath: string) {
 export function resolveImageSrc(value?: string, projectRoot?: string) {
   if (!value) return '';
   if (value.startsWith('/assets/')) return value;
-  if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://') || value.startsWith('file://')) {
+  if (
+    value.startsWith('data:') ||
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('file://')
+  ) {
     return value;
   }
-  if (/^[a-zA-Z]:\\/.test(value) || value.startsWith('\\\\') || value.startsWith('/')) {
+  if (
+    /^[a-zA-Z]:\\/.test(value) ||
+    value.startsWith('\\\\') ||
+    value.startsWith('/')
+  ) {
     return toFileUrl(value);
   }
   if (projectRoot) {

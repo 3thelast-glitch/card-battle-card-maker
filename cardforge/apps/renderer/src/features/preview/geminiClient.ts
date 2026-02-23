@@ -2,7 +2,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function generateCardData(prompt: string) {
   if (!window.ai?.generate) {
-    throw new Error('Gemini API Key is missing. Please set GEMINI_API_KEY in the main process.');
+    throw new Error(
+      'Gemini API Key is missing. Please set GEMINI_API_KEY in the main process.',
+    );
   }
 
   const generationPrompt = `Generate a trading card based on the theme: "${prompt}".
@@ -23,7 +25,10 @@ Return a JSON object with the following keys:
     throw new Error(result?.error ?? 'Gemini request failed.');
   }
 
-  const cleaned = result.text.replace(/```(?:json)?/g, '').replace(/```/g, '').trim();
+  const cleaned = result.text
+    .replace(/```(?:json)?/g, '')
+    .replace(/```/g, '')
+    .trim();
   return JSON.parse(cleaned);
 }
 

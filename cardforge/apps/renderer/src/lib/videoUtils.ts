@@ -1,5 +1,10 @@
 export async function getVideoMetadata(file: File) {
-  return new Promise<{ duration: number; width: number; height: number; canPlay: string }>((resolve, reject) => {
+  return new Promise<{
+    duration: number;
+    width: number;
+    height: number;
+    canPlay: string;
+  }>((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.muted = true;
@@ -35,7 +40,10 @@ export async function generatePoster(file: File, time = 0.5): Promise<Blob> {
     video.src = url;
 
     video.onloadedmetadata = () => {
-      const safeTime = Math.min(Math.max(time, 0), Math.max(0, video.duration - 0.1));
+      const safeTime = Math.min(
+        Math.max(time, 0),
+        Math.max(0, video.duration - 0.1),
+      );
       video.currentTime = Number.isFinite(safeTime) ? safeTime : 0;
     };
 
@@ -50,14 +58,18 @@ export async function generatePoster(file: File, time = 0.5): Promise<Blob> {
         return;
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        URL.revokeObjectURL(url);
-        if (!blob) {
-          reject(new Error('Poster failed'));
-          return;
-        }
-        resolve(blob);
-      }, 'image/jpeg', 0.92);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob) {
+            reject(new Error('Poster failed'));
+            return;
+          }
+          resolve(blob);
+        },
+        'image/jpeg',
+        0.92,
+      );
     };
 
     video.onerror = () => {

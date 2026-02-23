@@ -18,7 +18,10 @@ for (const entry of entries) {
   if (fs.existsSync(mapJsPath)) {
     fs.renameSync(mapJsPath, mapCjsPath);
     const content = fs.readFileSync(cjsPath, 'utf-8');
-    const updated = content.replace(/sourceMappingURL=.*$/m, `sourceMappingURL=${entry}.cjs.map`);
+    const updated = content.replace(
+      /sourceMappingURL=.*$/m,
+      `sourceMappingURL=${entry}.cjs.map`,
+    );
     if (updated !== content) {
       fs.writeFileSync(cjsPath, updated, 'utf-8');
     }

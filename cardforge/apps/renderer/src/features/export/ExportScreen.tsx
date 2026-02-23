@@ -1,13 +1,27 @@
 import React, { useRef, useState } from 'react';
-import type { Blueprint, DataRow, Project } from '../../../../../packages/core/src/index';
-import { ExportService, expandRowsWithQuantity, resolvePath } from '../../../../../packages/core/src/index';
-import { getParentPath, joinPath } from '../../../../../packages/storage/src/index';
+import type {
+  Blueprint,
+  DataRow,
+  Project,
+} from '../../../../../packages/core/src/index';
+import {
+  ExportService,
+  expandRowsWithQuantity,
+  resolvePath,
+} from '../../../../../packages/core/src/index';
+import {
+  getParentPath,
+  joinPath,
+} from '../../../../../packages/storage/src/index';
 import { Button, Panel, Row, Input, Select } from '../../components/ui';
 import { dataUrlToArrayBuffer } from '../../utils/file';
 import { useAppStore } from '../../state/appStore';
 import { ExportCanvas, ExportCanvasHandle } from './ExportCanvas';
 import { useTranslation } from 'react-i18next';
-import { getImageBindingDefaults, resolveImageReference } from '../../utils/imageBinding';
+import {
+  getImageBindingDefaults,
+  resolveImageReference,
+} from '../../utils/imageBinding';
 import { captureVideoPosterFromUrl } from '../../lib/videoPoster';
 import { buildGameExport } from '../../lib/exportToGame';
 import { exportToGameZip } from '../../lib/exportToGameZip';
@@ -18,31 +32,57 @@ type ExportReport = {
   failures: { rowId: string; error: string }[];
 };
 
-export function ExportScreen(props: { project: Project; onChange: (project: Project) => void }) {
+export function ExportScreen(props: {
+  project: Project;
+  onChange: (project: Project) => void;
+}) {
   const { t, i18n } = useTranslation();
   const { project } = props;
-  const { activeBlueprintId, activeTableId, setActiveBlueprintId, setActiveTableId, previewRowId } = useAppStore();
+  const {
+    activeBlueprintId,
+    activeTableId,
+    setActiveBlueprintId,
+    setActiveTableId,
+    previewRowId,
+  } = useAppStore();
   const [outputFolder, setOutputFolder] = useState<string>('');
-  const [exportFormat, setExportFormat] = useState<'png' | 'pdf' | 'json'>('png');
+  const [exportFormat, setExportFormat] = useState<'png' | 'pdf' | 'json'>(
+    'png',
+  );
   const [pixelRatio, setPixelRatio] = useState(2);
   const [namingTemplate, setNamingTemplate] = useState('{{name}}_{{id}}');
-  const [progress, setProgress] = useState<{ current: number; total: number; fileName: string } | null>(null);
+  const [progress, setProgress] = useState<{
+    current: number;
+    total: number;
+    fileName: string;
+  } | null>(null);
   const [running, setRunning] = useState(false);
   const [zipRunning, setZipRunning] = useState(false);
   const [zipNotice, setZipNotice] = useState<string | null>(null);
-  const [projectName, setProjectName] = useState(project.meta?.name || t('project.untitled'));
+  const [projectName, setProjectName] = useState(
+    project.meta?.name || t('project.untitled'),
+  );
   const [report, setReport] = useState<ExportReport | null>(null);
   const exportRef = useRef<ExportCanvasHandle>(null);
   const serviceRef = useRef(new ExportService());
 
   const blueprint: Blueprint | undefined =
-    project.blueprints.find((bp) => bp.id === activeBlueprintId) ?? project.blueprints[0];
-  const dataTable = project.dataTables.find((table) => table.id === activeTableId) ?? project.dataTables[0];
+    project.blueprints.find((bp) => bp.id === activeBlueprintId) ??
+    project.blueprints[0];
+  const dataTable =
+    project.dataTables.find((table) => table.id === activeTableId) ??
+    project.dataTables[0];
   const rows: DataRow[] = dataTable?.rows ?? [];
-  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
+  const projectRoot = project.meta.filePath
+    ? getParentPath(project.meta.filePath)
+    : undefined;
   const imageBinding = getImageBindingDefaults(dataTable?.imageBinding);
-  const missingPosterCount = rows.filter((row) => row.art?.kind === 'video' && !row.art.poster).length;
-  const missingFieldsCount = rows.filter((row) => !hasRequiredFields(row.data)).length;
+  const missingPosterCount = rows.filter(
+    (row) => row.art?.kind === 'video' && !row.art.poster,
+  ).length;
+  const missingFieldsCount = rows.filter(
+    (row) => !hasRequiredFields(row.data),
+  ).length;
 
   const ready = Boolean(outputFolder && blueprint);
   const busy = running || zipRunning;
@@ -54,7 +94,10 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
     setOutputFolder(res.filePaths[0]);
   };
 
-  const resolveRowData = async (row: DataRow, onMissing?: (expected: string) => void) => {
+  const resolveRowData = async (
+    row: DataRow,
+    onMissing?: (expected: string) => void,
+  ) => {
     let art = row.art;
     if (art?.kind === 'video' && !art.poster) {
       try {
@@ -79,13 +122,22 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
     return setPathValue(baseData, imageBinding.column, resolved);
   };
 
-  const renderRow = async (row: DataRow, ratio: number, onMissing?: (expected: string) => void) => {
+  const renderRow = async (
+    row: DataRow,
+    ratio: number,
+    onMissing?: (expected: string) => void,
+  ) => {
     if (!exportRef.current || !blueprint) return null;
     const data = await resolveRowData(row, onMissing);
     return exportRef.current.renderToDataUrl(data, ratio);
   };
 
-  const writeFile = async (fileName: string, dataUrl: string, current: number, total: number) => {
+  const writeFile = async (
+    fileName: string,
+    dataUrl: string,
+    current: number,
+    total: number,
+  ) => {
     if (!window.cardsmith) return;
     const buffer = dataUrlToArrayBuffer(dataUrl);
     const filePath = joinPath(outputFolder, fileName);
@@ -112,9 +164,15 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
   const exportToGame = () => {
     if (!rows.length) return;
     const result = buildGameExport(rows);
-    downloadBlob('cards.json', new Blob([result.cardsJson], { type: 'application/json' }));
+    downloadBlob(
+      'cards.json',
+      new Blob([result.cardsJson], { type: 'application/json' }),
+    );
     result.assets
-      .filter((asset) => asset.kind === 'poster' && asset.dataUrlOrUrl.startsWith('data:'))
+      .filter(
+        (asset) =>
+          asset.kind === 'poster' && asset.dataUrlOrUrl.startsWith('data:'),
+      )
       .forEach((asset) => {
         downloadBlob(asset.name, dataUrlToBlob(asset.dataUrlOrUrl));
       });
@@ -167,19 +225,30 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
               missingImages.push({ rowId: row.id, expected });
             });
           } catch (err: any) {
-            failures.push({ rowId: row.id, error: err?.message ?? 'RENDER_FAILED' });
+            failures.push({
+              rowId: row.id,
+              error: err?.message ?? 'RENDER_FAILED',
+            });
             return null;
           }
         },
         writeFile: async (fileName, dataUrl, progressInfo) => {
-          await writeFile(fileName, dataUrl, progressInfo.current, progressInfo.total);
+          await writeFile(
+            fileName,
+            dataUrl,
+            progressInfo.current,
+            progressInfo.total,
+          );
         },
         onComplete: () => {
           setRunning(false);
           setReport({ total, missingImages, failures });
         },
         onError: (error) => {
-          failures.push({ rowId: 'unknown', error: error.message ?? 'EXPORT_FAILED' });
+          failures.push({
+            rowId: 'unknown',
+            error: error.message ?? 'EXPORT_FAILED',
+          });
           setRunning(false);
           setReport({ total, missingImages, failures });
         },
@@ -199,12 +268,17 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
           <div className="uiStack">
             <Row gap={10}>
               <Button onClick={pickFolder}>{t('export.chooseFolder')}</Button>
-              <div className="uiHelp">{outputFolder || t('export.noFolder')}</div>
+              <div className="uiHelp">
+                {outputFolder || t('export.noFolder')}
+              </div>
             </Row>
             <Row gap={10}>
               <div style={{ flex: 1 }}>
                 <div className="uiHelp">{t('export.projectName')}</div>
-                <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+                <Input
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
               </div>
             </Row>
             <Row gap={10}>
@@ -215,7 +289,9 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                   onChange={(e) => setActiveBlueprintId(e.target.value)}
                 >
                   {project.blueprints.map((bp) => (
-                    <option key={bp.id} value={bp.id}>{bp.name}</option>
+                    <option key={bp.id} value={bp.id}>
+                      {bp.name}
+                    </option>
                   ))}
                 </Select>
               </div>
@@ -226,10 +302,14 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                   onChange={(e) => setActiveTableId(e.target.value)}
                 >
                   {project.dataTables.map((table) => (
-                    <option key={table.id} value={table.id}>{table.name}</option>
+                    <option key={table.id} value={table.id}>
+                      {table.name}
+                    </option>
                   ))}
                 </Select>
-                <div className="uiHelp" style={{ marginTop: 6 }}>{t('export.rows', { count: rows.length })}</div>
+                <div className="uiHelp" style={{ marginTop: 6 }}>
+                  {t('export.rows', { count: rows.length })}
+                </div>
               </div>
             </Row>
             <Row gap={10}>
@@ -237,10 +317,14 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                 <div className="uiHelp">{t('export.formatLabel')}</div>
                 <Select
                   value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as 'png' | 'pdf' | 'json')}
+                  onChange={(e) =>
+                    setExportFormat(e.target.value as 'png' | 'pdf' | 'json')
+                  }
                 >
                   <option value="png">PNG</option>
-                  <option value="pdf" disabled>PDF</option>
+                  <option value="pdf" disabled>
+                    PDF
+                  </option>
                   <option value="json">JSON</option>
                 </Select>
               </div>
@@ -269,33 +353,70 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
             </Row>
             <div className="uiRow">
               {missingPosterCount > 0 ? (
-                <span className="uiBadge uiBadgeWarn">{t('export.missingPoster', { count: missingPosterCount })}</span>
+                <span className="uiBadge uiBadgeWarn">
+                  {t('export.missingPoster', { count: missingPosterCount })}
+                </span>
               ) : null}
               {missingFieldsCount > 0 ? (
-                <span className="uiBadge uiBadgeWarn">{t('export.missingFields', { count: missingFieldsCount })}</span>
+                <span className="uiBadge uiBadgeWarn">
+                  {t('export.missingFields', { count: missingFieldsCount })}
+                </span>
               ) : null}
             </div>
             <Row gap={10}>
-              <Button onClick={exportSingle} disabled={!ready || busy || !rows.length || exportFormat !== 'png'}>
+              <Button
+                onClick={exportSingle}
+                disabled={
+                  !ready || busy || !rows.length || exportFormat !== 'png'
+                }
+              >
                 {t('export.exportSingle')}
               </Button>
-              <Button variant="outline" onClick={exportBatch} disabled={!ready || busy || !rows.length || exportFormat !== 'png'}>
+              <Button
+                variant="outline"
+                onClick={exportBatch}
+                disabled={
+                  !ready || busy || !rows.length || exportFormat !== 'png'
+                }
+              >
                 {t('export.exportBatch')}
               </Button>
-              <Button variant="outline" onClick={exportToGame} disabled={busy || !rows.length}>
+              <Button
+                variant="outline"
+                onClick={exportToGame}
+                disabled={busy || !rows.length}
+              >
                 {t('ui.exportToGame')}
               </Button>
-              <Button variant="outline" onClick={exportZip} disabled={busy || !rows.length}>
+              <Button
+                variant="outline"
+                onClick={exportZip}
+                disabled={busy || !rows.length}
+              >
                 {t('export.exportZip')}
               </Button>
-              {running ? <Button variant="danger" onClick={cancelExport}>{t('export.cancel')}</Button> : null}
+              {running ? (
+                <Button variant="danger" onClick={cancelExport}>
+                  {t('export.cancel')}
+                </Button>
+              ) : null}
             </Row>
             {zipNotice ? <div className="uiHelp">{zipNotice}</div> : null}
             {progress ? (
               <div>
-                <div className="uiHelp">{t('export.exporting', { current: progress.current, total: progress.total, file: progress.fileName })}</div>
+                <div className="uiHelp">
+                  {t('export.exporting', {
+                    current: progress.current,
+                    total: progress.total,
+                    file: progress.fileName,
+                  })}
+                </div>
                 <div className="progress-bar">
-                  <div style={{ width: `${Math.round((progress.current / progress.total) * 100)}%` }} />
+                  <div
+                    style={{
+                      width: `${Math.round((progress.current / progress.total) * 100)}%`,
+                    }}
+                  />
                 </div>
               </div>
             ) : (
@@ -316,7 +437,10 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                     <div className="uiHelp">{t('export.reportMissing')}</div>
                     {report.missingImages.map((item, idx) => (
                       <div key={`${item.rowId}-${idx}`} className="uiHelp">
-                        {t('export.reportMissingItem', { id: item.rowId, expected: item.expected })}
+                        {t('export.reportMissingItem', {
+                          id: item.rowId,
+                          expected: item.expected,
+                        })}
                       </div>
                     ))}
                   </div>
@@ -326,7 +450,10 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
                     <div className="uiHelp">{t('export.reportFailures')}</div>
                     {report.failures.map((item, idx) => (
                       <div key={`${item.rowId}-${idx}`} className="uiHelp">
-                        {t('export.reportFailureItem', { id: item.rowId, error: item.error })}
+                        {t('export.reportFailureItem', {
+                          id: item.rowId,
+                          error: item.error,
+                        })}
                       </div>
                     ))}
                   </div>
@@ -338,14 +465,23 @@ export function ExportScreen(props: { project: Project; onChange: (project: Proj
           </div>
         </Panel>
 
-        <Panel title={t('export.previewTitle')} subtitle={t('export.previewSubtitle')}>
+        <Panel
+          title={t('export.previewTitle')}
+          subtitle={t('export.previewSubtitle')}
+        >
           <div className="empty">
             {t('export.previewHint')} <code>{'{{name}}_{{id}}'}</code>.
           </div>
         </Panel>
       </div>
 
-      {blueprint ? <ExportCanvas ref={exportRef} blueprint={blueprint} projectRoot={projectRoot} /> : null}
+      {blueprint ? (
+        <ExportCanvas
+          ref={exportRef}
+          blueprint={blueprint}
+          projectRoot={projectRoot}
+        />
+      ) : null}
     </div>
   );
 }
@@ -381,7 +517,9 @@ function hasLocalizedValue(value: any) {
   if (typeof value === 'string') return value.trim().length > 0;
   if (typeof value === 'object') {
     const record = value as Record<string, any>;
-    return Boolean(String(record.en ?? '').trim() || String(record.ar ?? '').trim());
+    return Boolean(
+      String(record.en ?? '').trim() || String(record.ar ?? '').trim(),
+    );
   }
   return Boolean(value);
 }

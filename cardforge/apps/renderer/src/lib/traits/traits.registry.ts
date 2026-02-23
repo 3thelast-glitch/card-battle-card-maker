@@ -1,4 +1,9 @@
-import type { BaseTraitKey, DerivedTraitKey, TraitKey, TraitEffect } from './traits.types';
+import type {
+  BaseTraitKey,
+  DerivedTraitKey,
+  TraitKey,
+  TraitEffect,
+} from './traits.types';
 import { TRAIT_RELATIONS } from './traits.relations';
 
 export type TraitMeta = {
@@ -10,7 +15,11 @@ export type TraitMeta = {
 };
 
 export const BASE_TRAITS: BaseTraitKey[] = ['human', 'animal', 'swordsman'];
-export const DERIVED_TRAITS: DerivedTraitKey[] = ['tactical', 'ferocious', 'swift'];
+export const DERIVED_TRAITS: DerivedTraitKey[] = [
+  'tactical',
+  'ferocious',
+  'swift',
+];
 
 export const TRAIT_META: Record<TraitKey, TraitMeta> = {
   human: {

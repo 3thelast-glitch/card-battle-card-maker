@@ -33,14 +33,27 @@ export function SimulatorScreen(props: { project: Project }) {
   const { activeTableId } = useAppStore();
   const { project } = props;
   const [runs, setRuns] = useState(1000);
-  const [filtersA, setFiltersA] = useState<DeckFilter>({ rarity: '', race: '', trait: '', template: '', tag: '' });
-  const [filtersB, setFiltersB] = useState<DeckFilter>({ rarity: '', race: '', trait: '', template: '', tag: '' });
+  const [filtersA, setFiltersA] = useState<DeckFilter>({
+    rarity: '',
+    race: '',
+    trait: '',
+    template: '',
+    tag: '',
+  });
+  const [filtersB, setFiltersB] = useState<DeckFilter>({
+    rarity: '',
+    race: '',
+    trait: '',
+    template: '',
+    tag: '',
+  });
   const [result, setResult] = useState<SimResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
   const dataTables = project.dataTables ?? [];
-  const dataTable = dataTables.find((table) => table.id === activeTableId) ?? dataTables[0];
+  const dataTable =
+    dataTables.find((table) => table.id === activeTableId) ?? dataTables[0];
   const rows: DataRow[] = dataTable?.rows ?? [];
 
   const tagOptions = useMemo(() => collectTags(rows), [rows]);
@@ -142,7 +155,9 @@ export function SimulatorScreen(props: { project: Project }) {
                         key={toKey(card.id, `deck-a-${index}`)}
                         className="rounded-xl border border-slate-200/60 bg-white/80 p-3 shadow-sm"
                       >
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{card.rarity}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                          {card.rarity}
+                        </div>
                         <div className="mt-1 text-sm font-semibold text-slate-800">
                           ATK {card.attack} / DEF {card.defense}
                         </div>
@@ -180,7 +195,9 @@ export function SimulatorScreen(props: { project: Project }) {
                         key={toKey(card.id, `deck-b-${index}`)}
                         className="rounded-xl border border-slate-200/60 bg-white/80 p-3 shadow-sm"
                       >
-                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{card.rarity}</div>
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                          {card.rarity}
+                        </div>
                         <div className="mt-1 text-sm font-semibold text-slate-800">
                           ATK {card.attack} / DEF {card.defense}
                         </div>
@@ -213,7 +230,11 @@ export function SimulatorScreen(props: { project: Project }) {
                   {t('simulator.run')}
                 </span>
               </Button>
-              <Button variant="outline" onClick={handleStop} disabled={!isRunning}>
+              <Button
+                variant="outline"
+                onClick={handleStop}
+                disabled={!isRunning}
+              >
                 {t('simulator.stop')}
               </Button>
             </Row>
@@ -227,7 +248,9 @@ export function SimulatorScreen(props: { project: Project }) {
                     type="number"
                     min={1}
                     value={runs}
-                    onChange={(e) => setRuns(Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setRuns(Math.max(1, Number(e.target.value) || 1))
+                    }
                   />
                 </div>
               </Row>
@@ -239,7 +262,9 @@ export function SimulatorScreen(props: { project: Project }) {
                   <Badge variant={winRateB > winRateA ? 'good' : undefined}>
                     {t('simulator.winRate')} B: {formatPercent(winRateB)}
                   </Badge>
-                  <Badge>{t('simulator.drawRate')}: {formatPercent(drawRate)}</Badge>
+                  <Badge>
+                    {t('simulator.drawRate')}: {formatPercent(drawRate)}
+                  </Badge>
                 </div>
               ) : (
                 <div className="uiHelp">{t('simulator.readyHint')}</div>
@@ -248,7 +273,9 @@ export function SimulatorScreen(props: { project: Project }) {
               <details className="uiCollapse">
                 <summary className="flex items-center gap-2 cursor-pointer">
                   <Shield className="h-4 w-4 text-slate-500" />
-                  <div style={{ fontWeight: 600 }}>{t('simulator.advanced')}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {t('simulator.advanced')}
+                  </div>
                 </summary>
                 <div className="uiCollapseBody">
                   <div className="uiHelp">{t('simulator.advancedHint')}</div>
@@ -271,13 +298,25 @@ export function SimulatorScreen(props: { project: Project }) {
           <div className="uiPanelBody simPanelBody">
             {result ? (
               <div className="uiStack">
-                <Badge>{t('simulator.runs')}: {result.runs}</Badge>
-                <Badge>{t('simulator.deckA')}: {deckA.length}</Badge>
-                <Badge>{t('simulator.deckB')}: {deckB.length}</Badge>
+                <Badge>
+                  {t('simulator.runs')}: {result.runs}
+                </Badge>
+                <Badge>
+                  {t('simulator.deckA')}: {deckA.length}
+                </Badge>
+                <Badge>
+                  {t('simulator.deckB')}: {deckB.length}
+                </Badge>
                 <Divider />
-                <div className="uiHelp">{t('simulator.winRate')} A: {formatPercent(winRateA)}</div>
-                <div className="uiHelp">{t('simulator.winRate')} B: {formatPercent(winRateB)}</div>
-                <div className="uiHelp">{t('simulator.drawRate')}: {formatPercent(drawRate)}</div>
+                <div className="uiHelp">
+                  {t('simulator.winRate')} A: {formatPercent(winRateA)}
+                </div>
+                <div className="uiHelp">
+                  {t('simulator.winRate')} B: {formatPercent(winRateB)}
+                </div>
+                <div className="uiHelp">
+                  {t('simulator.drawRate')}: {formatPercent(drawRate)}
+                </div>
               </div>
             ) : (
               <div className="uiHelp">{t('simulator.readyHint')}</div>
@@ -308,7 +347,12 @@ function DeckFilterControls(props: {
         <div className="uiHelp">{t('simulator.rarity')}</div>
         <Select
           value={filters.rarity}
-          onChange={(e) => onChange({ ...filters, rarity: e.target.value as DeckFilter['rarity'] })}
+          onChange={(e) =>
+            onChange({
+              ...filters,
+              rarity: e.target.value as DeckFilter['rarity'],
+            })
+          }
         >
           <option value="">{t('common.all')}</option>
           {RARITY_OPTIONS.map((rarity, index) => {
@@ -366,7 +410,9 @@ function DeckFilterControls(props: {
             <div className="uiHelp">{t('simulator.template')}</div>
             <Select
               value={filters.template}
-              onChange={(e) => onChange({ ...filters, template: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...filters, template: e.target.value })
+              }
             >
               <option value="">{t('common.all')}</option>
               {props.templateOptions.map((key, index) => {
@@ -374,7 +420,9 @@ function DeckFilterControls(props: {
                 const keyValue = toKey(templateKey, `template-${index}`);
                 return (
                   <option key={keyValue} value={templateKey}>
-                    {toDisplayText(getTemplateLabel(templateKey, props.language))}
+                    {toDisplayText(
+                      getTemplateLabel(templateKey, props.language),
+                    )}
                   </option>
                 );
               })}
@@ -403,7 +451,9 @@ function DeckFilterControls(props: {
       <Divider />
       <div className="uiRow">
         <Badge>{t('simulator.cards', { count: props.count })}</Badge>
-        {props.count === 0 ? <span className="uiHelp">{t('simulator.emptyDeck')}</span> : null}
+        {props.count === 0 ? (
+          <span className="uiHelp">{t('simulator.emptyDeck')}</span>
+        ) : null}
       </div>
     </div>
   );
@@ -475,18 +525,22 @@ function normalizeNumber(value: any) {
 function toDisplayText(value: any) {
   if (value == null) return '';
   const valueType = typeof value;
-  if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
+  if (
+    valueType === 'string' ||
+    valueType === 'number' ||
+    valueType === 'boolean'
+  ) {
     return String(value);
   }
   if (valueType === 'object') {
     const candidate =
-      value.label ??
-      value.name ??
-      value.key ??
-      value.id ??
-      value.value;
+      value.label ?? value.name ?? value.key ?? value.id ?? value.value;
     const candidateType = typeof candidate;
-    if (candidateType === 'string' || candidateType === 'number' || candidateType === 'boolean') {
+    if (
+      candidateType === 'string' ||
+      candidateType === 'number' ||
+      candidateType === 'boolean'
+    ) {
       return String(candidate);
     }
     return '';
@@ -505,7 +559,8 @@ function toKey(value: any, fallback: string) {
 
 function normalizeRarity(value: any): Rarity {
   const cleaned = toDisplayText(value).toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned;
   return 'common';
 }
 
@@ -515,7 +570,9 @@ function normalizeRace(value: any) {
 
 function normalizeTraits(value: any) {
   if (Array.isArray(value)) {
-    return value.map((trait) => toDisplayText(trait).toLowerCase().trim()).filter(Boolean);
+    return value
+      .map((trait) => toDisplayText(trait).toLowerCase().trim())
+      .filter(Boolean);
   }
   const raw = toDisplayText(value).trim();
   if (!raw) return [];
@@ -576,7 +633,9 @@ function collectRaces(rows: DataRow[]) {
 function collectTraits(rows: DataRow[]) {
   const set = new Set<string>();
   rows.forEach((row) => {
-    normalizeTraits((row.data ?? {}).traits ?? (row.data ?? {}).trait).forEach((trait) => set.add(trait));
+    normalizeTraits((row.data ?? {}).traits ?? (row.data ?? {}).trait).forEach(
+      (trait) => set.add(trait),
+    );
   });
   return Array.from(set.values()).sort((a, b) => a.localeCompare(b));
 }

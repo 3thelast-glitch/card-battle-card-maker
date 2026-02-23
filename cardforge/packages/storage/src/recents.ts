@@ -33,13 +33,20 @@ export function loadRecentProjects(store?: StorageLike): RecentProject[] {
   }
 }
 
-export function saveRecentProjects(recents: RecentProject[], store?: StorageLike) {
+export function saveRecentProjects(
+  recents: RecentProject[],
+  store?: StorageLike,
+) {
   const storage = getStorage(store);
   if (!storage) return;
   storage.setItem(RECENTS_KEY, JSON.stringify(recents));
 }
 
-export function addRecentProject(project: Project, filePath: string, store?: StorageLike) {
+export function addRecentProject(
+  project: Project,
+  filePath: string,
+  store?: StorageLike,
+) {
   const recents = loadRecentProjects(store);
   const next: RecentProject = {
     name: project.meta.name,

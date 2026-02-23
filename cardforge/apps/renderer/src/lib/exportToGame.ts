@@ -34,7 +34,14 @@ export function buildGameExport(cards: DataRow[]): GameExport {
       defense: normalizeNumber(data.defense),
       name: normalizeLocalized(data.name),
       ability: normalizeLocalized(data.desc ?? data.ability),
-      art: art ? { kind: art.kind, src: art.src, poster: art.poster, transform: art.transform } : undefined,
+      art: art
+        ? {
+            kind: art.kind,
+            src: art.src,
+            poster: art.poster,
+            transform: art.transform,
+          }
+        : undefined,
     };
   });
 
@@ -44,7 +51,12 @@ export function buildGameExport(cards: DataRow[]): GameExport {
   };
 }
 
-function collectAssets(id: string, art: CardArt, assets: GameAsset[], seen: Set<string>) {
+function collectAssets(
+  id: string,
+  art: CardArt,
+  assets: GameAsset[],
+  seen: Set<string>,
+) {
   if (art.kind === 'video' && art.poster && isDataUrl(art.poster)) {
     pushAsset(assets, seen, {
       kind: 'poster',
@@ -86,14 +98,22 @@ function normalizeNumber(value: any) {
 }
 
 function normalizeRarity(value: any) {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned;
   return 'common';
 }
 
 function normalizeTemplateKey(value: any): TemplateKey {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (
+    cleaned &&
+    Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)
+  ) {
     return cleaned as TemplateKey;
   }
   return 'classic';

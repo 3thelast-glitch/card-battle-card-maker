@@ -1,4 +1,8 @@
-import type { BaseTraitKey, DerivedTraitKey, TraitEffect } from './traits.types';
+import type {
+  BaseTraitKey,
+  DerivedTraitKey,
+  TraitEffect,
+} from './traits.types';
 
 export type TraitRelation = {
   derived: DerivedTraitKey;

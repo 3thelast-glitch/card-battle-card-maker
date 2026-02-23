@@ -9,7 +9,13 @@ interface StatBadgeProps {
   radius?: number;
 }
 
-export const StatBadge: React.FC<StatBadgeProps> = ({ value, type, x, y, radius = 24 }) => {
+export const StatBadge: React.FC<StatBadgeProps> = ({
+  value,
+  type,
+  x,
+  y,
+  radius = 24,
+}) => {
   const isAttack = type === 'attack';
   // AAA Game Style Colors
   const mainColor = isAttack ? '#d32f2f' : '#388e3c';
@@ -48,7 +54,14 @@ export const StatBadge: React.FC<StatBadgeProps> = ({ value, type, x, y, radius 
         fillRadialGradientStartRadius={0}
         fillRadialGradientEndPoint={{ x: 0, y: 0 }}
         fillRadialGradientEndRadius={radius}
-        fillRadialGradientColorStops={[0, gradientStart, 0.4, mainColor, 1, gradientEnd]}
+        fillRadialGradientColorStops={[
+          0,
+          gradientStart,
+          0.4,
+          mainColor,
+          1,
+          gradientEnd,
+        ]}
       />
 
       {/* Glass Shine Effect (Top) */}

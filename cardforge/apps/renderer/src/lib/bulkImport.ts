@@ -22,7 +22,10 @@ export type MapOptions = {
 
 export async function parseCsvFile(file: File): Promise<ParsedRow[]> {
   const text = await file.text();
-  const parsed = Papa.parse<ParsedRow>(text, { header: true, skipEmptyLines: true });
+  const parsed = Papa.parse<ParsedRow>(text, {
+    header: true,
+    skipEmptyLines: true,
+  });
   return (parsed.data ?? []).filter(Boolean);
 }
 
@@ -46,20 +49,47 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
     const hasLang = options.hasLanguageColumns;
 
     const nameValue = getValue(normalized, ['name', 'title']);
-    const nameEn = hasLang ? getValue(normalized, ['name_en', 'title_en', 'name.en', 'title.en']) : nameValue;
-    const nameAr = hasLang ? getValue(normalized, ['name_ar', 'title_ar', 'name.ar', 'title.ar']) : nameValue;
+    const nameEn = hasLang
+      ? getValue(normalized, ['name_en', 'title_en', 'name.en', 'title.en'])
+      : nameValue;
+    const nameAr = hasLang
+      ? getValue(normalized, ['name_ar', 'title_ar', 'name.ar', 'title.ar'])
+      : nameValue;
 
     const descValue = getValue(normalized, ['desc', 'description']);
-    const descEn = hasLang ? getValue(normalized, ['desc_en', 'description_en', 'desc.en', 'description.en']) : descValue;
-    const descAr = hasLang ? getValue(normalized, ['desc_ar', 'description_ar', 'desc.ar', 'description.ar']) : descValue;
+    const descEn = hasLang
+      ? getValue(normalized, [
+          'desc_en',
+          'description_en',
+          'desc.en',
+          'description.en',
+        ])
+      : descValue;
+    const descAr = hasLang
+      ? getValue(normalized, [
+          'desc_ar',
+          'description_ar',
+          'desc.ar',
+          'description.ar',
+        ])
+      : descValue;
 
     const rarityRaw = getValue(normalized, ['rarity']);
     const rarity = normalizeRarity(rarityRaw);
 
-    const templateRaw = getValue(normalized, ['template', 'templatekey', 'template_key']);
-    const templateKey = normalizeTemplateKey(templateRaw, options.defaultTemplate);
+    const templateRaw = getValue(normalized, [
+      'template',
+      'templatekey',
+      'template_key',
+    ]);
+    const templateKey = normalizeTemplateKey(
+      templateRaw,
+      options.defaultTemplate,
+    );
 
-    const bgColor = getValue(normalized, ['bgcolor', 'bg_color', 'background', 'bg']) || CARD_TEMPLATES[templateKey].defaultBgColor;
+    const bgColor =
+      getValue(normalized, ['bgcolor', 'bg_color', 'background', 'bg']) ||
+      CARD_TEMPLATES[templateKey].defaultBgColor;
 
     const raceRaw = getValue(normalized, ['race']);
     const race = normalizeRace(raceRaw);
@@ -68,10 +98,23 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
 
     const idRaw = getValue(normalized, ['id']);
     const fallbackId = slugify(nameEn || nameAr || 'card');
-    const id = ensureUniqueId(idRaw || `${fallbackId || 'card'}_${index + 1}`, usedIds);
+    const id = ensureUniqueId(
+      idRaw || `${fallbackId || 'card'}_${index + 1}`,
+      usedIds,
+    );
 
-    const artKind = getValue(normalized, ['art_kind', 'artkind', 'art.type', 'artkind']);
-    const artSrc = getValue(normalized, ['art_src', 'art', 'image', 'image_src']);
+    const artKind = getValue(normalized, [
+      'art_kind',
+      'artkind',
+      'art.type',
+      'artkind',
+    ]);
+    const artSrc = getValue(normalized, [
+      'art_src',
+      'art',
+      'image',
+      'image_src',
+    ]);
     const poster = getValue(normalized, ['poster', 'poster_src', 'art_poster']);
     const art = buildArt(artKind, artSrc, poster);
 
@@ -80,7 +123,12 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
     const setName = getValue(normalized, ['set', 'setname', 'set_name']);
 
     const warnings: string[] = [];
-    if (String(artKind || '').toLowerCase().trim() === 'video' && !art) {
+    if (
+      String(artKind || '')
+        .toLowerCase()
+        .trim() === 'video' &&
+      !art
+    ) {
       warnings.push('video-unsupported');
     }
     if (art?.kind === 'video' && !art.poster) {
@@ -158,27 +206,39 @@ function getValue(row: ParsedRow, keys: string[]) {
 }
 
 function normalizeRarity(value: any): Rarity {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned as Rarity;
   return 'common';
 }
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (
+    cleaned &&
+    Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)
+  ) {
     return cleaned as TemplateKey;
   }
   return fallback;
 }
 
 function normalizeRace(value: any) {
-  const cleaned = String(value || '').toLowerCase().trim();
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
   return cleaned || '';
 }
 
 function parseTraits(value: any) {
   if (Array.isArray(value)) {
-    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+    return value
+      .map((trait) => String(trait).toLowerCase().trim())
+      .filter(Boolean);
   }
   const raw = String(value || '').trim();
   if (!raw) return [];
@@ -188,9 +248,15 @@ function parseTraits(value: any) {
     .filter(Boolean);
 }
 
-function buildArt(kindRaw: any, srcRaw: any, posterRaw: any): CardArt | undefined {
+function buildArt(
+  kindRaw: any,
+  srcRaw: any,
+  posterRaw: any,
+): CardArt | undefined {
   if (!srcRaw) return undefined;
-  const kind = String(kindRaw || '').toLowerCase().trim();
+  const kind = String(kindRaw || '')
+    .toLowerCase()
+    .trim();
   const src = String(srcRaw);
   const poster = posterRaw ? String(posterRaw) : undefined;
   if (kind === 'video') {
@@ -205,7 +271,8 @@ function buildArt(kindRaw: any, srcRaw: any, posterRaw: any): CardArt | undefine
 
 function isSupportedVideoSrc(src: string) {
   const lower = src.toLowerCase();
-  if (lower.startsWith('data:video/mp4') || lower.startsWith('data:video/webm')) return true;
+  if (lower.startsWith('data:video/mp4') || lower.startsWith('data:video/webm'))
+    return true;
   if (lower.endsWith('.mp4') || lower.endsWith('.webm')) return true;
   return false;
 }

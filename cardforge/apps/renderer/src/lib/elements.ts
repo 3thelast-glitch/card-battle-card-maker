@@ -19,12 +19,18 @@ export const ELEMENT_MATCHUPS: Record<
   ice: { weakTo: ['fire'], strongAgainst: ['nature'], resist: ['water'] },
   fire: { weakTo: ['water', 'ice'], strongAgainst: ['nature'], resist: [] },
   nature: { weakTo: ['fire', 'ice'], strongAgainst: ['water'], resist: [] },
-  water: { weakTo: ['nature', 'electric'], strongAgainst: ['fire'], resist: ['fire'] },
+  water: {
+    weakTo: ['nature', 'electric'],
+    strongAgainst: ['fire'],
+    resist: ['fire'],
+  },
   electric: { weakTo: ['nature'], strongAgainst: ['water'], resist: [] },
   shadow: { weakTo: ['electric'], strongAgainst: ['nature'], resist: [] },
 } as const;
 
 export function getMatchup(element?: ElementKey) {
   if (!element) return { weakTo: [], strongAgainst: [], resist: [] };
-  return ELEMENT_MATCHUPS[element] ?? { weakTo: [], strongAgainst: [], resist: [] };
+  return (
+    ELEMENT_MATCHUPS[element] ?? { weakTo: [], strongAgainst: [], resist: [] }
+  );
 }

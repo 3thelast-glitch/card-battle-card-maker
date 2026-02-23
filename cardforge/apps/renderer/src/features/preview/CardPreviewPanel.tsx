@@ -1,9 +1,16 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { LayoutTemplate, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import type { ArtTransform, CardArt, DataRow } from '../../../../../packages/core/src/index';
+import type {
+  ArtTransform,
+  CardArt,
+  DataRow,
+} from '../../../../../packages/core/src/index';
 import { CardFrame } from '../../components/cards/CardFrame';
 import { useTranslation } from 'react-i18next';
-import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
+import {
+  CARD_TEMPLATES,
+  type TemplateKey,
+} from '../../templates/cardTemplates';
 import { Toggle } from '../../components/ui';
 
 export function CardPreviewPanel(props: {
@@ -30,7 +37,9 @@ export function CardPreviewPanel(props: {
           <LayoutTemplate size={28} className="text-slate-600" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-slate-400">{t('cards.selectPreview')}</p>
+          <p className="text-sm font-semibold text-slate-400">
+            {t('cards.selectPreview')}
+          </p>
           <p className="text-xs text-slate-600 max-w-[200px] mx-auto leading-relaxed">
             Select a card from the list to preview it here
           </p>
@@ -43,17 +52,28 @@ export function CardPreviewPanel(props: {
   const data = props.row.data ?? {};
   const art: CardArt | undefined = props.row.art ?? (data as any).art;
   const rarity = normalizeRarity(data.rarity);
-  const templateKey = normalizeTemplateKey(data.templateKey ?? data.template, props.defaultTemplate);
+  const templateKey = normalizeTemplateKey(
+    data.templateKey ?? data.template,
+    props.defaultTemplate,
+  );
   const bgColor = data.bgColor ?? CARD_TEMPLATES[templateKey]?.defaultBgColor;
   const attack = normalizeNumber(data.attack ?? data.stats?.attack);
   const defense = normalizeNumber(data.defense ?? data.stats?.defense);
-  const title = data.name ?? data.title ?? data.character_name ?? data.character_name_en ?? data.character_name_ar ?? props.row.id;
-  const desc = data.desc ?? data.ability ?? data.ability_en ?? data.ability_ar ?? '';
+  const title =
+    data.name ??
+    data.title ??
+    data.character_name ??
+    data.character_name_en ??
+    data.character_name_ar ??
+    props.row.id;
+  const desc =
+    data.desc ?? data.ability ?? data.ability_en ?? data.ability_ar ?? '';
   const element = data.element;
   const race = data.race;
   const traits = normalizeTraits(data.traits ?? data.trait);
   const artTransform = normalizeArtTransform(art?.transform);
-  const template = CARD_TEMPLATES[templateKey] ?? CARD_TEMPLATES[props.defaultTemplate];
+  const template =
+    CARD_TEMPLATES[templateKey] ?? CARD_TEMPLATES[props.defaultTemplate];
   const canDrag = Boolean(props.onUpdateArtTransform && art);
   const dragEnabled = canDrag && !(art?.kind === 'video' && props.showControls);
   const previewWidth = 320;
@@ -64,7 +84,8 @@ export function CardPreviewPanel(props: {
   const DEFAULT_ZOOM_IDX = 4; // 1.0
   const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX);
   const zoom = ZOOM_STEPS[zoomIdx];
-  const zoomIn = () => setZoomIdx((i) => Math.min(i + 1, ZOOM_STEPS.length - 1));
+  const zoomIn = () =>
+    setZoomIdx((i) => Math.min(i + 1, ZOOM_STEPS.length - 1));
   const zoomOut = () => setZoomIdx((i) => Math.max(i - 1, 0));
   const zoomFit = () => setZoomIdx(DEFAULT_ZOOM_IDX);
 
@@ -112,7 +133,8 @@ export function CardPreviewPanel(props: {
         className="flex-1 flex items-center justify-center min-h-0 relative overflow-hidden"
         style={{
           backgroundColor: '#0C1018',
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px)',
+          backgroundImage:
+            'radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px)',
           backgroundSize: '20px 20px',
         }}
       >
@@ -123,7 +145,8 @@ export function CardPreviewPanel(props: {
             transform: `scale(${zoom})`,
             transformOrigin: 'center center',
             transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-            filter: 'drop-shadow(0 20px 48px rgba(0,0,0,0.80)) drop-shadow(0 4px 12px rgba(0,0,0,0.50))',
+            filter:
+              'drop-shadow(0 20px 48px rgba(0,0,0,0.80)) drop-shadow(0 4px 12px rgba(0,0,0,0.50))',
           }}
         >
           <CardFrame
@@ -165,13 +188,14 @@ export function CardPreviewPanel(props: {
 
         {/* ─── Floating Zoom Toolbar ─── */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center">
-          <div className={[
-            'flex items-center gap-0.5 px-1.5 py-1.5 rounded-full',
-            'bg-[#0F1520]/90 backdrop-blur-md',
-            'border border-[#2A3040]',
-            'shadow-[0_8px_24px_rgba(0,0,0,0.60)]',
-          ].join(' ')}>
-
+          <div
+            className={[
+              'flex items-center gap-0.5 px-1.5 py-1.5 rounded-full',
+              'bg-[#0F1520]/90 backdrop-blur-md',
+              'border border-[#2A3040]',
+              'shadow-[0_8px_24px_rgba(0,0,0,0.60)]',
+            ].join(' ')}
+          >
             {/* Zoom Out */}
             <button
               type="button"
@@ -224,7 +248,9 @@ export function CardPreviewPanel(props: {
       {desc && (
         <div className="flex-shrink-0 px-4 py-2.5 border-t border-[#1A1F2E]">
           <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
-            {language === 'ar' ? getLocalizedValue(desc, 'ar') : getLocalizedValue(desc, 'en')}
+            {language === 'ar'
+              ? getLocalizedValue(desc, 'ar')
+              : getLocalizedValue(desc, 'en')}
           </p>
         </div>
       )}
@@ -233,16 +259,24 @@ export function CardPreviewPanel(props: {
 }
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (
+    cleaned &&
+    Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)
+  ) {
     return cleaned as TemplateKey;
   }
   return fallback;
 }
 
 function normalizeRarity(value: any) {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned;
   return 'common';
 }
 
@@ -253,7 +287,9 @@ function normalizeNumber(value: any) {
 
 function normalizeTraits(value: any) {
   if (Array.isArray(value)) {
-    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+    return value
+      .map((trait) => String(trait).toLowerCase().trim())
+      .filter(Boolean);
   }
   const raw = String(value || '').trim();
   if (!raw) return [];
@@ -275,14 +311,18 @@ function normalizeArtTransform(value?: ArtTransform): ArtTransform {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
     scale: Number.isFinite(value?.scale) ? value!.scale : 1,
-    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
+    rotate: Number.isFinite(value?.rotate)
+      ? Math.max(-180, Math.min(180, value!.rotate))
+      : 0,
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }
 
 function clampArtTransform(
   value: ArtTransform,
-  artRect: { left: number; right: number; top: number; bottom: number } | undefined,
+  artRect:
+    | { left: number; right: number; top: number; bottom: number }
+    | undefined,
   frameWidth: number,
   frameHeight: number,
 ) {

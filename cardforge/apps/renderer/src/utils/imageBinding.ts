@@ -11,7 +11,9 @@ export type ImageResolutionResult = {
   sourcePath?: string;
 };
 
-export function getImageBindingDefaults(binding?: ImageBindingConfig): Required<ImageBindingConfig> {
+export function getImageBindingDefaults(
+  binding?: ImageBindingConfig,
+): Required<ImageBindingConfig> {
   return {
     column: binding?.column ?? 'art',
     imagesFolder: binding?.imagesFolder ?? '',
@@ -20,14 +22,22 @@ export function getImageBindingDefaults(binding?: ImageBindingConfig): Required<
   };
 }
 
-export function resolveImageReferenceSync(rawValue: any, binding?: ImageBindingConfig) {
+export function resolveImageReferenceSync(
+  rawValue: any,
+  binding?: ImageBindingConfig,
+) {
   const config = getImageBindingDefaults(binding);
   const artValue = resolveCardArtSource(rawValue);
   const raw = normalizeValue(artValue ?? rawValue);
   if (!raw) {
     return config.placeholder || '';
   }
-  if (isRemoteOrData(raw) || isFileUrl(raw) || isAbsolutePath(raw) || isAssetsPath(raw)) {
+  if (
+    isRemoteOrData(raw) ||
+    isFileUrl(raw) ||
+    isAbsolutePath(raw) ||
+    isAssetsPath(raw)
+  ) {
     return raw;
   }
   if (!config.imagesFolder) {
@@ -91,7 +101,12 @@ export async function resolveImageReference(
     const fullPath = joinPath(config.imagesFolder, candidate);
     const exists = await fileExists(fullPath);
     if (exists) {
-      return { resolved: fullPath, missing: false, sourcePath: fullPath, expected: fullPath };
+      return {
+        resolved: fullPath,
+        missing: false,
+        sourcePath: fullPath,
+        expected: fullPath,
+      };
     }
   }
 
@@ -150,7 +165,11 @@ export function fileUrlToPath(value: string) {
 }
 
 export function isAbsolutePath(value: string) {
-  return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('\\\\') || value.startsWith('/');
+  return (
+    /^[a-zA-Z]:[\\/]/.test(value) ||
+    value.startsWith('\\\\') ||
+    value.startsWith('/')
+  );
 }
 
 export function isFileUrl(value: string) {
@@ -158,11 +177,19 @@ export function isFileUrl(value: string) {
 }
 
 export function isAssetsPath(value: string) {
-  return value.startsWith('assets/') || value.startsWith('assets\\') || value.startsWith('/assets/');
+  return (
+    value.startsWith('assets/') ||
+    value.startsWith('assets\\') ||
+    value.startsWith('/assets/')
+  );
 }
 
 export function isRemoteOrData(value: string) {
-  return value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://');
+  return (
+    value.startsWith('data:') ||
+    value.startsWith('http://') ||
+    value.startsWith('https://')
+  );
 }
 
 export function normalizeValue(value: any) {

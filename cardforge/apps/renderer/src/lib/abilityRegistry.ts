@@ -42,14 +42,22 @@ export type TargetCard = {
 
 export function matchesTarget(card: TargetCard, filter?: TargetFilter) {
   if (!filter) return true;
-  const cardRace = String(card.race ?? '').toLowerCase().trim();
-  const cardTraits = new Set((card.traits ?? []).map((trait) => String(trait).toLowerCase().trim()));
+  const cardRace = String(card.race ?? '')
+    .toLowerCase()
+    .trim();
+  const cardTraits = new Set(
+    (card.traits ?? []).map((trait) => String(trait).toLowerCase().trim()),
+  );
   if (filter.races?.length) {
-    const allowed = filter.races.map((race) => String(race).toLowerCase().trim());
+    const allowed = filter.races.map((race) =>
+      String(race).toLowerCase().trim(),
+    );
     if (!allowed.some((race) => race === cardRace)) return false;
   }
   if (filter.traits?.length) {
-    const allowedTraits = filter.traits.map((trait) => String(trait).toLowerCase().trim());
+    const allowedTraits = filter.traits.map((trait) =>
+      String(trait).toLowerCase().trim(),
+    );
     if (!allowedTraits.some((trait) => cardTraits.has(trait))) return false;
   }
   return true;

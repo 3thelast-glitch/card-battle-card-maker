@@ -12,10 +12,10 @@
       "home": "الرئيسية",
       "dashboard": "لوحة المشروع",
       "blueprint": "القالب",
-    "data": "البيانات",
-    "export": "التصدير",
-    "simulator": "المحاكي",
-    "templates": "القوالب",
+      "data": "البيانات",
+      "export": "التصدير",
+      "simulator": "المحاكي",
+      "templates": "القوالب",
       "settings": "الإعدادات",
       "save": "حفظ"
     }

@@ -8,14 +8,20 @@ export type TemplateDefinition = Omit<Blueprint, 'name' | 'description'> & {
   thumbnail?: string;
 };
 
-export function resolveLocalized(value: string | LocalizedString | undefined, lang: string) {
+export function resolveLocalized(
+  value: string | LocalizedString | undefined,
+  lang: string,
+) {
   if (!value) return '';
   if (typeof value === 'string') return value;
   const short = lang.split('-')[0];
   return value[lang] ?? value[short] ?? value.en ?? firstValue(value);
 }
 
-export function templateToBlueprint(template: TemplateDefinition, lang: string): Blueprint {
+export function templateToBlueprint(
+  template: TemplateDefinition,
+  lang: string,
+): Blueprint {
   const { thumbnail: _thumbnail, ...rest } = template;
   return {
     ...(rest as Blueprint),

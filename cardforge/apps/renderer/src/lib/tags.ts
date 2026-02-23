@@ -31,17 +31,15 @@ export const KNOWN_RACES = Object.keys(RACES) as CardRace[];
 export const KNOWN_TRAITS = Object.keys(TRAITS) as CardTrait[];
 
 function normalizeKey(value: unknown) {
-  return String(value ?? '').toLowerCase().trim();
+  return String(value ?? '')
+    .toLowerCase()
+    .trim();
 }
 
 export function normalizeTraits(input: unknown): CardTrait[] {
   if (Array.isArray(input)) {
     return Array.from(
-      new Set(
-        input
-          .map((trait) => normalizeKey(trait))
-          .filter(Boolean),
-      ),
+      new Set(input.map((trait) => normalizeKey(trait)).filter(Boolean)),
     ) as CardTrait[];
   }
   const raw = normalizeKey(input);

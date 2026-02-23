@@ -29,7 +29,7 @@ export const KonvaCardFrame: FC<CardFrameProps> = ({
 }) => {
   const gradientConfig = useMemo(
     () => getElementGradient(mainElement, width, height),
-    [mainElement, width, height]
+    [mainElement, width, height],
   );
 
   // Calculate badge position (Top-Right)
@@ -37,7 +37,10 @@ export const KonvaCardFrame: FC<CardFrameProps> = ({
   const badgeIconSize = 32;
   const padding = 12;
   const visibleCount = Math.min(traits.length, 4);
-  const badgesWidth = visibleCount > 0 ? (visibleCount * badgeIconSize) + ((visibleCount - 1) * badgePadding) : 0;
+  const badgesWidth =
+    visibleCount > 0
+      ? visibleCount * badgeIconSize + (visibleCount - 1) * badgePadding
+      : 0;
   const badgesX = width - padding - badgesWidth;
 
   // Legendary Border Logic
@@ -87,7 +90,13 @@ export const KonvaCardFrame: FC<CardFrameProps> = ({
         />
       )}
 
-      <TraitBadges traits={traits} x={badgesX} y={padding} iconSize={badgeIconSize} padding={badgePadding} />
+      <TraitBadges
+        traits={traits}
+        x={badgesX}
+        y={padding}
+        iconSize={badgeIconSize}
+        padding={badgePadding}
+      />
 
       {/* Stats Badges */}
       {stats && (

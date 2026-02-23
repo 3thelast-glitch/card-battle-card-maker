@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BaseTraitKey, DerivedTraitKey } from '../../lib/traits/traits.types';
-import { BASE_TRAITS, DERIVED_TRAITS, TRAIT_META } from '../../lib/traits/traits.registry';
+import type {
+  BaseTraitKey,
+  DerivedTraitKey,
+} from '../../lib/traits/traits.types';
+import {
+  BASE_TRAITS,
+  DERIVED_TRAITS,
+  TRAIT_META,
+} from '../../lib/traits/traits.registry';
 
 type Props = {
   baseTraits: BaseTraitKey[];
@@ -44,16 +51,21 @@ export function TraitSelector({ baseTraits, derivedTraits, onChange }: Props) {
 
       <div className="uiHelp">{t('traitSystem.derivedTitle')}</div>
       <div className="traitOptions traitOptions--derived">
-        {(derivedTraits.length ? derivedTraits : DERIVED_TRAITS).map((trait) => {
-          const meta = TRAIT_META[trait];
-          const active = derivedTraits.includes(trait);
-          return (
-            <span key={trait} className={`traitOption isDerived ${active ? 'isActive' : ''}`}>
-              <span className="traitOptionIcon">{meta.icon}</span>
-              <span>{t(meta.labelKey, { defaultValue: trait })}</span>
-            </span>
-          );
-        })}
+        {(derivedTraits.length ? derivedTraits : DERIVED_TRAITS).map(
+          (trait) => {
+            const meta = TRAIT_META[trait];
+            const active = derivedTraits.includes(trait);
+            return (
+              <span
+                key={trait}
+                className={`traitOption isDerived ${active ? 'isActive' : ''}`}
+              >
+                <span className="traitOptionIcon">{meta.icon}</span>
+                <span>{t(meta.labelKey, { defaultValue: trait })}</span>
+              </span>
+            );
+          },
+        )}
       </div>
     </div>
   );

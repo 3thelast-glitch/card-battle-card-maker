@@ -9,14 +9,19 @@ import { resolveImageSrc } from '../../utils/file';
 const SUPPORTED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
 const SUPPORTED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
-export function AssetsScreen(props: { project: Project; onChange: (project: Project) => void }) {
+export function AssetsScreen(props: {
+  project: Project;
+  onChange: (project: Project) => void;
+}) {
   const { t } = useTranslation();
   const { project, onChange } = props;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const assets = project.assets?.images ?? [];
-  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : '';
+  const projectRoot = project.meta.filePath
+    ? getParentPath(project.meta.filePath)
+    : '';
   const assetsRef = useRef<ImageAsset[]>(assets);
   const projectRef = useRef<Project>(project);
 
@@ -50,7 +55,10 @@ export function AssetsScreen(props: { project: Project; onChange: (project: Proj
         };
         const nextImages = [...assetsRef.current, nextAsset];
         assetsRef.current = nextImages;
-        const nextProject = { ...projectRef.current, assets: { images: nextImages } };
+        const nextProject = {
+          ...projectRef.current,
+          assets: { images: nextImages },
+        };
         projectRef.current = nextProject;
         onChange(nextProject);
       };
@@ -62,7 +70,9 @@ export function AssetsScreen(props: { project: Project; onChange: (project: Proj
     fileInputRef.current?.click();
   };
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     processFiles(event.target.files);
     event.target.value = '';
   };
@@ -80,7 +90,9 @@ export function AssetsScreen(props: { project: Project; onChange: (project: Proj
   const displayAssets = assets.map((asset) => ({
     id: asset.id,
     name: asset.name,
-    path: asset.src.startsWith('data:') ? asset.src : resolveImageSrc(asset.src, projectRoot),
+    path: asset.src.startsWith('data:')
+      ? asset.src
+      : resolveImageSrc(asset.src, projectRoot),
     size: asset.size ?? 0,
   }));
 
@@ -140,14 +152,22 @@ export function AssetsScreen(props: { project: Project; onChange: (project: Proj
             </span>
             <div className="text-sm font-semibold text-slate-700">
               {isDragging
-                ? t('assets.dragActive', { defaultValue: 'Release to add images' })
-                : t('assets.dragHint', { defaultValue: 'Drop images here or click to upload' })}
+                ? t('assets.dragActive', {
+                    defaultValue: 'Release to add images',
+                  })
+                : t('assets.dragHint', {
+                    defaultValue: 'Drop images here or click to upload',
+                  })}
             </div>
             <div className="text-xs text-slate-500">PNG, JPG, JPEG, WEBP</div>
           </div>
           <Row gap={10}>
             <Button onClick={handleBrowseClick}>{t('assets.import')}</Button>
-            <Button variant="outline" onClick={removeSelected} disabled={!selectedAsset}>
+            <Button
+              variant="outline"
+              onClick={removeSelected}
+              disabled={!selectedAsset}
+            >
               {t('assets.remove')}
             </Button>
             <div className="hint">{t('assets.dragHint')}</div>
@@ -202,7 +222,8 @@ function getExtension(fileName: string) {
 function isSupportedImageFile(file: File) {
   const ext = getExtension(file.name || '');
   if (SUPPORTED_EXTENSIONS.includes(ext)) return true;
-  if (file.type && SUPPORTED_MIME_TYPES.has(file.type.toLowerCase())) return true;
+  if (file.type && SUPPORTED_MIME_TYPES.has(file.type.toLowerCase()))
+    return true;
   return false;
 }
 

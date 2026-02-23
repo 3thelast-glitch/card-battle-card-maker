@@ -10,7 +10,10 @@ export function sanitizeFileName(input: string) {
   return cleaned.slice(0, 120);
 }
 
-export function applyNamingTemplate(template: string, data: Record<string, any>) {
+export function applyNamingTemplate(
+  template: string,
+  data: Record<string, any>,
+) {
   if (!template?.trim()) return 'untitled';
   return template.replace(/\{\{\s*([a-zA-Z0-9_\.\-]+)\s*\}\}/g, (_m, key) => {
     const v = resolvePath(data, key);

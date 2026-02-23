@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import type { DataRow } from '../../../../../packages/core/src/index';
 import type { Rarity } from '../../lib/balanceRules';
 import { useTranslation } from 'react-i18next';
-import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
+import {
+  CARD_TEMPLATES,
+  type TemplateKey,
+} from '../../templates/cardTemplates';
 
 export type CardFilters = {
   query: string;
@@ -11,7 +14,11 @@ export type CardFilters = {
   tag: string;
 };
 
-export function filterCards(rows: DataRow[], filters: CardFilters, language: 'en' | 'ar') {
+export function filterCards(
+  rows: DataRow[],
+  filters: CardFilters,
+  language: 'en' | 'ar',
+) {
   const query = filters.query.trim().toLowerCase();
   return rows.filter((row) => {
     const data = row.data ?? {};
@@ -29,7 +36,10 @@ export function filterCards(rows: DataRow[], filters: CardFilters, language: 'en
     }
     if (query) {
       const name = resolveName(data, language).toLowerCase();
-      const alt = resolveName(data, language === 'en' ? 'ar' : 'en').toLowerCase();
+      const alt = resolveName(
+        data,
+        language === 'en' ? 'ar' : 'en',
+      ).toLowerCase();
       if (!name.includes(query) && !alt.includes(query)) return false;
     }
     return true;
@@ -103,7 +113,7 @@ export function CardList(props: {
             ].join(' ')}
           >
             {/* Thumbnail */}
-            < div
+            <div
               className={[
                 'w-12 h-12 flex-shrink-0 rounded-md border bg-[#12151E] bg-cover bg-center',
                 isSelected ? 'border-blue-500/40' : 'border-[#1E2435]',
@@ -111,23 +121,29 @@ export function CardList(props: {
               style={thumb ? { backgroundImage: `url(${thumb})` } : undefined}
             >
               {!thumb && (
-                <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg">🃏</div>
+                <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg">
+                  🃏
+                </div>
               )}
             </div>
 
             {/* Meta */}
             <div className="flex-1 min-w-0 flex flex-col gap-1">
               {/* Title */}
-              <div className={[
-                'text-sm font-semibold truncate leading-tight',
-                isSelected ? 'text-blue-300' : 'text-slate-200',
-              ].join(' ')}>
+              <div
+                className={[
+                  'text-sm font-semibold truncate leading-tight',
+                  isSelected ? 'text-blue-300' : 'text-slate-200',
+                ].join(' ')}
+              >
                 {title}
               </div>
 
               {/* Badges row */}
               <div className="flex flex-wrap gap-1">
-                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${rarityColor[rarity] ?? rarityColor.common}`}>
+                <span
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded-md border text-[10px] font-semibold ${rarityColor[rarity] ?? rarityColor.common}`}
+                >
                   {getRarityLabel(rarity, props.language)}
                 </span>
                 {template && (
@@ -158,7 +174,12 @@ export function CardList(props: {
 }
 
 function resolveName(data: Record<string, any>, language: 'en' | 'ar') {
-  const value = data.name ?? data.title ?? data.character_name ?? data.character_name_en ?? data.character_name_ar;
+  const value =
+    data.name ??
+    data.title ??
+    data.character_name ??
+    data.character_name_en ??
+    data.character_name_ar;
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return String(value[language] ?? value.en ?? value.ar ?? '');
   }
@@ -173,7 +194,9 @@ function resolveStats(data: Record<string, any>) {
 }
 
 function resolveTemplate(data: Record<string, any>) {
-  return String(data.templateKey ?? data.template ?? data.template_key ?? '').toLowerCase().trim();
+  return String(data.templateKey ?? data.template ?? data.template_key ?? '')
+    .toLowerCase()
+    .trim();
 }
 
 function resolveThumb(art?: { kind?: string; src?: string; poster?: string }) {
@@ -184,8 +207,11 @@ function resolveThumb(art?: { kind?: string; src?: string; poster?: string }) {
 }
 
 function normalizeRarity(value: any): Rarity {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned as Rarity;
   return 'common';
 }
 

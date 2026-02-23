@@ -1,6 +1,10 @@
 import type { Rarity } from './balanceRules';
 import { BALANCE_RANGES, type Rarity } from './balanceRules';
-import { ABILITY_POWER, inferAbilityKeyFromText, type AbilityKey } from './abilityRegistry';
+import {
+  ABILITY_POWER,
+  inferAbilityKeyFromText,
+  type AbilityKey,
+} from './abilityRegistry';
 
 export function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -43,7 +47,8 @@ export function generateAdvancedStats(opts: {
   total = clamp(total, range.min, range.max);
 
   // Split attack/defense with slight preference depending on ability type
-  const prefersDefense = abilityKey === 'shield_loss_to_draw' || abilityKey === 'heal_defense';
+  const prefersDefense =
+    abilityKey === 'shield_loss_to_draw' || abilityKey === 'heal_defense';
   const pivotMin = 1;
   const pivotMax = total - 1;
 
@@ -58,5 +63,13 @@ export function generateAdvancedStats(opts: {
     defense = tmp;
   }
 
-  return { attack, defense, total, abilityKey, abilityPower, costBonus, abilityPenalty };
+  return {
+    attack,
+    defense,
+    total,
+    abilityKey,
+    abilityPower,
+    costBonus,
+    abilityPenalty,
+  };
 }

@@ -39,8 +39,16 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="dialogOverlay" role="dialog" aria-modal="true" onMouseDown={onClose}>
-      <div className="dialogPanel" onMouseDown={(event) => event.stopPropagation()}>
+    <div
+      className="dialogOverlay"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
+      <div
+        className="dialogPanel"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="dialogHeader">
           <div className="uiTitle">{title}</div>
           {description ? <div className="uiSub">{description}</div> : null}
@@ -54,7 +62,9 @@ export function Dialog({
           </button>
           <button
             ref={confirmRef}
-            className={tone === 'danger' ? 'uiBtn uiBtnDanger' : 'uiBtn uiBtnPrimary'}
+            className={
+              tone === 'danger' ? 'uiBtn uiBtnDanger' : 'uiBtn uiBtnPrimary'
+            }
             type="button"
             onClick={onConfirm}
           >

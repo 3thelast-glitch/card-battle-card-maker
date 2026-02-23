@@ -16,11 +16,15 @@ export function CardPreview({ attack, defense, traits }: Props) {
       <div className="traitPreviewStats">
         <div className="traitStat">
           <div className="traitStatValue">{attack}</div>
-          <div className="traitStatLabel">{t('stats.atk', { defaultValue: 'ATK' })}</div>
+          <div className="traitStatLabel">
+            {t('stats.atk', { defaultValue: 'ATK' })}
+          </div>
         </div>
         <div className="traitStat">
           <div className="traitStatValue">{defense}</div>
-          <div className="traitStatLabel">{t('stats.def', { defaultValue: 'DEF' })}</div>
+          <div className="traitStatLabel">
+            {t('stats.def', { defaultValue: 'DEF' })}
+          </div>
         </div>
       </div>
       <div className="traitPreviewList">
@@ -30,7 +34,11 @@ export function CardPreview({ attack, defense, traits }: Props) {
             return (
               <span key={trait} className="traitPreviewBadge">
                 <span className="traitPreviewIcon">{meta?.icon ?? '*'}</span>
-                <span>{t(meta?.labelKey ?? `traits.${trait}`, { defaultValue: trait })}</span>
+                <span>
+                  {t(meta?.labelKey ?? `traits.${trait}`, {
+                    defaultValue: trait,
+                  })}
+                </span>
               </span>
             );
           })
@@ -41,4 +49,3 @@ export function CardPreview({ attack, defense, traits }: Props) {
     </div>
   );
 }
-

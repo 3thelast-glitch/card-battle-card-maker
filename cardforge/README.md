@@ -30,16 +30,19 @@ This project leverages a modern web-based stack wrapped in Electron for desktop 
 ## 📦 Installation & Setup
 
 ### Prerequisites
+
 - **Node.js**: Version 18+ or 20+
 - **OS**: Windows 10/11 (Primary target)
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-username/card-battle-card-maker.git
 cd card-battle-card-maker/cardforge
 ```
 
 ### 2. Install Dependencies
+
 This project manages dependencies separately for the main process, renderer, and core packages.
 
 ```bash
@@ -52,16 +55,19 @@ npm --prefix apps/renderer install
 ```
 
 ### Run (Dev)
+
 ```bash
 npm run dev
 ```
 
 ### Package (Windows build)
+
 ```bash
 npm run dist
 ```
 
 ### Optional (Tests)
+
 ```bash
 npm --prefix packages/core install
 npm run test
@@ -98,6 +104,7 @@ cardforge/
 ## Phase 1 - Editor UX (Implemented)
 
 New features:
+
 - Multi-selection with Shift+Click and marquee drag selection.
 - Snap system with grid + smart guides (canvas center and element edges/centers).
 - Optional grid visibility toggle.
@@ -107,6 +114,7 @@ New features:
 - Image fit modes for image layers: contain / cover / fill.
 
 Shortcuts:
+
 - `Ctrl+S` save
 - `Ctrl+Z` undo
 - `Ctrl+Y` redo
@@ -117,15 +125,18 @@ Shortcuts:
 - `Ctrl+wheel` zoom
 
 Known limitations:
+
 - Multi-selection transforms are disabled (move/nudge only).
 - Snapping uses axis-aligned bounds (rotated elements snap by bounds).
 
 Next steps:
+
 - Phase 2 export pipeline (batch/export settings + PDF sheet export).
 
 ## Phase 2 - Data + Export (Implemented)
 
 New features:
+
 - CSV/JSON import with dot-path keys (e.g., `stats.attack`) normalized into nested data.
 - Excel (.xlsx) import using the first worksheet.
 - Binding mapper for text/image elements via `bindingKey`.
@@ -133,35 +144,43 @@ New features:
 - Windows-safe filename templating with `{{name}}_{{id}}` and quantity suffixes.
 
 Known limitations:
+
 - Export is PNG-only (PDF/SVG are still roadmap items).
 
 Next steps:
+
 - PDF sheet export (imposition) and SVG export.
 
 ## Phase 3 - Template Library + Assets (Implemented)
 
 New features:
+
 - Template Gallery with search, categories, thumbnails, and “Create Project”.
 - Asset pipeline under `apps/renderer/public/assets/...` for template imagery.
 - Assets screen to import project images and drag them onto the canvas.
 
 Known limitations:
+
 - Built-in template set is minimal (expandable).
 
 Next steps:
+
 - Add more curated templates and thumbnails.
 
 ## Phase 5 - Localization (Implemented)
 
 New features:
+
 - Full i18n (English + Arabic) with runtime language toggle.
 - RTL layout switching and Arabic-friendly font stack.
 - Localized template names and descriptions.
 
 Known limitations:
+
 - Arabic copy will be refined during UX review.
 
 Next steps:
+
 - Expand localized sample data and help content.
 
 ## Template JSON Schema (Brief)
@@ -180,8 +199,13 @@ Each template is a JSON file in `/templates`:
       "id": "title",
       "type": "text",
       "name": "Title",
-      "x": 90, "y": 40, "w": 570, "h": 60,
-      "rotation": 0, "visible": true, "zIndex": 1,
+      "x": 90,
+      "y": 40,
+      "w": 570,
+      "h": 60,
+      "rotation": 0,
+      "visible": true,
+      "zIndex": 1,
       "text": "{{name}}"
     }
   ]
@@ -189,6 +213,7 @@ Each template is a JSON file in `/templates`:
 ```
 
 Each element supports:
+
 - `id, type, name, x, y, w, h, rotation, visible, zIndex`
 - Style props per type (text, shape, image, icon)
 - `bindingKey` to bind data directly
@@ -196,23 +221,27 @@ Each element supports:
 ## Data Bindings
 
 Text supports placeholders:
+
 - `{{name}}`
 - `{{stats.attack}}`
 
 Image elements can bind to a field via `bindingKey`:
+
 - `bindingKey: "art"` (expects a data URL or local file path)
 
 Excel import:
+
 - The first worksheet is used.
 - Column headers become data keys (dot-paths supported).
 
 Example Excel columns:
 
-| name | stats.attack | art | quantity | set |
-| --- | --- | --- | --- | --- |
-| Knight | 4 | knight.png | 2 | Base Deck |
+| name   | stats.attack | art        | quantity | set       |
+| ------ | ------------ | ---------- | -------- | --------- |
+| Knight | 4            | knight.png | 2        | Base Deck |
 
 Image binding:
+
 - Choose the image column and an images folder in **Data → Image Binding**.
 - If a cell contains an absolute path or `file://`, it is used directly.
 - Otherwise, the value is resolved inside the selected folder (extensions tried: `.png`, `.jpg`, `.jpeg`, `.webp`).
@@ -220,11 +249,13 @@ Image binding:
 - Optional “Copy images into project assets” stores files under `assets/images/` for portability.
 
 Assets:
+
 - Use `/assets/...` URLs (from `apps/renderer/public/assets`) inside templates or data.
 - Imported project images are stored under `<projectRoot>/assets/images/` and referenced as `assets/images/<file>`.
 - Drag assets from the **Assets** screen onto the canvas to create image elements.
 
 Set assignment:
+
 - Add a `set` column in your CSV/JSON matching a Set name (defaults to the first Set if missing).
 
 ## Batch Export Workflow

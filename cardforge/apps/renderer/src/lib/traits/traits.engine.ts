@@ -1,8 +1,15 @@
-import type { BaseTraitKey, DerivedTraitKey, TraitEffect } from './traits.types';
+import type {
+  BaseTraitKey,
+  DerivedTraitKey,
+  TraitEffect,
+} from './traits.types';
 import { BASE_TRAITS } from './traits.registry';
 import { TRAIT_RELATIONS } from './traits.relations';
 
-const toKey = (value: unknown) => String(value ?? '').toLowerCase().trim();
+const toKey = (value: unknown) =>
+  String(value ?? '')
+    .toLowerCase()
+    .trim();
 
 export const normalizeBaseTraits = (input: unknown): BaseTraitKey[] => {
   if (!input) return [];

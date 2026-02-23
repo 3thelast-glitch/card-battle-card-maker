@@ -17,8 +17,17 @@ export type ExportProgress = {
 };
 
 export type ExportCallbacks = {
-  render: (row: DataRow, copyIndex: number, blueprint: Blueprint, options: ExportOptions) => Promise<string | null>;
-  writeFile: (fileName: string, dataUrl: string, progress: ExportProgress) => Promise<void>;
+  render: (
+    row: DataRow,
+    copyIndex: number,
+    blueprint: Blueprint,
+    options: ExportOptions,
+  ) => Promise<string | null>;
+  writeFile: (
+    fileName: string,
+    dataUrl: string,
+    progress: ExportProgress,
+  ) => Promise<void>;
   onProgress?: (progress: ExportProgress) => void;
   onComplete?: () => void;
   onError?: (error: Error) => void;
@@ -31,7 +40,12 @@ export class ExportService {
     this.cancelled = true;
   }
 
-  async run(blueprint: Blueprint, rows: DataRow[], options: ExportOptions, callbacks: ExportCallbacks) {
+  async run(
+    blueprint: Blueprint,
+    rows: DataRow[],
+    options: ExportOptions,
+    callbacks: ExportCallbacks,
+  ) {
     this.cancelled = false;
     const expanded = expandRowsWithQuantity(rows);
     const usedNames = new Map<string, number>();
@@ -49,11 +63,19 @@ export class ExportService {
         });
         const templateHasCopy = options.namingTemplate.includes('{{copy');
         const baseRaw = rawName || options.fallbackName || `card_${i + 1}`;
-        const withCopy = !templateHasCopy && (row.quantity ?? 1) > 1 ? `${baseRaw}_${row.copyIndex}` : baseRaw;
+        const withCopy =
+          !templateHasCopy && (row.quantity ?? 1) > 1
+            ? `${baseRaw}_${row.copyIndex}`
+            : baseRaw;
         const baseName = sanitizeFileName(withCopy);
         const fileName = ensureUnique(`${baseName}.png`, usedNames);
 
-        const dataUrl = await callbacks.render(row, row.copyIndex, blueprint, options);
+        const dataUrl = await callbacks.render(
+          row,
+          row.copyIndex,
+          blueprint,
+          options,
+        );
         if (!dataUrl) continue;
 
         const progress: ExportProgress = {

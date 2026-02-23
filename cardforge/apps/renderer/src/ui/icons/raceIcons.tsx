@@ -11,7 +11,13 @@ export const raceTint: Record<CardRace, string> = {
   amphibian: '#2aa8a8',
 };
 
-export function RaceIcon({ race, size = 16 }: { race: CardRace; size?: number }) {
+export function RaceIcon({
+  race,
+  size = 16,
+}: {
+  race: CardRace;
+  size?: number;
+}) {
   const props = {
     width: size,
     height: size,

@@ -2,10 +2,31 @@ import { useState, useCallback } from 'react';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { HexColorPicker } from 'react-colorful';
 import Draggable from 'react-draggable';
-import { 
-  X, Maximize2, Palette, RotateCw, Undo, Redo, 
-  Move, Zap, Shield, Crown, Star, Type, Image as ImageIcon,
-  Heart, Sword, Flame, Moon, Diamond, Mic, Droplets, Ghost, Skull, Sun, Anchor
+import {
+  X,
+  Maximize2,
+  Palette,
+  RotateCw,
+  Undo,
+  Redo,
+  Move,
+  Zap,
+  Shield,
+  Crown,
+  Star,
+  Type,
+  Image as ImageIcon,
+  Heart,
+  Sword,
+  Flame,
+  Moon,
+  Diamond,
+  Mic,
+  Droplets,
+  Ghost,
+  Skull,
+  Sun,
+  Anchor,
 } from 'lucide-react';
 
 // --- Types ---
@@ -56,15 +77,18 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'style' | 'icon'>('style'); // Tab state
 
-  const editingElement = elements.find(e => e.id === editingId) || null;
+  const editingElement = elements.find((e) => e.id === editingId) || null;
 
   // --- Helpers ---
-  const updateElement = useCallback((id: string, updates: Partial<ElementProps>) => {
-    const newElements = elements.map(el => 
-      el.id === id ? { ...el, ...updates } : el
-    );
-    onUpdate(newElements);
-  }, [elements, onUpdate]);
+  const updateElement = useCallback(
+    (id: string, updates: Partial<ElementProps>) => {
+      const newElements = elements.map((el) =>
+        el.id === id ? { ...el, ...updates } : el,
+      );
+      onUpdate(newElements);
+    },
+    [elements, onUpdate],
+  );
 
   const addHistory = useCallback(() => {
     const newHistory = [...history.slice(0, historyIndex + 1), elements];
@@ -97,25 +121,37 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
               🎨 Element Studio
             </h3>
             <div className="flex gap-1">
-              <button onClick={undo} disabled={historyIndex === 0} className="p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50">
+              <button
+                onClick={undo}
+                disabled={historyIndex === 0}
+                className="p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50"
+              >
                 <Undo className="w-4 h-4" />
               </button>
-              <button onClick={redo} disabled={historyIndex === history.length - 1} className="p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50">
+              <button
+                onClick={redo}
+                disabled={historyIndex === history.length - 1}
+                className="p-2 text-slate-500 hover:text-slate-700 disabled:opacity-50"
+              >
                 <Redo className="w-4 h-4" />
               </button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-3 gap-2 text-xs">
-            {elements.map(el => (
+            {elements.map((el) => (
               <button
                 key={el.id}
                 onClick={() => setEditingId(el.id)}
                 className={`p-2 rounded-xl transition-all hover:scale-105 ${editingId === el.id ? 'bg-blue-500 text-white shadow-lg' : 'bg-slate-100 hover:bg-slate-200'}`}
               >
-                {el.type === 'trait' && <Shield className="w-4 h-4 mx-auto mb-1" />}
+                {el.type === 'trait' && (
+                  <Shield className="w-4 h-4 mx-auto mb-1" />
+                )}
                 {el.type === 'icon' && <Zap className="w-4 h-4 mx-auto mb-1" />}
-                {el.type === 'number' && <Crown className="w-4 h-4 mx-auto mb-1" />}
+                {el.type === 'number' && (
+                  <Crown className="w-4 h-4 mx-auto mb-1" />
+                )}
                 {el.type === 'orb' && <Star className="w-4 h-4 mx-auto mb-1" />}
                 <div>{el.name}</div>
               </button>
@@ -136,20 +172,34 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <label>X</label>
-                      <input 
-                        type="range" min="0" max="100" step="0.5"
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="0.5"
                         value={editingElement.x}
-                        onChange={(e) => updateElement(editingElement.id, { x: +e.target.value })}
+                        onChange={(e) =>
+                          updateElement(editingElement.id, {
+                            x: +e.target.value,
+                          })
+                        }
                         className="w-full h-2 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full cursor-pointer accent-blue-500"
                       />
                       <span>{editingElement.x.toFixed(1)}%</span>
                     </div>
                     <div>
                       <label>Y</label>
-                      <input 
-                        type="range" min="0" max="100" step="0.5"
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="0.5"
                         value={editingElement.y}
-                        onChange={(e) => updateElement(editingElement.id, { y: +e.target.value })}
+                        onChange={(e) =>
+                          updateElement(editingElement.id, {
+                            y: +e.target.value,
+                          })
+                        }
                         className="w-full h-2 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full cursor-pointer accent-blue-500"
                       />
                       <span>{editingElement.y.toFixed(1)}%</span>
@@ -163,13 +213,16 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                     <Maximize2 className="w-4 h-4" />
                     الحجم
                   </div>
-                  <input 
-                    type="range" min="0.3" max="2.5" step="0.05"
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="2.5"
+                    step="0.05"
                     value={editingElement.width}
                     onChange={(e) => {
-                      updateElement(editingElement.id, { 
-                        width: +e.target.value, 
-                        height: +e.target.value 
+                      updateElement(editingElement.id, {
+                        width: +e.target.value,
+                        height: +e.target.value,
                       });
                     }}
                     className="w-full h-2 bg-gradient-to-r from-emerald-200 to-emerald-400 rounded-full cursor-pointer accent-emerald-600"
@@ -184,19 +237,29 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
             <PanelResizeHandle className="h-px bg-gradient-to-r from-slate-300 to-slate-400" />
 
             {/* Bottom Panel: Appearance */}
-            <Panel defaultSize={55} className="overflow-y-auto custom-scrollbar">
+            <Panel
+              defaultSize={55}
+              className="overflow-y-auto custom-scrollbar"
+            >
               <div className="p-4 space-y-5">
-                
                 {/* Size Controls */}
                 <div>
                   <div className="flex items-center gap-2 mb-3 text-sm font-medium text-slate-700">
                     <Maximize2 className="w-4 h-4" />
                     الحجم ({editingElement.width.toFixed(1)}x)
                   </div>
-                  <input 
-                    type="range" min="0.3" max="3" step="0.1"
+                  <input
+                    type="range"
+                    min="0.3"
+                    max="3"
+                    step="0.1"
                     value={editingElement.width}
-                    onChange={(e) => updateElement(editingElement.id, { width: +e.target.value, height: +e.target.value })}
+                    onChange={(e) =>
+                      updateElement(editingElement.id, {
+                        width: +e.target.value,
+                        height: +e.target.value,
+                      })
+                    }
                     className="w-full h-2 bg-gradient-to-r from-emerald-200 to-emerald-400 rounded-full cursor-pointer accent-emerald-600"
                   />
                 </div>
@@ -208,10 +271,14 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                       <Type className="w-4 h-4" />
                       النص / الرقم
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editingElement.text || ''}
-                      onChange={(e) => updateElement(editingElement.id, { text: e.target.value })}
+                      onChange={(e) =>
+                        updateElement(editingElement.id, {
+                          text: e.target.value,
+                        })
+                      }
                       placeholder="e.g. 12"
                       maxLength={4}
                       className="w-full p-2 border border-slate-300 rounded-lg text-center font-bold focus:ring-2 focus:ring-blue-500 outline-none"
@@ -225,19 +292,30 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                     <Palette className="w-4 h-4" />
                     اللون
                   </div>
-                  <HexColorPicker 
+                  <HexColorPicker
                     color={editingElement.color}
-                    onChange={(color) => updateElement(editingElement.id, { color })}
+                    onChange={(color) =>
+                      updateElement(editingElement.id, { color })
+                    }
                     style={{ width: '100%', height: '100px' }}
                   />
-                  
+
                   {/* Opacity */}
                   <div className="mt-3">
-                    <label className="block text-xs text-slate-600 mb-1">الشفافية</label>
-                    <input 
-                      type="range" min="0.1" max="1" step="0.05"
+                    <label className="block text-xs text-slate-600 mb-1">
+                      الشفافية
+                    </label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.05"
                       value={editingElement.opacity || 1}
-                      onChange={(e) => updateElement(editingElement.id, { opacity: +e.target.value })}
+                      onChange={(e) =>
+                        updateElement(editingElement.id, {
+                          opacity: +e.target.value,
+                        })
+                      }
                       className="w-full h-2 bg-slate-200 rounded-lg cursor-pointer accent-purple-500"
                     />
                   </div>
@@ -249,10 +327,17 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                     <RotateCw className="w-4 h-4" />
                     الدوران ({editingElement.rotation || 0}°)
                   </label>
-                  <input 
-                    type="range" min="-180" max="180" step="5"
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="5"
                     value={editingElement.rotation || 0}
-                    onChange={(e) => updateElement(editingElement.id, { rotation: +e.target.value })}
+                    onChange={(e) =>
+                      updateElement(editingElement.id, {
+                        rotation: +e.target.value,
+                      })
+                    }
                     className="w-full h-2 bg-gradient-to-r from-orange-200 to-orange-400 rounded-full cursor-pointer accent-orange-500"
                   />
                 </div>
@@ -270,8 +355,8 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
             bounds="parent"
             position={{ x: el.x * 3, y: el.y * 5 }} // Temporary visual scaling for demo
             onStop={(e, data) => {
-                // Calculation logic would go here to convert px back to %
-                addHistory();
+              // Calculation logic would go here to convert px back to %
+              addHistory();
             }}
           >
             <div
@@ -285,22 +370,32 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                 backgroundColor: el.type === 'orb' ? 'transparent' : el.color,
                 opacity: el.opacity || 1,
                 transform: `rotate(${el.rotation || 0}deg)`,
-                fontSize: `${el.fontSize || 16}px`
+                fontSize: `${el.fontSize || 16}px`,
               }}
               onClick={() => setEditingId(el.id)}
             >
               {/* Dynamic Rendering Based on Type */}
               {el.image ? (
-                <img src={el.image} alt={el.name} className="w-full h-full object-contain rounded" />
+                <img
+                  src={el.image}
+                  alt={el.name}
+                  className="w-full h-full object-contain rounded"
+                />
               ) : (
                 <>
                   {/* Dynamic Render based on Type & Selected Icon */}
                   {el.type === 'number' ? (
-                     <div className="w-full h-full flex items-center justify-center font-black text-white drop-shadow-lg leading-none" style={{ fontSize: '150%' }}>
-                        {el.text || '12'}
-                     </div>
+                    <div
+                      className="w-full h-full flex items-center justify-center font-black text-white drop-shadow-lg leading-none"
+                      style={{ fontSize: '150%' }}
+                    >
+                      {el.text || '12'}
+                    </div>
                   ) : el.type === 'orb' ? (
-                    <div className="w-full h-full rounded-full shadow-lg flex items-center justify-center relative overflow-hidden" style={{ backgroundColor: el.color }}>
+                    <div
+                      className="w-full h-full rounded-full shadow-lg flex items-center justify-center relative overflow-hidden"
+                      style={{ backgroundColor: el.color }}
+                    >
                       <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-black/10 rounded-full pointer-events-none"></div>
                       <div className="relative z-10 w-1/2 h-1/2 text-white/90 drop-shadow-md">
                         {getRenderedIcon(el)}
@@ -308,7 +403,7 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
                     </div>
                   ) : (
                     <div className="w-full h-full text-white drop-shadow-md p-1">
-                        {getRenderedIcon(el)}
+                      {getRenderedIcon(el)}
                     </div>
                   )}
                 </>

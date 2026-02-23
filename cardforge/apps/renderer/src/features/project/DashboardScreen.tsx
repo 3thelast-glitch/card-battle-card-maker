@@ -17,7 +17,9 @@ export function DashboardScreen(props: {
   const createBlankBlueprint = () => {
     const blueprint: Blueprint = {
       id: createId('bp'),
-      name: t('dashboard.newBlueprintName', { index: project.blueprints.length + 1 }),
+      name: t('dashboard.newBlueprintName', {
+        index: project.blueprints.length + 1,
+      }),
       description: t('dashboard.blankBlueprint'),
       category: t('dashboard.blankCategory'),
       size: { w: 750, h: 1050 },
@@ -35,12 +37,23 @@ export function DashboardScreen(props: {
   return (
     <div className="screen" style={{ padding: 16 }}>
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: '1fr 1fr' }}>
-        <Panel title={t('dashboard.managerTitle')} subtitle={t('dashboard.managerSubtitle')}>
+        <Panel
+          title={t('dashboard.managerTitle')}
+          subtitle={t('dashboard.managerSubtitle')}
+        >
           <div className="list">
             <Row gap={12}>
-              <Badge>{t('dashboard.setsCount', { count: project.sets.length })}</Badge>
-              <Badge>{t('dashboard.blueprintsCount', { count: project.blueprints.length })}</Badge>
-              <Badge>{t('dashboard.itemsCount', { count: project.items.length })}</Badge>
+              <Badge>
+                {t('dashboard.setsCount', { count: project.sets.length })}
+              </Badge>
+              <Badge>
+                {t('dashboard.blueprintsCount', {
+                  count: project.blueprints.length,
+                })}
+              </Badge>
+              <Badge>
+                {t('dashboard.itemsCount', { count: project.items.length })}
+              </Badge>
             </Row>
             <div className="divider" />
             <div className="list">
@@ -48,14 +61,24 @@ export function DashboardScreen(props: {
                 <div key={set.id} className="list-item">
                   <div>
                     <div style={{ fontWeight: 600 }}>{set.name}</div>
-                    <div className="hint">{t('dashboard.setId', { id: set.id })}</div>
+                    <div className="hint">
+                      {t('dashboard.setId', { id: set.id })}
+                    </div>
                   </div>
-                  <Badge>{t('dashboard.itemsInSet', { count: project.items.filter((item) => item.setId === set.id).length })}</Badge>
+                  <Badge>
+                    {t('dashboard.itemsInSet', {
+                      count: project.items.filter(
+                        (item) => item.setId === set.id,
+                      ).length,
+                    })}
+                  </Badge>
                 </div>
               ))}
             </div>
             <Row gap={10}>
-              <Button onClick={props.onOpenData}>{t('dashboard.importData')}</Button>
+              <Button onClick={props.onOpenData}>
+                {t('dashboard.importData')}
+              </Button>
               <Button variant="outline" onClick={props.onOpenExport}>
                 {t('dashboard.export')}
               </Button>
@@ -63,7 +86,10 @@ export function DashboardScreen(props: {
           </div>
         </Panel>
 
-        <Panel title={t('dashboard.blueprintsTitle')} subtitle={t('dashboard.blueprintsSubtitle')}>
+        <Panel
+          title={t('dashboard.blueprintsTitle')}
+          subtitle={t('dashboard.blueprintsSubtitle')}
+        >
           <div className="list">
             {project.blueprints.length === 0 ? (
               <div className="empty">{t('dashboard.noBlueprints')}</div>
@@ -72,15 +98,23 @@ export function DashboardScreen(props: {
                 <div key={bp.id} className="list-item">
                   <div>
                     <div style={{ fontWeight: 600 }}>{bp.name}</div>
-                    <div className="hint">{bp.description ?? t('dashboard.blueprintFallback')}</div>
+                    <div className="hint">
+                      {bp.description ?? t('dashboard.blueprintFallback')}
+                    </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => props.onOpenBlueprint(bp.id)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => props.onOpenBlueprint(bp.id)}
+                  >
                     {t('dashboard.openBlueprint')}
                   </Button>
                 </div>
               ))
             )}
-            <Button variant="primary" onClick={createBlankBlueprint}>{t('dashboard.createBlueprint')}</Button>
+            <Button variant="primary" onClick={createBlankBlueprint}>
+              {t('dashboard.createBlueprint')}
+            </Button>
           </div>
         </Panel>
       </div>

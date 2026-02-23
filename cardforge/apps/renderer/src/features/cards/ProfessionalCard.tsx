@@ -15,7 +15,11 @@ interface ProfessionalCardProps {
   height: number;
 }
 
-export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ data, width, height }) => {
+export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({
+  data,
+  width,
+  height,
+}) => {
   return (
     <Group>
       {/* 1. الإطار الخارجي المتوهج */}
@@ -26,7 +30,14 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ data, width,
         fill="#0f172a"
         strokeLinearGradientStartPoint={{ x: 0, y: 0 }}
         strokeLinearGradientEndPoint={{ x: width, y: height }}
-        strokeLinearGradientColorStops={[0, '#B38728', 0.5, '#FBF5B7', 1, '#AA771C']}
+        strokeLinearGradientColorStops={[
+          0,
+          '#B38728',
+          0.5,
+          '#FBF5B7',
+          1,
+          '#AA771C',
+        ]}
         strokeWidth={10}
         shadowBlur={25}
         shadowColor="black"
@@ -36,13 +47,13 @@ export const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ data, width,
       <TraitBadges traits={data.traits} x={25} y={25} />
 
       {/* 3. منطقة اسم البطاقة */}
-      <Rect 
-        x={width * 0.15} 
-        y={35} 
-        width={width * 0.7} 
-        height={45} 
-        fill="rgba(0,0,0,0.6)" 
-        cornerRadius={12} 
+      <Rect
+        x={width * 0.15}
+        y={35}
+        width={width * 0.7}
+        height={45}
+        fill="rgba(0,0,0,0.6)"
+        cornerRadius={12}
         stroke="#FFD700"
         strokeWidth={1}
       />

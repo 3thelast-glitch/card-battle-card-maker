@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type PointerEvent,
+} from 'react';
 import type {
   ArtTransform,
   Blueprint,
@@ -12,11 +19,34 @@ import { createId, resolvePath } from '../../../../../packages/core/src/index';
 import { getParentPath } from '../../../../../packages/storage/src/index';
 import { useAppStore } from '../../state/appStore';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Divider, Input, Row, Select, Toggle } from '../../components/ui';
+import {
+  Badge,
+  Button,
+  Divider,
+  Input,
+  Row,
+  Select,
+  Toggle,
+} from '../../components/ui';
 import { ToastContainer, type ToastData } from '../../components/ui/Toast';
 import { GenerationModal } from '../../components/ui/GenerationModal';
-import { Plus, Upload, FileSpreadsheet, Zap, Download, BarChart2, PanelLeft, PanelRight, Layers, Loader2 } from 'lucide-react';
-import { parseCsvFile, parseXlsxFile, mapRowsToCards } from '../../lib/bulkImport';
+import {
+  Plus,
+  Upload,
+  FileSpreadsheet,
+  Zap,
+  Download,
+  BarChart2,
+  PanelLeft,
+  PanelRight,
+  Layers,
+  Loader2,
+} from 'lucide-react';
+import {
+  parseCsvFile,
+  parseXlsxFile,
+  mapRowsToCards,
+} from '../../lib/bulkImport';
 import {
   copyImageToProjectAssets,
   fileUrlToPath,
@@ -28,10 +58,16 @@ import {
   resolveImageReferenceSync,
 } from '../../utils/imageBinding';
 import { generateAdvancedStats } from '../../lib/advancedBalance';
-import { createDefaultRangesConfig, generateDeck } from '../../lib/deckGenerator';
+import {
+  createDefaultRangesConfig,
+  generateDeck,
+} from '../../lib/deckGenerator';
 import { type AbilityKey } from '../../lib/abilityRegistry';
 import type { Rarity } from '../../lib/balanceRules';
-import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
+import {
+  CARD_TEMPLATES,
+  type TemplateKey,
+} from '../../templates/cardTemplates';
 import { AppShell } from '../../ui/layout/AppShell';
 import { CardList, filterCards, type CardFilters } from '../cards/CardList';
 import { CardInspector } from '../inspector/CardInspector';
@@ -61,7 +97,11 @@ type CopySummary = {
   failed: number;
 };
 
-export function DataTableScreen(props: { project: Project; onChange: (project: Project) => void; currentView?: string }) {
+export function DataTableScreen(props: {
+  project: Project;
+  onChange: (project: Project) => void;
+  currentView?: string;
+}) {
   const { t, i18n } = useTranslation();
   const { project, onChange, currentView = 'design' } = props;
   const {
@@ -73,18 +113,35 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     setScreen,
   } = useAppStore();
 
-  const [filters, setFilters] = useState<CardFilters>({ query: '', rarity: '', template: '', tag: '' });
-  const [selectedId, setSelectedId] = useState<string | null>(previewRowId ?? null);
+  const [filters, setFilters] = useState<CardFilters>({
+    query: '',
+    rarity: '',
+    template: '',
+    tag: '',
+  });
+  const [selectedId, setSelectedId] = useState<string | null>(
+    previewRowId ?? null,
+  );
   const [inspectorData, setInspectorData] = useState<DataRow | null>(null);
-  const [defaultTemplate, setDefaultTemplate] = useState<TemplateKey>('classic');
+  const [defaultTemplate, setDefaultTemplate] =
+    useState<TemplateKey>('classic');
   const [mergeById, setMergeById] = useState(false);
   const [hasLanguageColumns, setHasLanguageColumns] = useState(true);
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(
+    null,
+  );
   const [deckSize, setDeckSize] = useState(40);
-  const [dist, setDist] = useState({ common: 60, rare: 25, epic: 10, legendary: 5 });
+  const [dist, setDist] = useState({
+    common: 60,
+    rare: 25,
+    epic: 10,
+    legendary: 5,
+  });
   const [deckAutoBalanced, setDeckAutoBalanced] = useState(false);
   const [advancedBalance, setAdvancedBalance] = useState(false);
-  const [rangesConfig, setRangesConfig] = useState(() => createDefaultRangesConfig());
+  const [rangesConfig, setRangesConfig] = useState(() =>
+    createDefaultRangesConfig(),
+  );
   const [defaultCost, setDefaultCost] = useState(1);
   const [defaultAbility, setDefaultAbility] = useState<AbilityKey>('none');
   const [previewMode, setPreviewMode] = useState<'preview' | 'edit'>('preview');
@@ -107,7 +164,8 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const pushToast = (message: string, type: ToastData['type'] = 'success') => {
     setToasts((prev) => [...prev, { id: toastIdRef.current++, message, type }]);
   };
-  const dismissToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
+  const dismissToast = (id: number) =>
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   const artDragRef = useRef<{
     startX: number;
     startY: number;
@@ -117,9 +175,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   } | null>(null);
 
   const language = i18n.language?.startsWith('ar') ? 'ar' : 'en';
-  const table = project.dataTables.find((tbl) => tbl.id === activeTableId) ?? project.dataTables[0];
+  const table =
+    project.dataTables.find((tbl) => tbl.id === activeTableId) ??
+    project.dataTables[0];
   const blueprint: Blueprint | undefined =
-    project.blueprints.find((bp) => bp.id === activeBlueprintId) ?? project.blueprints[0];
+    project.blueprints.find((bp) => bp.id === activeBlueprintId) ??
+    project.blueprints[0];
   const rows: DataRow[] = table?.rows ?? [];
   const columns = useMemo(() => {
     if (!table) return [];
@@ -129,18 +190,29 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
   const imageBinding = getImageBindingDefaults(table?.imageBinding);
   const bindingElements: ElementModel[] =
-    blueprint?.elements.filter((el) => el.type === 'text' || el.type === 'image') ?? [];
-  const projectRoot = project.meta.filePath ? getParentPath(project.meta.filePath) : undefined;
+    blueprint?.elements.filter(
+      (el) => el.type === 'text' || el.type === 'image',
+    ) ?? [];
+  const projectRoot = project.meta.filePath
+    ? getParentPath(project.meta.filePath)
+    : undefined;
 
   const tagOptions = useMemo(() => collectTags(rows), [rows]);
   const templateOptions = useMemo(() => collectTemplates(rows), [rows]);
-  const filteredRows = useMemo(() => filterCards(rows, filters, language), [rows, filters, language]);
+  const filteredRows = useMemo(
+    () => filterCards(rows, filters, language),
+    [rows, filters, language],
+  );
   const selectedRow = useMemo(
     () => filteredRows.find((row) => row.id === selectedId) ?? null,
     [filteredRows, selectedId],
   );
-  const pendingRow = pendingDeleteId ? rows.find((row) => row.id === pendingDeleteId) : undefined;
-  const generatorRow = lastGeneratedId ? rows.find((row) => row.id === lastGeneratedId) : undefined;
+  const pendingRow = pendingDeleteId
+    ? rows.find((row) => row.id === pendingDeleteId)
+    : undefined;
+  const generatorRow = lastGeneratedId
+    ? rows.find((row) => row.id === lastGeneratedId)
+    : undefined;
 
   useEffect(() => {
     if (!filteredRows.length) {
@@ -170,61 +242,105 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
   const resolvedArt = resolveRowArt(selectedRow, previewArt);
 
-  const posterWarning = previewArt?.kind === 'video' && !previewArt.poster ? t('data.posterRequired') : undefined;
+  const posterWarning =
+    previewArt?.kind === 'video' && !previewArt.poster
+      ? t('data.posterRequired')
+      : undefined;
   const previewData = selectedRow?.data ?? {};
   const previewTemplateKey = normalizeTemplateKey(
     previewData.templateKey ?? previewData.template ?? previewData.template_key,
     defaultTemplate,
   );
-  const previewTitle = selectedRow ? getRowTitle(previewData, language) || selectedRow.id : '';
+  const previewTitle = selectedRow
+    ? getRowTitle(previewData, language) || selectedRow.id
+    : '';
   const previewDesc =
-    previewData.desc ?? previewData.ability ?? previewData.ability_en ?? previewData.ability_ar ?? '';
-  const previewTraits = normalizeTraits(previewData.traits ?? previewData.trait);
+    previewData.desc ??
+    previewData.ability ??
+    previewData.ability_en ??
+    previewData.ability_ar ??
+    '';
+  const previewTraits = normalizeTraits(
+    previewData.traits ?? previewData.trait,
+  );
   const previewRarity = normalizeRarity(previewData.rarity);
-  const previewAttack = normalizeNumber(previewData.attack ?? previewData.stats?.attack);
-  const previewDefense = normalizeNumber(previewData.defense ?? previewData.stats?.defense);
+  const previewAttack = normalizeNumber(
+    previewData.attack ?? previewData.stats?.attack,
+  );
+  const previewDefense = normalizeNumber(
+    previewData.defense ?? previewData.stats?.defense,
+  );
   const previewElement = previewData.element;
   const previewRace = previewData.race;
   const previewBgColor = previewData.bgColor;
   const previewBadgeStyle = (previewData as any)?.style?.badges;
-  const previewTemplate = CARD_TEMPLATES[previewTemplateKey] ?? CARD_TEMPLATES[defaultTemplate];
+  const previewTemplate =
+    CARD_TEMPLATES[previewTemplateKey] ?? CARD_TEMPLATES[defaultTemplate];
   const smallPreviewWidth = 240;
   const smallPreviewHeight = 320;
   const editorPreviewData = useMemo(() => {
     if (!selectedRow || !table) return undefined;
     const data = selectedRow.data
-      ? { ...selectedRow.data, ...(selectedRow.art ? { art: selectedRow.art } : {}), __lang: language }
+      ? {
+          ...selectedRow.data,
+          ...(selectedRow.art ? { art: selectedRow.art } : {}),
+          __lang: language,
+        }
       : undefined;
     if (!data) return undefined;
     if (!imageBinding.column) return data;
-    const resolved = resolveImageReferenceSync(resolvePath(data, imageBinding.column), imageBinding);
+    const resolved = resolveImageReferenceSync(
+      resolvePath(data, imageBinding.column),
+      imageBinding,
+    );
     if (!resolved) return data;
     return setPathValue(data, imageBinding.column, resolved);
   }, [selectedRow, table, imageBinding, language]);
   const generatorData = generatorRow?.data ?? {};
   const generatorTemplateKey = normalizeTemplateKey(
-    generatorData.templateKey ?? generatorData.template ?? generatorData.template_key,
+    generatorData.templateKey ??
+      generatorData.template ??
+      generatorData.template_key,
     defaultTemplate,
   );
-  const generatorTitle = generatorRow ? getRowTitle(generatorData ?? {}, language) || generatorRow.id : '';
+  const generatorTitle = generatorRow
+    ? getRowTitle(generatorData ?? {}, language) || generatorRow.id
+    : '';
   const generatorDesc =
-    generatorData.desc ?? generatorData.ability ?? generatorData.ability_en ?? generatorData.ability_ar ?? '';
-  const generatorTraits = normalizeTraits(generatorData.traits ?? generatorData.trait);
+    generatorData.desc ??
+    generatorData.ability ??
+    generatorData.ability_en ??
+    generatorData.ability_ar ??
+    '';
+  const generatorTraits = normalizeTraits(
+    generatorData.traits ?? generatorData.trait,
+  );
   const generatorRarity = normalizeRarity(generatorData.rarity);
-  const generatorAttack = normalizeNumber(generatorData.attack ?? generatorData.stats?.attack);
-  const generatorDefense = normalizeNumber(generatorData.defense ?? generatorData.stats?.defense);
-  const generatorArt = generatorRow ? resolveRowArt(generatorRow, undefined) : undefined;
+  const generatorAttack = normalizeNumber(
+    generatorData.attack ?? generatorData.stats?.attack,
+  );
+  const generatorDefense = normalizeNumber(
+    generatorData.defense ?? generatorData.stats?.defense,
+  );
+  const generatorArt = generatorRow
+    ? resolveRowArt(generatorRow, undefined)
+    : undefined;
   const generatorBadgeStyle = (generatorData as any)?.style?.badges;
 
   const updateTable = (nextTable: DataTable) => {
     const exists = project.dataTables.some((tbl) => tbl.id === nextTable.id);
     const tables = project.dataTables.length
       ? exists
-        ? project.dataTables.map((tbl) => (tbl.id === nextTable.id ? nextTable : tbl))
+        ? project.dataTables.map((tbl) =>
+            tbl.id === nextTable.id ? nextTable : tbl,
+          )
         : [...project.dataTables, nextTable]
       : [nextTable];
-    const fallback = (rowId: string) => t('project.itemFallback', { id: rowId });
-    const items = tables.flatMap((tbl) => buildItemsFromTable(tbl, project, blueprint, fallback));
+    const fallback = (rowId: string) =>
+      t('project.itemFallback', { id: rowId });
+    const items = tables.flatMap((tbl) =>
+      buildItemsFromTable(tbl, project, blueprint, fallback),
+    );
     onChange({ ...project, dataTables: tables, items });
     setActiveTableId(nextTable.id);
   };
@@ -242,13 +358,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
 
   const handleInspectorChange = (newCardData: DataRow) => {
     setInspectorData(newCardData);
-    const nextRows = rows.map((row) => (row.id === newCardData.id ? newCardData : row));
+    const nextRows = rows.map((row) =>
+      row.id === newCardData.id ? newCardData : row,
+    );
     updateRows(nextRows);
   };
 
   const updateRowArt = (rowId: string, art?: CardArt) => {
     if (!table) return;
-    const nextRows = table.rows.map((row) => (row.id === rowId ? { ...row, art } : row));
+    const nextRows = table.rows.map((row) =>
+      row.id === rowId ? { ...row, art } : row,
+    );
     updateRows(nextRows);
   };
 
@@ -299,7 +419,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     };
     const nextTable: DataTable = table
       ? { ...table, rows: [...table.rows, nextRow] }
-      : { id: createId('table'), name: t('data.mainTable'), columns: [], rows: [nextRow] };
+      : {
+          id: createId('table'),
+          name: t('data.mainTable'),
+          columns: [],
+          rows: [nextRow],
+        };
     updateTable(nextTable);
     setSelectedId(nextRow.id);
   };
@@ -351,11 +476,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     if (!blueprint) return;
     const nextBlueprint = {
       ...blueprint,
-      elements: blueprint.elements.map((el) => (el.id === elementId ? { ...el, bindingKey: column } : el)),
+      elements: blueprint.elements.map((el) =>
+        el.id === elementId ? { ...el, bindingKey: column } : el,
+      ),
     };
     const nextProject = {
       ...project,
-      blueprints: project.blueprints.map((bp) => (bp.id === blueprint.id ? nextBlueprint : bp)),
+      blueprints: project.blueprints.map((bp) =>
+        bp.id === blueprint.id ? nextBlueprint : bp,
+      ),
     };
     onChange(nextProject);
   };
@@ -365,7 +494,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const normalized = normalizeZIndex(nextElements);
     const nextProject = {
       ...project,
-      blueprints: project.blueprints.map((bp) => (bp.id === blueprint.id ? { ...bp, elements: normalized } : bp)),
+      blueprints: project.blueprints.map((bp) =>
+        bp.id === blueprint.id ? { ...bp, elements: normalized } : bp,
+      ),
     };
     onChange(nextProject);
   };
@@ -410,7 +541,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     if (!imageBinding.column) return;
 
     const root = getParentPath(project.meta.filePath);
-    const existingNames = new Set((project.assets?.images ?? []).map((asset) => asset.name.toLowerCase()));
+    const existingNames = new Set(
+      (project.assets?.images ?? []).map((asset) => asset.name.toLowerCase()),
+    );
     const nextAssets = [...(project.assets?.images ?? [])];
     const nextRows = [...table.rows];
     let missing = 0;
@@ -430,8 +563,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       if (isRemoteOrData(result.resolved) || isAssetsPath(result.resolved)) {
         continue;
       }
-      const sourcePath = isFileUrl(result.resolved) ? fileUrlToPath(result.resolved) : result.resolved;
-      const copyResult = await copyImageToProjectAssets(sourcePath, root, existingNames);
+      const sourcePath = isFileUrl(result.resolved)
+        ? fileUrlToPath(result.resolved)
+        : result.resolved;
+      const copyResult = await copyImageToProjectAssets(
+        sourcePath,
+        root,
+        existingNames,
+      );
       if (!copyResult.relativePath) {
         failed += 1;
         continue;
@@ -445,7 +584,11 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       });
       nextRows[i] = {
         ...row,
-        data: setPathValue(row.data ?? {}, imageBinding.column, copyResult.relativePath),
+        data: setPathValue(
+          row.data ?? {},
+          imageBinding.column,
+          copyResult.relativePath,
+        ),
       };
     }
 
@@ -454,12 +597,22 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const exists = project.dataTables.some((tbl) => tbl.id === updatedTable.id);
     const tables = project.dataTables.length
       ? exists
-        ? project.dataTables.map((tbl) => (tbl.id === updatedTable.id ? updatedTable : tbl))
+        ? project.dataTables.map((tbl) =>
+            tbl.id === updatedTable.id ? updatedTable : tbl,
+          )
         : [...project.dataTables, updatedTable]
       : [updatedTable];
-    const fallback = (rowId: string) => t('project.itemFallback', { id: rowId });
-    const items = tables.flatMap((tbl) => buildItemsFromTable(tbl, project, blueprint, fallback));
-    onChange({ ...project, dataTables: tables, items, assets: { images: nextAssets } });
+    const fallback = (rowId: string) =>
+      t('project.itemFallback', { id: rowId });
+    const items = tables.flatMap((tbl) =>
+      buildItemsFromTable(tbl, project, blueprint, fallback),
+    );
+    onChange({
+      ...project,
+      dataTables: tables,
+      items,
+      assets: { images: nextAssets },
+    });
     setActiveTableId(updatedTable.id);
   };
 
@@ -482,8 +635,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   };
 
   const handleImport = async (file: File, mode: 'csv' | 'xlsx') => {
-    const parsed = mode === 'csv' ? await parseCsvFile(file) : await parseXlsxFile(file);
-    const { cards, errors } = mapRowsToCards(parsed, { defaultTemplate, hasLanguageColumns });
+    const parsed =
+      mode === 'csv' ? await parseCsvFile(file) : await parseXlsxFile(file);
+    const { cards, errors } = mapRowsToCards(parsed, {
+      defaultTemplate,
+      hasLanguageColumns,
+    });
     const existingIds = new Set(rows.map((row) => row.id));
     const rowIndex = new Map(rows.map((row, index) => [row.id, index]));
     const nextRows = [...rows];
@@ -523,8 +680,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     });
 
     const nextTable: DataTable = table
-      ? { ...table, rows: nextRows, columns: collectColumns(nextRows.map((row) => row.data ?? {})) }
-      : { id: createId('table'), name: t('data.mainTable'), columns: collectColumns(nextRows.map((row) => row.data ?? {})), rows: nextRows };
+      ? {
+          ...table,
+          rows: nextRows,
+          columns: collectColumns(nextRows.map((row) => row.data ?? {})),
+        }
+      : {
+          id: createId('table'),
+          name: t('data.mainTable'),
+          columns: collectColumns(nextRows.map((row) => row.data ?? {})),
+          rows: nextRows,
+        };
     updateTable(nextTable);
     setImportSummary({ created, updated, errors: errors.length, warnings });
     if (firstCreatedId) {
@@ -597,8 +763,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       });
 
       const nextTable: DataTable = table
-        ? { ...table, rows: nextRows, columns: collectColumns(nextRows.map((row) => row.data ?? {})) }
-        : { id: createId('table'), name: t('data.mainTable'), columns: collectColumns(nextRows.map((row) => row.data ?? {})), rows: nextRows };
+        ? {
+            ...table,
+            rows: nextRows,
+            columns: collectColumns(nextRows.map((row) => row.data ?? {})),
+          }
+        : {
+            id: createId('table'),
+            name: t('data.mainTable'),
+            columns: collectColumns(nextRows.map((row) => row.data ?? {})),
+            rows: nextRows,
+          };
 
       // Wait for minimum display time before committing
       await minDisplay;
@@ -608,7 +783,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       if (firstGeneratedId) setSelectedId(firstGeneratedId);
       setLastGeneratedId(firstGeneratedId ?? null);
 
-      pushToast(`⚡ ${result.cards.length} cards generated successfully`, 'success');
+      pushToast(
+        `⚡ ${result.cards.length} cards generated successfully`,
+        'success',
+      );
     } catch {
       await minDisplay;
       pushToast('Generation failed — check settings', 'error');
@@ -623,14 +801,28 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const enabledRarities = rangesConfig.enabled
     ? RARITY_OPTIONS.filter((rarity) => rangesConfig.perRarity[rarity]?.enabled)
     : RARITY_OPTIONS;
-  const enabledTotal = enabledRarities.reduce((sum, rarity) => sum + Number(dist[rarity] || 0), 0);
-  const rangesZeroWarning = rangesConfig.enabled && Math.round(enabledTotal) === 0;
+  const enabledTotal = enabledRarities.reduce(
+    (sum, rarity) => sum + Number(dist[rarity] || 0),
+    0,
+  );
+  const rangesZeroWarning =
+    rangesConfig.enabled && Math.round(enabledTotal) === 0;
   const balancePreview = useMemo(() => {
     if (!advancedBalance) return null;
-    return generateAdvancedStats({ rarity: 'rare', cost: defaultCost, abilityKey: defaultAbility });
+    return generateAdvancedStats({
+      rarity: 'rare',
+      cost: defaultCost,
+      abilityKey: defaultAbility,
+    });
   }, [advancedBalance, defaultCost, defaultAbility]);
-  const clampRangeValue = (value: number) => Math.max(0, Math.min(999, Math.floor(Number(value) || 0)));
-  const updateRangeValue = (rarity: Rarity, field: 'attack' | 'defense' | 'cost', bound: 'min' | 'max', value: number) => {
+  const clampRangeValue = (value: number) =>
+    Math.max(0, Math.min(999, Math.floor(Number(value) || 0)));
+  const updateRangeValue = (
+    rarity: Rarity,
+    field: 'attack' | 'defense' | 'cost',
+    bound: 'min' | 'max',
+    value: number,
+  ) => {
     setRangesConfig((prev) => {
       const current = prev.perRarity[rarity];
       const nextRange = { ...(current[field] ?? { min: 0, max: 0 }) };
@@ -678,15 +870,19 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
     const sum = scaled.common + scaled.rare + scaled.epic + scaled.legendary;
     const remainder = 100 - sum;
     if (remainder !== 0) {
-      const entries = Object.entries(scaled) as Array<[keyof typeof scaled, number]>;
-      const largest = entries.reduce((prev, current) => (current[1] > prev[1] ? current : prev), entries[0]);
+      const entries = Object.entries(scaled) as Array<
+        [keyof typeof scaled, number]
+      >;
+      const largest = entries.reduce(
+        (prev, current) => (current[1] > prev[1] ? current : prev),
+        entries[0],
+      );
       scaled[largest[0]] = scaled[largest[0]] + remainder;
     }
     setDist(scaled);
   };
   const header = (
     <div className="flex items-center justify-between w-full gap-3 h-full">
-
       {/* ── LEFT GROUP: Brand + count ── */}
       <div className="flex items-center gap-3 flex-shrink-0">
         {/* Mobile left drawer toggle */}
@@ -703,7 +899,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             <Layers size={14} className="text-white" />
           </div>
           <div className="hidden sm:block leading-none">
-            <div className="text-sm font-semibold text-slate-200 leading-none">{t('cards.title')}</div>
+            <div className="text-sm font-semibold text-slate-200 leading-none">
+              {t('cards.title')}
+            </div>
             <div className="text-[10px] text-slate-600 mt-0.5">
               {t('cards.count', { count: filteredRows.length })}
             </div>
@@ -729,17 +927,30 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           disabled={isImporting}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isImporting ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+          {isImporting ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Upload size={13} />
+          )}
           <span className="hidden md:inline">{t('data.importCsv')}</span>
         </button>
         {/* Import Excel */}
         <button
           type="button"
-          onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}
+          onClick={() =>
+            pickImport(
+              '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              'xlsx',
+            )
+          }
           disabled={isImporting}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] hover:border-[#2D3A5A] transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isImporting ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
+          {isImporting ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <FileSpreadsheet size={13} />
+          )}
           <span className="hidden md:inline">{t('data.importXlsx')}</span>
         </button>
 
@@ -753,9 +964,11 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           disabled={isGenerating}
           className="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors border border-blue-500/40 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          {isGenerating
-            ? <Loader2 size={13} className="animate-spin" />
-            : <Zap size={13} />}
+          {isGenerating ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <Zap size={13} />
+          )}
           <span>{isGenerating ? 'Generating…' : t('data.generateDeck')}</span>
         </button>
       </div>
@@ -787,7 +1000,6 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           <PanelRight size={15} />
         </button>
       </div>
-
     </div>
   );
 
@@ -796,8 +1008,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       {/* Left panel sticky header */}
       <div className="shrink-0 p-4 border-b border-white/10 flex items-center justify-between">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t('cards.title')}</div>
-          <div className="text-[10px] text-slate-600 mt-0.5">{t('cards.count', { count: filteredRows.length })}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {t('cards.title')}
+          </div>
+          <div className="text-[10px] text-slate-600 mt-0.5">
+            {t('cards.count', { count: filteredRows.length })}
+          </div>
         </div>
         <button
           type="button"
@@ -813,27 +1029,39 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             <Input
               placeholder={t('cards.search')}
               value={filters.query}
-              onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, query: e.target.value })
+              }
             />
             <Select
               value={filters.rarity}
-              onChange={(e) => setFilters({ ...filters, rarity: e.target.value as CardFilters['rarity'] })}
+              onChange={(e) =>
+                setFilters({
+                  ...filters,
+                  rarity: e.target.value as CardFilters['rarity'],
+                })
+              }
             >
               <option value="">{t('common.all')}</option>
               {RARITY_OPTIONS.map((rarity) => (
                 <option key={rarity} value={rarity}>
-                  {t(`editor.inspector.rarity${rarity[0].toUpperCase()}${rarity.slice(1)}`)}
+                  {t(
+                    `editor.inspector.rarity${rarity[0].toUpperCase()}${rarity.slice(1)}`,
+                  )}
                 </option>
               ))}
             </Select>
             <Select
               value={filters.template}
-              onChange={(e) => setFilters({ ...filters, template: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, template: e.target.value })
+              }
             >
               <option value="">{t('common.all')}</option>
               {templateOptions.map((template) => (
                 <option key={template} value={template}>
-                  {CARD_TEMPLATES[template as TemplateKey]?.label[language] ?? template}
+                  {CARD_TEMPLATES[template as TemplateKey]?.label[language] ??
+                    template}
                 </option>
               ))}
             </Select>
@@ -862,19 +1090,44 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
           language={language}
         />
         <Divider />
-        <div className="uiTitle" style={{ fontSize: 14 }}>{t('cards.tools')}</div>
+        <div className="uiTitle" style={{ fontSize: 14 }}>
+          {t('cards.tools')}
+        </div>
         <div className="uiStack" style={{ marginTop: 10 }}>
-          <ToolSection title={t('ui.bulkImport.title')} subtitle={t('ui.bulkImport.sub')} defaultOpen>
+          <ToolSection
+            title={t('ui.bulkImport.title')}
+            subtitle={t('ui.bulkImport.sub')}
+            defaultOpen
+          >
             <div className="uiStack">
               <Row gap={8}>
-                <Button size="sm" onClick={() => pickImport('.csv,text/csv', 'csv')}>{t('data.importCsv')}</Button>
-                <Button size="sm" variant="outline" onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}>
+                <Button
+                  size="sm"
+                  onClick={() => pickImport('.csv,text/csv', 'csv')}
+                >
+                  {t('data.importCsv')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    pickImport(
+                      '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                      'xlsx',
+                    )
+                  }
+                >
                   {t('data.importXlsx')}
                 </Button>
               </Row>
               <div>
                 <div className="uiHelp">{t('data.defaultTemplate')}</div>
-                <Select value={defaultTemplate} onChange={(e) => setDefaultTemplate(e.target.value as TemplateKey)}>
+                <Select
+                  value={defaultTemplate}
+                  onChange={(e) =>
+                    setDefaultTemplate(e.target.value as TemplateKey)
+                  }
+                >
                   {Object.values(CARD_TEMPLATES).map((template) => (
                     <option key={template.key} value={template.key}>
                       {template.label[language] ?? template.label.en}
@@ -882,18 +1135,36 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   ))}
                 </Select>
               </div>
-              <Toggle checked={mergeById} onChange={setMergeById} label={t('data.mergeById')} />
-              <Toggle checked={hasLanguageColumns} onChange={setHasLanguageColumns} label={t('data.languageColumns')} />
+              <Toggle
+                checked={mergeById}
+                onChange={setMergeById}
+                label={t('data.mergeById')}
+              />
+              <Toggle
+                checked={hasLanguageColumns}
+                onChange={setHasLanguageColumns}
+                label={t('data.languageColumns')}
+              />
               <div className="uiHelp">{t('ui.tip.mergeById')}</div>
               {importSummary ? (
-                <Badge variant={importSummary.errors || importSummary.warnings ? 'warn' : 'good'}>
+                <Badge
+                  variant={
+                    importSummary.errors || importSummary.warnings
+                      ? 'warn'
+                      : 'good'
+                  }
+                >
                   {t('data.importSummary', importSummary)}
                 </Badge>
               ) : null}
             </div>
           </ToolSection>
 
-          <ToolSection title={t('ui.deckGen.title')} subtitle={t('ui.deckGen.sub')} defaultOpen>
+          <ToolSection
+            title={t('ui.deckGen.title')}
+            subtitle={t('ui.deckGen.sub')}
+            defaultOpen
+          >
             <div className="uiStack">
               <Row gap={10} align="end">
                 <div style={{ minWidth: 140 }}>
@@ -902,21 +1173,38 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                     type="number"
                     min={1}
                     value={deckSize}
-                    onChange={(e) => setDeckSize(Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setDeckSize(Math.max(1, Number(e.target.value) || 1))
+                    }
                   />
                 </div>
-                <Button onClick={handleGenerateDeck}>{t('data.generateDeck')}</Button>
+                <Button onClick={handleGenerateDeck}>
+                  {t('data.generateDeck')}
+                </Button>
               </Row>
-              <div className="uiRow" style={{ justifyContent: 'space-between' }}>
+              <div
+                className="uiRow"
+                style={{ justifyContent: 'space-between' }}
+              >
                 <div className="uiStack" style={{ gap: 6 }}>
                   <div className="uiTitle">{t('cards.deck.title')}</div>
                   <div className="uiSub">{t('cards.deck.sub')}</div>
                 </div>
                 <div className="uiRow">
-                  <span className={totalDisplay === 100 ? 'uiBadge uiBadgeGood' : 'uiBadge uiBadgeWarn'}>
+                  <span
+                    className={
+                      totalDisplay === 100
+                        ? 'uiBadge uiBadgeGood'
+                        : 'uiBadge uiBadgeWarn'
+                    }
+                  >
                     {t('cards.deck.total')}: {totalDisplay}%
                   </span>
-                  <button className="uiBtn" type="button" onClick={normalizeDistribution}>
+                  <button
+                    className="uiBtn"
+                    type="button"
+                    onClick={normalizeDistribution}
+                  >
                     {t('cards.deck.normalize')}
                   </button>
                 </div>
@@ -934,7 +1222,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                       min={0}
                       max={100}
                       value={dist.common}
-                      onChange={(e) => setDist({ ...dist, common: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setDist({
+                          ...dist,
+                          common: Number(e.target.value) || 0,
+                        })
+                      }
                     />
                     <span className="rarityPct">%</span>
                   </div>
@@ -951,7 +1244,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                       min={0}
                       max={100}
                       value={dist.rare}
-                      onChange={(e) => setDist({ ...dist, rare: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setDist({ ...dist, rare: Number(e.target.value) || 0 })
+                      }
                     />
                     <span className="rarityPct">%</span>
                   </div>
@@ -968,7 +1263,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                       min={0}
                       max={100}
                       value={dist.epic}
-                      onChange={(e) => setDist({ ...dist, epic: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setDist({ ...dist, epic: Number(e.target.value) || 0 })
+                      }
                     />
                     <span className="rarityPct">%</span>
                   </div>
@@ -985,7 +1282,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                       min={0}
                       max={100}
                       value={dist.legendary}
-                      onChange={(e) => setDist({ ...dist, legendary: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setDist({
+                          ...dist,
+                          legendary: Number(e.target.value) || 0,
+                        })
+                      }
                     />
                     <span className="rarityPct">%</span>
                   </div>
@@ -994,8 +1296,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               {totalDisplay !== 100 || deckAutoBalanced ? (
                 <Badge variant="good">{t('data.autoBalanced')}</Badge>
               ) : null}
-              {zeroRarity ? <Badge variant="warn">{t('data.zeroRarityWarning')}</Badge> : null}
-              <Toggle checked={advancedBalance} onChange={setAdvancedBalance} label={t('data.advancedBalance')} />
+              {zeroRarity ? (
+                <Badge variant="warn">{t('data.zeroRarityWarning')}</Badge>
+              ) : null}
+              <Toggle
+                checked={advancedBalance}
+                onChange={setAdvancedBalance}
+                label={t('data.advancedBalance')}
+              />
               {advancedBalance ? (
                 <div className="uiStack">
                   <Row gap={10}>
@@ -1005,14 +1313,18 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                         type="number"
                         min={0}
                         value={defaultCost}
-                        onChange={(e) => setDefaultCost(Number(e.target.value) || 0)}
+                        onChange={(e) =>
+                          setDefaultCost(Number(e.target.value) || 0)
+                        }
                       />
                     </div>
                     <div style={{ minWidth: 180 }}>
                       <div className="uiHelp">{t('data.ability')}</div>
                       <Select
                         value={defaultAbility}
-                        onChange={(e) => setDefaultAbility(e.target.value as AbilityKey)}
+                        onChange={(e) =>
+                          setDefaultAbility(e.target.value as AbilityKey)
+                        }
                       >
                         {ABILITY_OPTIONS.map((ability) => (
                           <option key={ability} value={ability}>
@@ -1025,7 +1337,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   <div className="uiHelp">{t('data.autoBalancedStats')}</div>
                   {balancePreview ? (
                     <Badge>
-                      {t('data.balanceDetails')}: total {balancePreview.total} / +{balancePreview.costBonus} / -{balancePreview.abilityPenalty}
+                      {t('data.balanceDetails')}: total {balancePreview.total} /
+                      +{balancePreview.costBonus} / -
+                      {balancePreview.abilityPenalty}
                     </Badge>
                   ) : null}
                 </div>
@@ -1033,7 +1347,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               <details className="uiCollapse">
                 <summary>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{t('cards.deck.ranges.title')}</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {t('cards.deck.ranges.title')}
+                    </div>
                     <div className="uiSub">{t('cards.deck.ranges.enable')}</div>
                   </div>
                 </summary>
@@ -1041,17 +1357,26 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   <div className="uiStack">
                     <Toggle
                       checked={rangesConfig.enabled}
-                      onChange={(next) => setRangesConfig((prev) => ({ ...prev, enabled: next }))}
+                      onChange={(next) =>
+                        setRangesConfig((prev) => ({ ...prev, enabled: next }))
+                      }
                       label={t('cards.deck.ranges.enable')}
                     />
                     <Row gap={12} align="end">
                       <Toggle
                         checked={rangesConfig.lowDuplicate}
-                        onChange={(next) => setRangesConfig((prev) => ({ ...prev, lowDuplicate: next }))}
+                        onChange={(next) =>
+                          setRangesConfig((prev) => ({
+                            ...prev,
+                            lowDuplicate: next,
+                          }))
+                        }
                         label={t('cards.deck.ranges.lowDuplicate')}
                       />
                       <div style={{ minWidth: 140 }}>
-                        <div className="uiHelp">{t('cards.deck.ranges.duplicateBudget')}</div>
+                        <div className="uiHelp">
+                          {t('cards.deck.ranges.duplicateBudget')}
+                        </div>
                         <Input
                           type="number"
                           min={0}
@@ -1060,45 +1385,84 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                           onChange={(e) =>
                             setRangesConfig((prev) => ({
                               ...prev,
-                              duplicateBudget: clampRangeValue(Number(e.target.value)),
+                              duplicateBudget: clampRangeValue(
+                                Number(e.target.value),
+                              ),
                             }))
                           }
                         />
                       </div>
                       <div style={{ minWidth: 180 }}>
-                        <div className="uiHelp">{t('cards.deck.ranges.seed')}</div>
+                        <div className="uiHelp">
+                          {t('cards.deck.ranges.seed')}
+                        </div>
                         <Input
                           value={rangesConfig.seed ?? ''}
-                          onChange={(e) => setRangesConfig((prev) => ({ ...prev, seed: e.target.value }))}
+                          onChange={(e) =>
+                            setRangesConfig((prev) => ({
+                              ...prev,
+                              seed: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                     </Row>
-                    {rangesZeroWarning ? <Badge variant="warn">{t('data.zeroRarityWarning')}</Badge> : null}
+                    {rangesZeroWarning ? (
+                      <Badge variant="warn">
+                        {t('data.zeroRarityWarning')}
+                      </Badge>
+                    ) : null}
                     <div className="rarityGrid">
                       {RARITY_OPTIONS.map((rarity) => {
                         const range = rangesConfig.perRarity[rarity];
                         return (
-                          <div key={rarity} className="rarityField" style={{ alignItems: 'flex-start' }}>
+                          <div
+                            key={rarity}
+                            className="rarityField"
+                            style={{ alignItems: 'flex-start' }}
+                          >
                             <div className="rarityLabel">
-                              <div className="name">{t(`cards.rarity.${rarity}`)}</div>
-                              <div className="hint">{t('cards.deck.ranges.includeRarity')}</div>
+                              <div className="name">
+                                {t(`cards.rarity.${rarity}`)}
+                              </div>
+                              <div className="hint">
+                                {t('cards.deck.ranges.includeRarity')}
+                              </div>
                             </div>
                             <div className="uiStack" style={{ gap: 8 }}>
                               <Toggle
                                 checked={range.enabled}
-                                onChange={(next) => updateRangeToggle(rarity, next)}
+                                onChange={(next) =>
+                                  updateRangeToggle(rarity, next)
+                                }
                                 label={t('cards.deck.ranges.includeRarity')}
                               />
-                              <div className="uiRow" style={{ gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                              <div
+                                className="uiRow"
+                                style={{
+                                  gap: 10,
+                                  alignItems: 'flex-end',
+                                  flexWrap: 'wrap',
+                                }}
+                              >
                                 <div className="uiStack" style={{ gap: 4 }}>
-                                  <div className="uiHelp">{t('cards.deck.ranges.attack')}</div>
+                                  <div className="uiHelp">
+                                    {t('cards.deck.ranges.attack')}
+                                  </div>
                                   <div className="uiRow" style={{ gap: 6 }}>
                                     <Input
                                       type="number"
                                       min={0}
                                       max={999}
                                       value={range.attack.min}
-                                      onChange={(e) => updateRangeValue(rarity, 'attack', 'min', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'attack',
+                                          'min',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.attack')} ${t('cards.deck.ranges.min')}`}
                                       title={t('cards.deck.ranges.min')}
                                       style={{ width: 74 }}
@@ -1108,7 +1472,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                                       min={0}
                                       max={999}
                                       value={range.attack.max}
-                                      onChange={(e) => updateRangeValue(rarity, 'attack', 'max', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'attack',
+                                          'max',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.attack')} ${t('cards.deck.ranges.max')}`}
                                       title={t('cards.deck.ranges.max')}
                                       style={{ width: 74 }}
@@ -1116,14 +1487,23 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                                   </div>
                                 </div>
                                 <div className="uiStack" style={{ gap: 4 }}>
-                                  <div className="uiHelp">{t('cards.deck.ranges.defense')}</div>
+                                  <div className="uiHelp">
+                                    {t('cards.deck.ranges.defense')}
+                                  </div>
                                   <div className="uiRow" style={{ gap: 6 }}>
                                     <Input
                                       type="number"
                                       min={0}
                                       max={999}
                                       value={range.defense.min}
-                                      onChange={(e) => updateRangeValue(rarity, 'defense', 'min', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'defense',
+                                          'min',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.defense')} ${t('cards.deck.ranges.min')}`}
                                       title={t('cards.deck.ranges.min')}
                                       style={{ width: 74 }}
@@ -1133,7 +1513,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                                       min={0}
                                       max={999}
                                       value={range.defense.max}
-                                      onChange={(e) => updateRangeValue(rarity, 'defense', 'max', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'defense',
+                                          'max',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.defense')} ${t('cards.deck.ranges.max')}`}
                                       title={t('cards.deck.ranges.max')}
                                       style={{ width: 74 }}
@@ -1141,14 +1528,23 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                                   </div>
                                 </div>
                                 <div className="uiStack" style={{ gap: 4 }}>
-                                  <div className="uiHelp">{t('cards.deck.ranges.cost')}</div>
+                                  <div className="uiHelp">
+                                    {t('cards.deck.ranges.cost')}
+                                  </div>
                                   <div className="uiRow" style={{ gap: 6 }}>
                                     <Input
                                       type="number"
                                       min={0}
                                       max={999}
                                       value={range.cost?.min ?? 0}
-                                      onChange={(e) => updateRangeValue(rarity, 'cost', 'min', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'cost',
+                                          'min',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.cost')} ${t('cards.deck.ranges.min')}`}
                                       title={t('cards.deck.ranges.min')}
                                       style={{ width: 74 }}
@@ -1158,7 +1554,14 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                                       min={0}
                                       max={999}
                                       value={range.cost?.max ?? 0}
-                                      onChange={(e) => updateRangeValue(rarity, 'cost', 'max', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateRangeValue(
+                                          rarity,
+                                          'cost',
+                                          'max',
+                                          Number(e.target.value),
+                                        )
+                                      }
                                       aria-label={`${t('cards.deck.ranges.cost')} ${t('cards.deck.ranges.max')}`}
                                       title={t('cards.deck.ranges.max')}
                                       style={{ width: 74 }}
@@ -1194,12 +1597,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                   />
                 </div>
               ) : (
-                <div className="generatorInlinePreviewEmpty">{t('cards.generatorPreviewEmpty')}</div>
+                <div className="generatorInlinePreviewEmpty">
+                  {t('cards.generatorPreviewEmpty')}
+                </div>
               )}
             </div>
           </ToolSection>
 
-          <ToolSection title={t('data.bindingsTitle')} subtitle={t('data.bindingsSubtitle')}>
+          <ToolSection
+            title={t('data.bindingsTitle')}
+            subtitle={t('data.bindingsSubtitle')}
+          >
             <div className="uiStack">
               {bindingElements.length === 0 ? (
                 <div className="uiHelp">{t('data.noBindings')}</div>
@@ -1207,10 +1615,15 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                 bindingElements.map((el) => (
                   <div key={el.id}>
                     <div className="uiHelp">{el.name}</div>
-                    <Select value={el.bindingKey ?? ''} onChange={(e) => updateBinding(el.id, e.target.value)}>
+                    <Select
+                      value={el.bindingKey ?? ''}
+                      onChange={(e) => updateBinding(el.id, e.target.value)}
+                    >
                       <option value="">{t('data.noBinding')}</option>
                       {columns.map((col) => (
-                        <option key={col} value={col}>{col}</option>
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
                       ))}
                     </Select>
                   </div>
@@ -1219,29 +1632,53 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             </div>
           </ToolSection>
 
-          <ToolSection title={t('data.imageBindingTitle')} subtitle={t('data.imageBindingSubtitle')}>
+          <ToolSection
+            title={t('data.imageBindingTitle')}
+            subtitle={t('data.imageBindingSubtitle')}
+          >
             <div className="uiStack">
               <div>
                 <div className="uiHelp">{t('data.imageColumn')}</div>
-                <Select value={imageBinding.column ?? ''} onChange={(e) => updateImageBinding({ column: e.target.value })}>
+                <Select
+                  value={imageBinding.column ?? ''}
+                  onChange={(e) =>
+                    updateImageBinding({ column: e.target.value })
+                  }
+                >
                   <option value="">{t('common.none')}</option>
                   {columns.map((col) => (
-                    <option key={col} value={col}>{col}</option>
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
                   ))}
                 </Select>
               </div>
               <div>
                 <div className="uiHelp">{t('data.imagesFolder')}</div>
                 <Row gap={8}>
-                  <Button size="sm" variant="outline" onClick={pickImagesFolder}>{t('common.open')}</Button>
-                  <div className="uiHelp">{imageBinding.imagesFolder || t('data.imagesFolderEmpty')}</div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={pickImagesFolder}
+                  >
+                    {t('common.open')}
+                  </Button>
+                  <div className="uiHelp">
+                    {imageBinding.imagesFolder || t('data.imagesFolderEmpty')}
+                  </div>
                 </Row>
               </div>
               <div>
                 <div className="uiHelp">{t('data.placeholderImage')}</div>
                 <Row gap={8}>
-                  <Button size="sm" variant="outline" onClick={pickPlaceholder}>{t('data.placeholderPick')}</Button>
-                  <div className="uiHelp">{imageBinding.placeholder ? getFileName(imageBinding.placeholder) : t('common.none')}</div>
+                  <Button size="sm" variant="outline" onClick={pickPlaceholder}>
+                    {t('data.placeholderPick')}
+                  </Button>
+                  <div className="uiHelp">
+                    {imageBinding.placeholder
+                      ? getFileName(imageBinding.placeholder)
+                      : t('common.none')}
+                  </div>
                 </Row>
               </div>
               <Toggle
@@ -1250,11 +1687,26 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
                 label={t('data.copyImages')}
               />
               <div className="uiHelp">{t('data.copyImagesHint')}</div>
-              <Button size="sm" variant="outline" onClick={copyImagesToAssets} disabled={!imageBinding.column}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={copyImagesToAssets}
+                disabled={!imageBinding.column}
+              >
                 {t('data.copyImages')}
               </Button>
-              {copySummary?.missing ? <Badge variant="warn">{t('data.imageMissingCount', { count: copySummary.missing })}</Badge> : null}
-              {copySummary?.failed ? <Badge variant="warn">{t('data.imageCopyFailedCount', { count: copySummary.failed })}</Badge> : null}
+              {copySummary?.missing ? (
+                <Badge variant="warn">
+                  {t('data.imageMissingCount', { count: copySummary.missing })}
+                </Badge>
+              ) : null}
+              {copySummary?.failed ? (
+                <Badge variant="warn">
+                  {t('data.imageCopyFailedCount', {
+                    count: copySummary.failed,
+                  })}
+                </Badge>
+              ) : null}
             </div>
           </ToolSection>
         </div>
@@ -1267,9 +1719,13 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       {/* Center panel sticky header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0D1117]">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">{t('cards.preview')}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {t('cards.preview')}
+          </div>
           <div className="text-[10px] text-slate-600 mt-0.5 truncate max-w-[180px]">
-            {selectedRow ? getRowTitle(selectedRow.data ?? {}, language) : t('cards.empty')}
+            {selectedRow
+              ? getRowTitle(selectedRow.data ?? {}, language)
+              : t('cards.empty')}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1328,7 +1784,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       <div className="flex-1 overflow-auto flex items-center justify-center relative p-8">
         {!selectedRow ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="w-12 h-12 rounded-xl bg-[#12151E] border border-[#1E2435] flex items-center justify-center text-2xl">🃏</div>
+            <div className="w-12 h-12 rounded-xl bg-[#12151E] border border-[#1E2435] flex items-center justify-center text-2xl">
+              🃏
+            </div>
             <p className="text-sm text-slate-500">{t('data.selectCardHint')}</p>
           </div>
         ) : previewMode === 'preview' ? (
@@ -1385,9 +1843,18 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       <div className="shrink-0 p-4 border-b border-white/10 flex items-center justify-between">
         <div>
           <div className="uiTitle">{t('cards.inspector')}</div>
-          <div className="uiSub">{inspectorData ? getRowTitle(inspectorData.data ?? {}, language) : t('cards.empty')}</div>
+          <div className="uiSub">
+            {inspectorData
+              ? getRowTitle(inspectorData.data ?? {}, language)
+              : t('cards.empty')}
+          </div>
         </div>
-        <Button size="sm" variant="outline" className="panelClose" onClick={() => setRightDrawerOpen(false)}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="panelClose"
+          onClick={() => setRightDrawerOpen(false)}
+        >
           {t('common.close')}
         </Button>
       </div>
@@ -1400,14 +1867,34 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
               <CardFrame
                 rarity={normalizeRarity(inspectorData.data.rarity)}
                 art={resolveRowArt(inspectorData, previewArt)}
-                templateKey={normalizeTemplateKey(inspectorData.data.templateKey ?? inspectorData.data.template ?? inspectorData.data.template_key, defaultTemplate)}
-                title={getRowTitle(inspectorData.data, language) || inspectorData.id}
-                description={inspectorData.data.desc ?? inspectorData.data.ability ?? inspectorData.data.ability_en ?? inspectorData.data.ability_ar ?? ''}
+                templateKey={normalizeTemplateKey(
+                  inspectorData.data.templateKey ??
+                    inspectorData.data.template ??
+                    inspectorData.data.template_key,
+                  defaultTemplate,
+                )}
+                title={
+                  getRowTitle(inspectorData.data, language) || inspectorData.id
+                }
+                description={
+                  inspectorData.data.desc ??
+                  inspectorData.data.ability ??
+                  inspectorData.data.ability_en ??
+                  inspectorData.data.ability_ar ??
+                  ''
+                }
                 race={inspectorData.data.race}
-                traits={normalizeTraits(inspectorData.data.traits ?? inspectorData.data.trait)}
+                traits={normalizeTraits(
+                  inspectorData.data.traits ?? inspectorData.data.trait,
+                )}
                 element={inspectorData.data.element}
-                attack={normalizeNumber(inspectorData.data.attack ?? inspectorData.data.stats?.attack)}
-                defense={normalizeNumber(inspectorData.data.defense ?? inspectorData.data.stats?.defense)}
+                attack={normalizeNumber(
+                  inspectorData.data.attack ?? inspectorData.data.stats?.attack,
+                )}
+                defense={normalizeNumber(
+                  inspectorData.data.defense ??
+                    inspectorData.data.stats?.defense,
+                )}
                 badgeStyle={(inspectorData.data as any)?.style?.badges}
                 bgColor={inspectorData.data.bgColor}
                 posterWarning={posterWarning}
@@ -1441,8 +1928,12 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       {/* The Data Toolbar */}
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <div className="text-xl font-semibold text-white tracking-tight">{t('app.nav.data')} Manager</div>
-          <div className="text-sm text-slate-400 mt-1">{t('cards.count', { count: rows.length })} rows total</div>
+          <div className="text-xl font-semibold text-white tracking-tight">
+            {t('app.nav.data')} Manager
+          </div>
+          <div className="text-sm text-slate-400 mt-1">
+            {t('cards.count', { count: rows.length })} rows total
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -1451,16 +1942,29 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             disabled={isImporting}
             className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-50"
           >
-            {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+            {isImporting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Upload size={16} />
+            )}
             {t('data.importCsv')}
           </button>
           <button
             type="button"
-            onClick={() => pickImport('.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx')}
+            onClick={() =>
+              pickImport(
+                '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'xlsx',
+              )
+            }
             disabled={isImporting}
             className="flex items-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 rounded-lg px-4 py-2 text-sm transition-colors disabled:opacity-50"
           >
-            {isImporting ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
+            {isImporting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <FileSpreadsheet size={16} />
+            )}
             {t('data.importXlsx')}
           </button>
           <button
@@ -1479,21 +1983,39 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         <table className="w-full text-sm whitespace-nowrap text-slate-300 text-right">
           <thead className="sticky top-0 bg-[#121624] text-slate-400 font-semibold uppercase text-xs z-10 shadow-sm ring-1 ring-white/5">
             <tr>
-              <th className="px-4 py-3 border-b border-white/5 font-medium w-16 text-center">ID</th>
+              <th className="px-4 py-3 border-b border-white/5 font-medium w-16 text-center">
+                ID
+              </th>
               {columns.map((col) => (
-                <th key={col} className="px-4 py-3 border-b border-white/5 font-medium">{col}</th>
+                <th
+                  key={col}
+                  className="px-4 py-3 border-b border-white/5 font-medium"
+                >
+                  {col}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="hover:bg-white/[0.02] transition-colors">
-                <td className="px-4 py-3 border-b border-white/5 text-slate-500 font-mono text-xs text-center">{row.id.substring(0, 4)}</td>
+              <tr
+                key={row.id}
+                className="hover:bg-white/[0.02] transition-colors"
+              >
+                <td className="px-4 py-3 border-b border-white/5 text-slate-500 font-mono text-xs text-center">
+                  {row.id.substring(0, 4)}
+                </td>
                 {columns.map((col) => {
                   const val = String(row.data?.[col] ?? '');
                   return (
-                    <td key={col} className="px-4 py-3 border-b border-white/5 truncate max-w-[200px]" title={val}>
-                      {val || <span className="text-slate-600 italic">Empty</span>}
+                    <td
+                      key={col}
+                      className="px-4 py-3 border-b border-white/5 truncate max-w-[200px]"
+                      title={val}
+                    >
+                      {val || (
+                        <span className="text-slate-600 italic">Empty</span>
+                      )}
                     </td>
                   );
                 })}
@@ -1501,7 +2023,10 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-slate-500 border-b border-white/5">
+                <td
+                  colSpan={columns.length + 1}
+                  className="px-4 py-12 text-center text-slate-500 border-b border-white/5"
+                >
                   {t('data.selectCardHint')}
                 </td>
               </tr>
@@ -1514,32 +2039,49 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   const renderGenerateStudio = () => (
     <main className="flex-1 overflow-y-auto min-h-0 bg-[#070A14] custom-scrollbar">
       <div className="max-w-4xl mx-auto w-full p-6 lg:p-12 flex flex-col gap-8">
-
         {/* Header Section */}
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Generation Studio</h1>
-          <p className="text-sm text-slate-400">Configure your deck balance, rarity distribution, and export settings.</p>
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
+            Generation Studio
+          </h1>
+          <p className="text-sm text-slate-400">
+            Configure your deck balance, rarity distribution, and export
+            settings.
+          </p>
         </div>
 
         {/* Deck Configuration Card */}
         <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
-          <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('ui.deckGen.title')}</h2>
+          <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider">
+            {t('ui.deckGen.title')}
+          </h2>
 
           <div className="flex flex-col gap-6">
             <div className="flex justify-between items-end">
               <div className="w-48">
-                <label className="block text-xs text-slate-400 mb-1.5">{t('data.deckSize')}</label>
+                <label className="block text-xs text-slate-400 mb-1.5">
+                  {t('data.deckSize')}
+                </label>
                 <input
-                  type="number" min={1} value={deckSize}
-                  onChange={(e) => setDeckSize(Math.max(1, Number(e.target.value) || 1))}
+                  type="number"
+                  min={1}
+                  value={deckSize}
+                  onChange={(e) =>
+                    setDeckSize(Math.max(1, Number(e.target.value) || 1))
+                  }
                   className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
                 />
               </div>
               <div className="flex gap-4 items-center">
-                <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${totalDisplay === 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                <span
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium border ${totalDisplay === 100 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}
+                >
                   {t('cards.deck.total')}: {totalDisplay}%
                 </span>
-                <button onClick={normalizeDistribution} className="text-xs text-slate-400 hover:text-white transition-colors underline decoration-white/20 underline-offset-2">
+                <button
+                  onClick={normalizeDistribution}
+                  className="text-xs text-slate-400 hover:text-white transition-colors underline decoration-white/20 underline-offset-2"
+                >
                   {t('cards.deck.normalize')}
                 </button>
               </div>
@@ -1548,21 +2090,43 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             {/* Rarity Grid Container */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { key: 'common', label: t('cards.rarity.common'), val: dist.common },
+                {
+                  key: 'common',
+                  label: t('cards.rarity.common'),
+                  val: dist.common,
+                },
                 { key: 'rare', label: t('cards.rarity.rare'), val: dist.rare },
                 { key: 'epic', label: t('cards.rarity.epic'), val: dist.epic },
-                { key: 'legendary', label: t('cards.rarity.legendary'), val: dist.legendary }
+                {
+                  key: 'legendary',
+                  label: t('cards.rarity.legendary'),
+                  val: dist.legendary,
+                },
               ].map((r) => (
-                <div key={r.key} className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-3">
-                  <div className="text-sm font-medium text-slate-300">{r.label}</div>
+                <div
+                  key={r.key}
+                  className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-3"
+                >
+                  <div className="text-sm font-medium text-slate-300">
+                    {r.label}
+                  </div>
                   <div className="relative">
                     <input
-                      type="number" min={0} max={100}
+                      type="number"
+                      min={0}
+                      max={100}
                       value={r.val}
-                      onChange={(e) => setDist({ ...dist, [r.key]: Number(e.target.value) || 0 })}
+                      onChange={(e) =>
+                        setDist({
+                          ...dist,
+                          [r.key]: Number(e.target.value) || 0,
+                        })
+                      }
                       className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg pl-3 pr-8 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+                      %
+                    </span>
                   </div>
                 </div>
               ))}
@@ -1584,7 +2148,9 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         {/* Advanced Balance Card */}
         <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('data.advancedBalance')}</h2>
+            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+              {t('data.advancedBalance')}
+            </h2>
             <Toggle checked={advancedBalance} onChange={setAdvancedBalance} />
           </div>
 
@@ -1592,26 +2158,45 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             <div className="flex flex-col gap-5">
               <div className="flex gap-6">
                 <div className="w-32">
-                  <label className="block text-xs text-slate-400 mb-1.5">{t('data.cost')}</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">
+                    {t('data.cost')}
+                  </label>
                   <input
-                    type="number" min={0} value={defaultCost}
-                    onChange={(e) => setDefaultCost(Number(e.target.value) || 0)}
+                    type="number"
+                    min={0}
+                    value={defaultCost}
+                    onChange={(e) =>
+                      setDefaultCost(Number(e.target.value) || 0)
+                    }
                     className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
                   />
                 </div>
                 <div className="flex-1 max-w-[240px]">
-                  <label className="block text-xs text-slate-400 mb-1.5">{t('data.ability')}</label>
-                  <Select value={defaultAbility} onChange={(e) => setDefaultAbility(e.target.value as AbilityKey)} className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors">
+                  <label className="block text-xs text-slate-400 mb-1.5">
+                    {t('data.ability')}
+                  </label>
+                  <Select
+                    value={defaultAbility}
+                    onChange={(e) =>
+                      setDefaultAbility(e.target.value as AbilityKey)
+                    }
+                    className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none transition-colors"
+                  >
                     {ABILITY_OPTIONS.map((ability) => (
-                      <option key={ability} value={ability}>{t(`abilities.${ability}`)}</option>
+                      <option key={ability} value={ability}>
+                        {t(`abilities.${ability}`)}
+                      </option>
                     ))}
                   </Select>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">{t('data.autoBalancedStats')}</p>
+              <p className="text-xs text-slate-500">
+                {t('data.autoBalancedStats')}
+              </p>
               {balancePreview && (
                 <div className="px-3 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-mono w-fit">
-                  {t('data.balanceDetails')}: total {balancePreview.total} / +{balancePreview.costBonus} / -{balancePreview.abilityPenalty}
+                  {t('data.balanceDetails')}: total {balancePreview.total} / +
+                  {balancePreview.costBonus} / -{balancePreview.abilityPenalty}
                 </div>
               )}
             </div>
@@ -1622,69 +2207,205 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col gap-5">
           <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex flex-col">
-              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('cards.deck.ranges.title')}</h2>
-              <div className="text-xs text-slate-500 mt-0.5">{t('cards.deck.ranges.enable')}</div>
+              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+                {t('cards.deck.ranges.title')}
+              </h2>
+              <div className="text-xs text-slate-500 mt-0.5">
+                {t('cards.deck.ranges.enable')}
+              </div>
             </div>
-            <Toggle checked={rangesConfig.enabled} onChange={(next) => setRangesConfig((prev) => ({ ...prev, enabled: next }))} />
+            <Toggle
+              checked={rangesConfig.enabled}
+              onChange={(next) =>
+                setRangesConfig((prev) => ({ ...prev, enabled: next }))
+              }
+            />
           </div>
 
           {rangesConfig.enabled && (
             <div className="flex flex-col gap-6">
               <div className="flex flex-wrap gap-6 items-end">
-                <Toggle checked={rangesConfig.lowDuplicate} onChange={(next) => setRangesConfig((prev) => ({ ...prev, lowDuplicate: next }))} label={t('cards.deck.ranges.lowDuplicate')} />
+                <Toggle
+                  checked={rangesConfig.lowDuplicate}
+                  onChange={(next) =>
+                    setRangesConfig((prev) => ({ ...prev, lowDuplicate: next }))
+                  }
+                  label={t('cards.deck.ranges.lowDuplicate')}
+                />
                 <div className="w-32">
-                  <label className="block text-xs text-slate-400 mb-1.5">{t('cards.deck.ranges.duplicateBudget')}</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">
+                    {t('cards.deck.ranges.duplicateBudget')}
+                  </label>
                   <input
-                    type="number" min={0} max={999} value={rangesConfig.duplicateBudget}
-                    onChange={(e) => setRangesConfig((prev) => ({ ...prev, duplicateBudget: clampRangeValue(Number(e.target.value)) }))}
+                    type="number"
+                    min={0}
+                    max={999}
+                    value={rangesConfig.duplicateBudget}
+                    onChange={(e) =>
+                      setRangesConfig((prev) => ({
+                        ...prev,
+                        duplicateBudget: clampRangeValue(
+                          Number(e.target.value),
+                        ),
+                      }))
+                    }
                     className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none"
                   />
                 </div>
                 <div className="w-48">
-                  <label className="block text-xs text-slate-400 mb-1.5">{t('cards.deck.ranges.seed')}</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">
+                    {t('cards.deck.ranges.seed')}
+                  </label>
                   <input
                     value={rangesConfig.seed ?? ''}
-                    onChange={(e) => setRangesConfig((prev) => ({ ...prev, seed: e.target.value }))}
+                    onChange={(e) =>
+                      setRangesConfig((prev) => ({
+                        ...prev,
+                        seed: e.target.value,
+                      }))
+                    }
                     className="w-full bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none"
                   />
                 </div>
               </div>
-              {rangesZeroWarning && <div className="text-rose-400 text-xs">{t('data.zeroRarityWarning')}</div>}
+              {rangesZeroWarning && (
+                <div className="text-rose-400 text-xs">
+                  {t('data.zeroRarityWarning')}
+                </div>
+              )}
 
               {/* Rarity Value Grid (simplified layout for dark mode) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {RARITY_OPTIONS.map((rarity) => {
                   const range = rangesConfig.perRarity[rarity];
                   return (
-                    <div key={rarity} className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-4">
+                    <div
+                      key={rarity}
+                      className="bg-[#12151E] border border-white/5 rounded-xl p-4 flex flex-col gap-4"
+                    >
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-bold text-slate-300">{t(`cards.rarity.${rarity}`)}</div>
-                        <Toggle checked={range.enabled} onChange={(next) => updateRangeToggle(rarity, next)} />
+                        <div className="text-sm font-bold text-slate-300">
+                          {t(`cards.rarity.${rarity}`)}
+                        </div>
+                        <Toggle
+                          checked={range.enabled}
+                          onChange={(next) => updateRangeToggle(rarity, next)}
+                        />
                       </div>
                       {range.enabled && (
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.attack')}</span>
+                            <span className="text-xs text-slate-400 w-16">
+                              {t('cards.deck.ranges.attack')}
+                            </span>
                             <div className="flex items-center gap-2">
-                              <input type="number" min={0} max={999} value={range.attack.min} onChange={(e) => updateRangeValue(rarity, 'attack', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.attack.min}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'attack',
+                                    'min',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                               <span className="text-slate-500">-</span>
-                              <input type="number" min={0} max={999} value={range.attack.max} onChange={(e) => updateRangeValue(rarity, 'attack', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.attack.max}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'attack',
+                                    'max',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.defense')}</span>
+                            <span className="text-xs text-slate-400 w-16">
+                              {t('cards.deck.ranges.defense')}
+                            </span>
                             <div className="flex items-center gap-2">
-                              <input type="number" min={0} max={999} value={range.defense.min} onChange={(e) => updateRangeValue(rarity, 'defense', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.defense.min}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'defense',
+                                    'min',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                               <span className="text-slate-500">-</span>
-                              <input type="number" min={0} max={999} value={range.defense.max} onChange={(e) => updateRangeValue(rarity, 'defense', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.defense.max}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'defense',
+                                    'max',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-slate-400 w-16">{t('cards.deck.ranges.cost')}</span>
+                            <span className="text-xs text-slate-400 w-16">
+                              {t('cards.deck.ranges.cost')}
+                            </span>
                             <div className="flex items-center gap-2">
-                              <input type="number" min={0} max={999} value={range.cost?.min ?? 0} onChange={(e) => updateRangeValue(rarity, 'cost', 'min', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.cost?.min ?? 0}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'cost',
+                                    'min',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                               <span className="text-slate-500">-</span>
-                              <input type="number" min={0} max={999} value={range.cost?.max ?? 0} onChange={(e) => updateRangeValue(rarity, 'cost', 'max', Number(e.target.value))} className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center" />
+                              <input
+                                type="number"
+                                min={0}
+                                max={999}
+                                value={range.cost?.max ?? 0}
+                                onChange={(e) =>
+                                  updateRangeValue(
+                                    rarity,
+                                    'cost',
+                                    'max',
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-16 bg-[#12151E] border border-[#252A3A] text-slate-200 rounded-lg px-2 py-1 text-xs focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 outline-none text-center"
+                              />
                             </div>
                           </div>
                         </div>
@@ -1700,9 +2421,24 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         {/* Generation Review (Inline Card Preview inside modal) */}
         {generatorRow && (
           <section className="bg-[#0D1117] border border-white/5 rounded-2xl p-6 shadow-xl relative flex flex-col items-center gap-5">
-            <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider w-full text-center">{t('cards.deck.previewGenerated')}</h2>
+            <h2 className="border-b border-white/5 pb-4 text-sm font-semibold text-slate-300 uppercase tracking-wider w-full text-center">
+              {t('cards.deck.previewGenerated')}
+            </h2>
             <CardFrame
-              rarity={generatorRarity} art={generatorArt} templateKey={generatorTemplateKey} title={generatorTitle} description={generatorDesc} race={generatorData.race} traits={generatorTraits} element={generatorData.element} attack={generatorAttack} defense={generatorDefense} badgeStyle={generatorBadgeStyle} bgColor={generatorData.bgColor} width={260} height={360}
+              rarity={generatorRarity}
+              art={generatorArt}
+              templateKey={generatorTemplateKey}
+              title={generatorTitle}
+              description={generatorDesc}
+              race={generatorData.race}
+              traits={generatorTraits}
+              element={generatorData.element}
+              attack={generatorAttack}
+              defense={generatorDefense}
+              badgeStyle={generatorBadgeStyle}
+              bgColor={generatorData.bgColor}
+              width={260}
+              height={360}
             />
           </section>
         )}
@@ -1717,14 +2453,17 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
             <span className="text-blue-200/50">({deckSize} Cards)</span>
           </div>
         </button>
-
       </div>
     </main>
   );
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden w-full uiApp">
-      {currentView === 'data' ? renderDataGrid() : currentView === 'generate' ? renderGenerateStudio() : (
+      {currentView === 'data' ? (
+        renderDataGrid()
+      ) : currentView === 'generate' ? (
+        renderGenerateStudio()
+      ) : (
         <AppShell
           header={header}
           left={leftPanel}
@@ -1735,7 +2474,7 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
         />
       )}
       <div
-        className={`drawerOverlay ${(leftDrawerOpen || rightDrawerOpen) ? 'open' : ''}`}
+        className={`drawerOverlay ${leftDrawerOpen || rightDrawerOpen ? 'open' : ''}`}
         onClick={() => {
           setLeftDrawerOpen(false);
           setRightDrawerOpen(false);
@@ -1744,7 +2483,11 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
       <Dialog
         open={confirmDeleteOpen}
         title={t('cards.delete.title')}
-        description={t('cards.delete.desc', { name: pendingRow ? getRowTitle(pendingRow.data ?? {}, language) || pendingRow.id : '' })}
+        description={t('cards.delete.desc', {
+          name: pendingRow
+            ? getRowTitle(pendingRow.data ?? {}, language) || pendingRow.id
+            : '',
+        })}
         confirmText={t('cards.delete.confirm')}
         cancelText={t('cards.delete.cancel')}
         tone="danger"
@@ -1757,13 +2500,20 @@ export function DataTableScreen(props: { project: Project; onChange: (project: P
   );
 }
 
-function ToolSection(props: { title: string; subtitle?: string; defaultOpen?: boolean; children: ReactNode }) {
+function ToolSection(props: {
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
   return (
     <details className="uiCollapse" open={props.defaultOpen}>
       <summary>
         <div>
           <div style={{ fontWeight: 600 }}>{props.title}</div>
-          {props.subtitle ? <div className="uiSub">{props.subtitle}</div> : null}
+          {props.subtitle ? (
+            <div className="uiSub">{props.subtitle}</div>
+          ) : null}
         </div>
       </summary>
       <div className="uiCollapseBody">{props.children}</div>
@@ -1815,7 +2565,9 @@ function setPathValue(data: Record<string, any>, path: string, value: any) {
 
 function findSetIdByName(project: Project, name: string) {
   if (!name) return project.sets[0]?.id;
-  const found = project.sets.find((set) => set.name.toLowerCase() === name.toLowerCase());
+  const found = project.sets.find(
+    (set) => set.name.toLowerCase() === name.toLowerCase(),
+  );
   return found?.id ?? project.sets[0]?.id;
 }
 
@@ -1857,22 +2609,32 @@ function resolveRowArt(row?: DataRow, fallback?: CardArt) {
 }
 
 function normalizeTemplateKey(value: any, fallback: TemplateKey): TemplateKey {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (
+    cleaned &&
+    Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)
+  ) {
     return cleaned as TemplateKey;
   }
   return fallback;
 }
 
 function normalizeRarity(value: any): Rarity {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned as Rarity;
   return 'common';
 }
 
 function normalizeTraits(value: any) {
   if (Array.isArray(value)) {
-    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean);
+    return value
+      .map((trait) => String(trait).toLowerCase().trim())
+      .filter(Boolean);
   }
   const raw = String(value || '').trim();
   if (!raw) return [];
@@ -1891,15 +2653,21 @@ function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   return {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
-    scale: Number.isFinite(value?.scale) ? Math.min(2.5, Math.max(0.6, value!.scale)) : 1,
-    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
+    scale: Number.isFinite(value?.scale)
+      ? Math.min(2.5, Math.max(0.6, value!.scale))
+      : 1,
+    rotate: Number.isFinite(value?.rotate)
+      ? Math.max(-180, Math.min(180, value!.rotate))
+      : 0,
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }
 
 function clampArtTransform(
   value: ArtTransform,
-  artRect: { left: number; right: number; top: number; bottom: number } | undefined,
+  artRect:
+    | { left: number; right: number; top: number; bottom: number }
+    | undefined,
   frameWidth: number,
   frameHeight: number,
 ) {
@@ -1985,7 +2753,12 @@ function collectTemplates(rows: DataRow[]) {
 }
 
 function getRowTitle(data: Record<string, any>, language: 'en' | 'ar') {
-  const name = data.name ?? data.title ?? data.character_name ?? data.character_name_en ?? data.character_name_ar;
+  const name =
+    data.name ??
+    data.title ??
+    data.character_name ??
+    data.character_name_en ??
+    data.character_name_ar;
   if (name && typeof name === 'object' && !Array.isArray(name)) {
     return String(name[language] ?? name.en ?? name.ar ?? '');
   }

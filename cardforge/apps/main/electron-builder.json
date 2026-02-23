@@ -4,14 +4,9 @@
   "directories": {
     "output": "dist"
   },
-  "files": [
-    "dist/**/*",
-    "../renderer/dist/**/*"
-  ],
+  "files": ["dist/**/*", "../renderer/dist/**/*"],
   "asar": true,
   "win": {
-    "target": [
-      "nsis"
-    ]
+    "target": ["nsis"]
   }
 }

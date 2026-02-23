@@ -27,7 +27,10 @@ export function createEmptyProject(name = 'Untitled Project'): Project {
   };
 }
 
-export function createProjectFromBlueprint(template: Blueprint, name = 'Untitled Project'): Project {
+export function createProjectFromBlueprint(
+  template: Blueprint,
+  name = 'Untitled Project',
+): Project {
   const project = createEmptyProject(name);
   project.blueprints = [cloneBlueprint(template)];
   return project;

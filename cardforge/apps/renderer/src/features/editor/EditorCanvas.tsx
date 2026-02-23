@@ -1,7 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Transformer, Line, Group } from 'react-konva';
+import {
+  Stage,
+  Layer,
+  Rect,
+  Text,
+  Image as KonvaImage,
+  Transformer,
+  Line,
+  Group,
+} from 'react-konva';
 import Konva from 'konva';
-import type { Blueprint, ElementModel } from '../../../../../packages/core/src/index';
+import type {
+  Blueprint,
+  ElementModel,
+} from '../../../../../packages/core/src/index';
 import { applyBindingsToElements } from '../../../../../packages/core/src/index';
 import { useHtmlImage } from '../../utils/konva';
 import { getImageLayout } from '../../utils/imageFit';
@@ -19,7 +31,10 @@ type Props = {
   onSelectIds: (ids: string[]) => void;
   onChange: (elements: ElementModel[]) => void;
   onZoomChange: (zoom: number) => void;
-  onDropAsset?: (asset: DroppedAsset, position: { x: number; y: number }) => void;
+  onDropAsset?: (
+    asset: DroppedAsset,
+    position: { x: number; y: number },
+  ) => void;
 };
 
 type GuideLine = {
@@ -46,14 +61,24 @@ export function EditorCanvas(props: Props) {
   const [spaceDown, setSpaceDown] = useState(false);
   const [shiftDown, setShiftDown] = useState(false);
   const [guides, setGuides] = useState<GuideLine[]>([]);
-  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number; visible: boolean }>({
+  const [selectionRect, setSelectionRect] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    visible: boolean;
+  }>({
     x: 0,
     y: 0,
     w: 0,
     h: 0,
     visible: false,
   });
-  const selectionStartRef = useRef<{ x: number; y: number; additive: boolean } | null>(null);
+  const selectionStartRef = useRef<{
+    x: number;
+    y: number;
+    additive: boolean;
+  } | null>(null);
   const selectionJustFinishedRef = useRef(false);
   const dragStartRef = useRef<DragStart | null>(null);
   const draggingIdRef = useRef<string | null>(null);
@@ -93,23 +118,33 @@ export function EditorCanvas(props: Props) {
     if (!tr) return;
     tr.nodes(selectedNodes);
     tr.rotateEnabled(selectedNodes.length === 1);
-    tr.enabledAnchors(selectedNodes.length === 1 ? ['top-left', 'top-right', 'bottom-left', 'bottom-right'] : []);
+    tr.enabledAnchors(
+      selectedNodes.length === 1
+        ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+        : [],
+    );
     tr.getLayer()?.batchDraw();
   }, [selectedNodes]);
 
   const keepRatio = useMemo(() => {
     if (shiftDown) return true;
     if (props.selectedIds.length !== 1) return false;
-    const selected = props.elements.find((el) => el.id === props.selectedIds[0]);
+    const selected = props.elements.find(
+      (el) => el.id === props.selectedIds[0],
+    );
     if (!selected || selected.type !== 'image') return false;
     return Boolean((selected as any).lockRatio);
   }, [shiftDown, props.selectedIds, props.elements]);
 
   const snap = (value: number) =>
-    props.snapToGrid ? Math.round(value / props.gridSize) * props.gridSize : value;
+    props.snapToGrid
+      ? Math.round(value / props.gridSize) * props.gridSize
+      : value;
 
   const updateElement = (id: string, patch: Partial<ElementModel>) => {
-    props.onChange(props.elements.map((el) => (el.id === id ? { ...el, ...patch } : el)));
+    props.onChange(
+      props.elements.map((el) => (el.id === id ? { ...el, ...patch } : el)),
+    );
   };
 
   const handleWheel = (evt: Konva.KonvaEventObject<WheelEvent>) => {
@@ -125,8 +160,11 @@ export function EditorCanvas(props: Props) {
       x: (pointer.x - stagePos.x) / oldScale,
       y: (pointer.y - stagePos.y) / oldScale,
     };
-    const newScale = evt.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-    props.onZoomChange(Math.min(2.5, Math.max(0.3, Number(newScale.toFixed(2)))));
+    const newScale =
+      evt.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+    props.onZoomChange(
+      Math.min(2.5, Math.max(0.3, Number(newScale.toFixed(2)))),
+    );
     const newPos = {
       x: pointer.x - mousePointTo.x * newScale,
       y: pointer.y - mousePointTo.y * newScale,
@@ -180,7 +218,9 @@ export function EditorCanvas(props: Props) {
 
     const selected = props.elements
       .filter((el) => el.visible !== false && !el.locked)
-      .filter((el) => rectsIntersect(rect, { x: el.x, y: el.y, w: el.w, h: el.h }))
+      .filter((el) =>
+        rectsIntersect(rect, { x: el.x, y: el.y, w: el.w, h: el.h }),
+      )
       .map((el) => el.id);
 
     if (additive) {
@@ -199,7 +239,13 @@ export function EditorCanvas(props: Props) {
 
     const stage = stageRef.current;
     if (!stage) return;
-    const lineGuideStops = getLineGuideStops(props.elements, props.blueprint, props.gridSize, skipId, props.snapToGrid);
+    const lineGuideStops = getLineGuideStops(
+      props.elements,
+      props.blueprint,
+      props.gridSize,
+      skipId,
+      props.snapToGrid,
+    );
     const itemBounds = getObjectSnappingEdges(node, stage);
     const nextGuides = getGuides(lineGuideStops, itemBounds);
 
@@ -218,7 +264,12 @@ export function EditorCanvas(props: Props) {
     });
     node.absolutePosition(absPos);
 
-    setGuides(nextGuides.map((g) => ({ orientation: g.orientation, position: g.lineGuide })));
+    setGuides(
+      nextGuides.map((g) => ({
+        orientation: g.orientation,
+        position: g.lineGuide,
+      })),
+    );
   };
 
   const onDragStart = (id: string) => {
@@ -350,7 +401,13 @@ export function EditorCanvas(props: Props) {
         }}
       >
         <Layer listening={false}>
-          {props.showGrid ? renderGrid(props.blueprint.size.w, props.blueprint.size.h, props.gridSize) : null}
+          {props.showGrid
+            ? renderGrid(
+                props.blueprint.size.w,
+                props.blueprint.size.h,
+                props.gridSize,
+              )
+            : null}
         </Layer>
         <Layer listening={false}>
           <Rect
@@ -412,7 +469,11 @@ export function EditorCanvas(props: Props) {
                     text={el.text ?? ''}
                     fontSize={el.fontSize ?? 32}
                     fontFamily={el.fontFamily ?? 'Segoe UI'}
-                    fontStyle={isBold(el.fontWeight) ? 'bold' : el.fontStyle ?? 'normal'}
+                    fontStyle={
+                      isBold(el.fontWeight)
+                        ? 'bold'
+                        : (el.fontStyle ?? 'normal')
+                    }
                     align={el.align ?? 'left'}
                     verticalAlign={el.verticalAlign ?? 'top'}
                     fill={el.fill ?? '#fff'}
@@ -504,9 +565,31 @@ export function EditorCanvas(props: Props) {
         <Layer listening={false}>
           {guides.map((guide) =>
             guide.orientation === 'V' ? (
-              <Line key={`gv-${guide.position}`} points={[guide.position, 0, guide.position, props.blueprint.size.h]} stroke="#38bdf8" strokeWidth={1} dash={[4, 4]} />
+              <Line
+                key={`gv-${guide.position}`}
+                points={[
+                  guide.position,
+                  0,
+                  guide.position,
+                  props.blueprint.size.h,
+                ]}
+                stroke="#38bdf8"
+                strokeWidth={1}
+                dash={[4, 4]}
+              />
             ) : (
-              <Line key={`gh-${guide.position}`} points={[0, guide.position, props.blueprint.size.w, guide.position]} stroke="#38bdf8" strokeWidth={1} dash={[4, 4]} />
+              <Line
+                key={`gh-${guide.position}`}
+                points={[
+                  0,
+                  guide.position,
+                  props.blueprint.size.w,
+                  guide.position,
+                ]}
+                stroke="#38bdf8"
+                strokeWidth={1}
+                dash={[4, 4]}
+              />
             ),
           )}
           {selectionRect.visible ? (
@@ -530,10 +613,28 @@ export function EditorCanvas(props: Props) {
 function renderGrid(w: number, h: number, step: number) {
   const lines: React.ReactNode[] = [];
   for (let x = step; x < w; x += step) {
-    lines.push(<Rect key={`vx-${x}`} x={x} y={0} width={1} height={h} fill="rgba(255,255,255,0.04)" />);
+    lines.push(
+      <Rect
+        key={`vx-${x}`}
+        x={x}
+        y={0}
+        width={1}
+        height={h}
+        fill="rgba(255,255,255,0.04)"
+      />,
+    );
   }
   for (let y = step; y < h; y += step) {
-    lines.push(<Rect key={`hy-${y}`} x={0} y={y} width={w} height={1} fill="rgba(255,255,255,0.04)" />);
+    lines.push(
+      <Rect
+        key={`hy-${y}`}
+        x={0}
+        y={y}
+        width={w}
+        height={1}
+        fill="rgba(255,255,255,0.04)"
+      />,
+    );
   }
   return lines;
 }
@@ -568,12 +669,18 @@ function getObjectSnappingEdges(node: Konva.Node, stage: Konva.Stage) {
   return {
     vertical: [
       { guide: box.x, offset: absPos.x - box.x },
-      { guide: box.x + box.width / 2, offset: absPos.x - box.x - box.width / 2 },
+      {
+        guide: box.x + box.width / 2,
+        offset: absPos.x - box.x - box.width / 2,
+      },
       { guide: box.x + box.width, offset: absPos.x - box.x - box.width },
     ],
     horizontal: [
       { guide: box.y, offset: absPos.y - box.y },
-      { guide: box.y + box.height / 2, offset: absPos.y - box.y - box.height / 2 },
+      {
+        guide: box.y + box.height / 2,
+        offset: absPos.y - box.y - box.height / 2,
+      },
       { guide: box.y + box.height, offset: absPos.y - box.y - box.height },
     ],
   };
@@ -586,7 +693,11 @@ function getGuides(
     horizontal: { guide: number; offset: number }[];
   },
 ) {
-  const guides: { orientation: 'V' | 'H'; lineGuide: number; offset: number }[] = [];
+  const guides: {
+    orientation: 'V' | 'H';
+    lineGuide: number;
+    offset: number;
+  }[] = [];
 
   let minV = SNAP_THRESHOLD + 1;
   lineGuideStops.vertical.forEach((lineGuide) => {
@@ -613,8 +724,13 @@ function getGuides(
   return guides.filter(Boolean);
 }
 
-function rectsIntersect(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
-  return a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y;
+function rectsIntersect(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number },
+) {
+  return (
+    a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y
+  );
 }
 
 function ImageNode(props: {
@@ -673,7 +789,11 @@ function isBold(weight?: number | string) {
   return String(weight).toLowerCase() === 'bold';
 }
 
-function applyTransform(el: ElementModel, node: Konva.Node, snap: (value: number) => number) {
+function applyTransform(
+  el: ElementModel,
+  node: Konva.Node,
+  snap: (value: number) => number,
+) {
   const scaleX = node.scaleX();
   const scaleY = node.scaleY();
   node.scaleX(1);

@@ -43,7 +43,8 @@ const ensureGeminiKey = () => {
 ensureGeminiKey();
 
 const resolvedFfmpegPath = typeof ffmpegPath === 'string' ? ffmpegPath : '';
-const resolvedFfprobePath = (ffprobePath as any)?.path || (ffprobePath as string | undefined);
+const resolvedFfprobePath =
+  (ffprobePath as any)?.path || (ffprobePath as string | undefined);
 if (resolvedFfmpegPath) {
   ffmpeg.setFfmpegPath(resolvedFfmpegPath);
 }
@@ -54,7 +55,10 @@ if (resolvedFfprobePath) {
 // âœ… Fix: force Chromium cache directories to a writable location (userData)
 const userData = app.getPath('userData');
 app.commandLine.appendSwitch('disk-cache-dir', path.join(userData, 'Cache'));
-app.commandLine.appendSwitch('gpu-disk-cache-dir', path.join(userData, 'GPUCache'));
+app.commandLine.appendSwitch(
+  'gpu-disk-cache-dir',
+  path.join(userData, 'GPUCache'),
+);
 // Optional: reduce noisy GPU shader cache warnings (keep GPU on)
 // app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 
@@ -113,7 +117,8 @@ const toNumber = (value: any) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const sanitizeId = (value: string) => value.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+const sanitizeId = (value: string) =>
+  value.replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
 
 const resolveMediaRoot = (projectPath?: string) => {
   if (projectPath) {
@@ -149,8 +154,12 @@ const probeVideo = async (filePath: string): Promise<VideoProbeResult> => {
     });
     const format = metadata?.format ?? {};
     const streams = metadata?.streams ?? [];
-    const videoStream = streams.find((stream: any) => stream.codec_type === 'video');
-    const audioStream = streams.find((stream: any) => stream.codec_type === 'audio');
+    const videoStream = streams.find(
+      (stream: any) => stream.codec_type === 'video',
+    );
+    const audioStream = streams.find(
+      (stream: any) => stream.codec_type === 'audio',
+    );
     return {
       ok: true,
       container: String(format.format_name || '').split(',')[0] || undefined,
@@ -178,7 +187,9 @@ type GeminiPayload = {
 ipcMain.handle('dialog:openFile', async () => {
   return dialog.showOpenDialog({
     title: 'Open CardSmith Project',
-    filters: [{ name: 'CardSmith Project (.cardsmith.json)', extensions: ['json'] }],
+    filters: [
+      { name: 'CardSmith Project (.cardsmith.json)', extensions: ['json'] },
+    ],
     properties: ['openFile'],
   });
 });
@@ -187,7 +198,9 @@ ipcMain.handle('dialog:saveFile', async () => {
   return dialog.showSaveDialog({
     title: 'Save CardSmith Project',
     defaultPath: 'project.cardsmith.json',
-    filters: [{ name: 'CardSmith Project (.cardsmith.json)', extensions: ['json'] }],
+    filters: [
+      { name: 'CardSmith Project (.cardsmith.json)', extensions: ['json'] },
+    ],
   });
 });
 
@@ -218,16 +231,23 @@ ipcMain.handle('dialog:openImageFiles', async () => {
   });
 });
 
-ipcMain.handle('fs:readFile', async (_evt, { filePath }: { filePath: string }) => {
-  const text = await fs.readFile(filePath, 'utf-8');
-  return { ok: true, text };
-});
+ipcMain.handle(
+  'fs:readFile',
+  async (_evt, { filePath }: { filePath: string }) => {
+    const text = await fs.readFile(filePath, 'utf-8');
+    return { ok: true, text };
+  },
+);
 
 ipcMain.handle(
   'fs:writeFile',
   async (
     _evt,
-    { filePath, text, data }: { filePath: string; text?: string; data?: ArrayBuffer },
+    {
+      filePath,
+      text,
+      data,
+    }: { filePath: string; text?: string; data?: ArrayBuffer },
   ) => {
     if (typeof text === 'string') {
       await fs.writeFile(filePath, text, 'utf-8');
@@ -242,20 +262,26 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle('fs:exists', async (_evt, { filePath }: { filePath: string }) => {
-  try {
-    await fs.access(filePath, fsConstants.F_OK);
-    return { ok: true, exists: true };
-  } catch {
-    return { ok: true, exists: false };
-  }
-});
+ipcMain.handle(
+  'fs:exists',
+  async (_evt, { filePath }: { filePath: string }) => {
+    try {
+      await fs.access(filePath, fsConstants.F_OK);
+      return { ok: true, exists: true };
+    } catch {
+      return { ok: true, exists: false };
+    }
+  },
+);
 
 ipcMain.handle(
   'fs:copyFile',
   async (
     _evt,
-    { sourcePath, destinationPath }: { sourcePath: string; destinationPath: string },
+    {
+      sourcePath,
+      destinationPath,
+    }: { sourcePath: string; destinationPath: string },
   ) => {
     try {
       await fs.mkdir(path.dirname(destinationPath), { recursive: true });
@@ -303,7 +329,9 @@ ipcMain.handle('gemini:generate', async (_evt, payload: GeminiPayload) => {
     }
 
     const text =
-      data?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text ?? '').join('') ?? '';
+      data?.candidates?.[0]?.content?.parts
+        ?.map((part: any) => part?.text ?? '')
+        .join('') ?? '';
     if (!text) {
       return { ok: false, error: 'EMPTY_RESPONSE' };
     }
@@ -313,9 +341,12 @@ ipcMain.handle('gemini:generate', async (_evt, payload: GeminiPayload) => {
   }
 });
 
-ipcMain.handle('video:probe', async (_evt, { filePath }: { filePath: string }) => {
-  return probeVideo(filePath);
-});
+ipcMain.handle(
+  'video:probe',
+  async (_evt, { filePath }: { filePath: string }) => {
+    return probeVideo(filePath);
+  },
+);
 
 ipcMain.handle(
   'video:transcode',
@@ -348,45 +379,50 @@ ipcMain.handle(
         const stat = await fs.stat(videoPath);
         return { ok: true, outPath: videoPath, stats: { size: stat.size } };
       }
-      return await new Promise<{ ok: true; outPath: string; stats?: { size?: number } } | { ok: false; error?: string }>(
-        (resolve) => {
-          const command = ffmpeg(filePath)
-            .outputOptions([
-              '-y',
-              '-movflags +faststart',
-              '-pix_fmt yuv420p',
-              '-preset veryfast',
-              '-crf 30',
-              "-vf scale='if(gte(iw,ih),min(iw,720),-2)':'if(gte(iw,ih),-2,min(ih,720))'",
-            ])
-            .videoCodec('libx264')
-            .format('mp4');
+      return await new Promise<
+        | { ok: true; outPath: string; stats?: { size?: number } }
+        | { ok: false; error?: string }
+      >((resolve) => {
+        const command = ffmpeg(filePath)
+          .outputOptions([
+            '-y',
+            '-movflags +faststart',
+            '-pix_fmt yuv420p',
+            '-preset veryfast',
+            '-crf 30',
+            "-vf scale='if(gte(iw,ih),min(iw,720),-2)':'if(gte(iw,ih),-2,min(ih,720))'",
+          ])
+          .videoCodec('libx264')
+          .format('mp4');
 
-          if (keepAudio) {
-            command.audioCodec('aac').audioBitrate('96k');
-          } else {
-            command.noAudio();
-          }
+        if (keepAudio) {
+          command.audioCodec('aac').audioBitrate('96k');
+        } else {
+          command.noAudio();
+        }
 
-          command
-            .on('progress', (progress: any) => {
-              event.sender.send('video:transcode:progress', {
-                requestId,
-                pct: progress?.percent ?? 0,
-                fps: progress?.currentFps ?? 0,
-                time: progress?.timemark ?? '',
-              });
-            })
-            .on('end', async () => {
-              const stat = await fs.stat(videoPath);
-              resolve({ ok: true, outPath: videoPath, stats: { size: stat.size } });
-            })
-            .on('error', (error: any) => {
-              resolve({ ok: false, error: error?.message ?? 'TRANSCODE_FAILED' });
-            })
-            .save(videoPath);
-        },
-      );
+        command
+          .on('progress', (progress: any) => {
+            event.sender.send('video:transcode:progress', {
+              requestId,
+              pct: progress?.percent ?? 0,
+              fps: progress?.currentFps ?? 0,
+              time: progress?.timemark ?? '',
+            });
+          })
+          .on('end', async () => {
+            const stat = await fs.stat(videoPath);
+            resolve({
+              ok: true,
+              outPath: videoPath,
+              stats: { size: stat.size },
+            });
+          })
+          .on('error', (error: any) => {
+            resolve({ ok: false, error: error?.message ?? 'TRANSCODE_FAILED' });
+          })
+          .save(videoPath);
+      });
     } catch (error: any) {
       return { ok: false, error: error?.message ?? 'TRANSCODE_FAILED' };
     }
@@ -403,23 +439,36 @@ ipcMain.handle(
       assetId,
       timeSec,
       size,
-    }: { filePath: string; projectPath?: string; assetId?: string; timeSec?: number; size?: number },
+    }: {
+      filePath: string;
+      projectPath?: string;
+      assetId?: string;
+      timeSec?: number;
+      size?: number;
+    },
   ) => {
     if (!resolvedFfmpegPath || !resolvedFfprobePath) {
       return { ok: false, error: 'FFMPEG_UNAVAILABLE' };
     }
     try {
-      const { postersDir, posterPath } = resolveMediaPaths(projectPath, assetId);
+      const { postersDir, posterPath } = resolveMediaPaths(
+        projectPath,
+        assetId,
+      );
       await fs.mkdir(postersDir, { recursive: true });
       const probe = await probeVideo(filePath);
-      const duration = probe.ok ? probe.duration ?? 0 : 0;
+      const duration = probe.ok ? (probe.duration ?? 0) : 0;
       const targetTime =
         typeof timeSec === 'number'
           ? timeSec
           : duration
-            ? Math.min(Math.max(duration * 0.2, 0.2), Math.max(duration - 0.1, 0.2))
+            ? Math.min(
+                Math.max(duration * 0.2, 0.2),
+                Math.max(duration - 0.1, 0.2),
+              )
             : 1;
-      const targetSize = typeof size === 'number' && size > 0 ? Math.floor(size) : 720;
+      const targetSize =
+        typeof size === 'number' && size > 0 ? Math.floor(size) : 720;
       await new Promise<void>((resolve, reject) => {
         ffmpeg(filePath)
           .seekInput(targetTime)

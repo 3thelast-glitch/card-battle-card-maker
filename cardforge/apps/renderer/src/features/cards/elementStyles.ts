@@ -11,9 +11,11 @@ export interface GradientConfig {
 export function getElementGradient(
   element: string,
   width: number,
-  height: number
+  height: number,
 ): GradientConfig {
-  const normalized = String(element || '').toLowerCase().trim();
+  const normalized = String(element || '')
+    .toLowerCase()
+    .trim();
   let startColor = '#9E9E9E'; // Default Grey
   let endColor = '#616161';
 

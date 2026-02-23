@@ -1,14 +1,41 @@
-import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { RARITY_COLORS, Rarity } from '../../shared/cardRarityColors';
-import type { ArtTransform, CardArt, CardRace, CardTrait, ElementKey } from '../../../../../packages/core/src/index';
+import type {
+  ArtTransform,
+  CardArt,
+  CardRace,
+  CardTrait,
+  ElementKey,
+} from '../../../../../packages/core/src/index';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
 import { RaceIcon } from '../../ui/icons/raceIcons';
 import { TraitIcon, TRAIT_META } from '../../ui/icons/traitIcons';
 import { ELEMENTS, getMatchup } from '../../lib/elements';
-import { 
-  Shield, Zap, Star, Heart, Sword, Flame, Moon, Droplets, Diamond, Mic, 
-  Skull, Ghost, Anchor, Sun, Crown, ArrowRight, Circle
+import {
+  Shield,
+  Zap,
+  Star,
+  Heart,
+  Sword,
+  Flame,
+  Moon,
+  Droplets,
+  Diamond,
+  Mic,
+  Skull,
+  Ghost,
+  Anchor,
+  Sun,
+  Crown,
+  ArrowRight,
+  Circle,
 } from 'lucide-react';
 
 type Props = {
@@ -36,7 +63,10 @@ type Props = {
   onArtPointerLeave?: (event: PointerEvent<HTMLDivElement>) => void;
 };
 
-const FRAME_SRC = new URL('../../assets/images/card-frames/frame_base.png', import.meta.url).href;
+const FRAME_SRC = new URL(
+  '../../assets/images/card-frames/frame_base.png',
+  import.meta.url,
+).href;
 
 type Spark = { left: number; bottom: number; delay: number };
 
@@ -71,7 +101,7 @@ type BadgeStyle = {
   iconUrl?: string;
   iconId?: string;
   text?: string;
-  
+
   // Layout
   x?: number; // %
   y?: number; // %
@@ -98,7 +128,12 @@ type BadgeStyleConfig = {
 function hexToRgb(hex: string) {
   const cleaned = hex.replace('#', '');
   const normalized =
-    cleaned.length === 3 ? cleaned.split('').map((char) => `${char}${char}`).join('') : cleaned;
+    cleaned.length === 3
+      ? cleaned
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : cleaned;
   const value = Number.parseInt(normalized, 16);
   return {
     r: (value >> 16) & 255,
@@ -168,11 +203,16 @@ export function CardFrame({
   const trimmedTraits = traitList.map((trait) => String(trait));
   const maxVisibleTraits = 6;
   const visibleTraits = trimmedTraits.slice(0, maxVisibleTraits);
-  const extraTraitCount = Math.max(0, trimmedTraits.length - visibleTraits.length);
+  const extraTraitCount = Math.max(
+    0,
+    trimmedTraits.length - visibleTraits.length,
+  );
   const raceKey = race ? String(race).toLowerCase() : '';
   const elementKey = element ? String(element).toLowerCase() : '';
   const elementInfo = elementKey && ELEMENTS[elementKey as ElementKey];
-  const matchup = elementInfo ? getMatchup(elementKey as ElementKey) : { weakTo: [], strongAgainst: [], resist: [] };
+  const matchup = elementInfo
+    ? getMatchup(elementKey as ElementKey)
+    : { weakTo: [], strongAgainst: [], resist: [] };
   const weakKey = matchup.weakTo[0];
   const strongKey = matchup.strongAgainst[0];
   const weakInfo = weakKey ? ELEMENTS[weakKey] : undefined;
@@ -280,7 +320,10 @@ export function CardFrame({
   };
 
   return (
-    <div className={`card-frame card-frame--${rarity} card-frame--${template.key}`} style={frameVars}>
+    <div
+      className={`card-frame card-frame--${rarity} card-frame--${template.key}`}
+      style={frameVars}
+    >
       <div className="card-frame__bg" />
       <div
         className={artMaskClass}
@@ -340,7 +383,10 @@ export function CardFrame({
           </div>
         ) : null}
         {badge ? (
-          <div className="card-frame__badge" style={{ left: badgePos.x, top: badgePos.y }}>
+          <div
+            className="card-frame__badge"
+            style={{ left: badgePos.x, top: badgePos.y }}
+          >
             {badge}
           </div>
         ) : null}
@@ -375,7 +421,10 @@ export function CardFrame({
               );
             })}
             {extraTraitCount > 0 ? (
-              <span className="traitBadge traitBadge--more" title={t('cards.meta.traits')}>
+              <span
+                className="traitBadge traitBadge--more"
+                title={t('cards.meta.traits')}
+              >
                 +{extraTraitCount}
               </span>
             ) : null}
@@ -387,19 +436,31 @@ export function CardFrame({
           </div>
         ) : null}
         {elementInfo ? (
-          <div className="elementBadge" aria-label={t(elementInfo.labelKey)} style={elementCss.container}>
+          <div
+            className="elementBadge"
+            aria-label={t(elementInfo.labelKey)}
+            style={elementCss.container}
+          >
             <div
               className="elementHex"
               style={{
                 ...elementCss.style,
                 borderColor: elementBadge.borderColor || elementColor, // Fallback to element color if no border color
-                backgroundColor: elementBadge.color ? hexToRgba(elementBadge.color, 0.8) : undefined,
-                boxShadow: elementColor ? `0 0 12px ${toGlowColor(elementColor, 0.35)}` : undefined,
+                backgroundColor: elementBadge.color
+                  ? hexToRgba(elementBadge.color, 0.8)
+                  : undefined,
+                boxShadow: elementColor
+                  ? `0 0 12px ${toGlowColor(elementColor, 0.35)}`
+                  : undefined,
               }}
               title={t(elementInfo.labelKey)}
             >
               {elementBadge.iconUrl ? (
-                <img src={elementBadge.iconUrl} alt="" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+                <img
+                  src={elementBadge.iconUrl}
+                  alt=""
+                  style={{ width: 18, height: 18, objectFit: 'contain' }}
+                />
               ) : elementBadge.iconId && BADGE_ICONS[elementBadge.iconId] ? (
                 <BadgeIcon iconId={elementBadge.iconId} />
               ) : (
@@ -408,13 +469,19 @@ export function CardFrame({
             </div>
             <div className="elementMiniRow">
               {weakInfo ? (
-                <div className="elementMini elementMini--weak" title={t('elements.weakTo')}>
+                <div
+                  className="elementMini elementMini--weak"
+                  title={t('elements.weakTo')}
+                >
                   <span className="elementMiniArrow">v</span>
                   <span>{weakInfo.icon}</span>
                 </div>
               ) : null}
               {strongInfo ? (
-                <div className="elementMini elementMini--strong" title={t('elements.strongAgainst')}>
+                <div
+                  className="elementMini elementMini--strong"
+                  title={t('elements.strongAgainst')}
+                >
                   <span className="elementMiniArrow">^</span>
                   <span>{strongInfo.icon}</span>
                 </div>
@@ -423,10 +490,18 @@ export function CardFrame({
           </div>
         ) : null}
         {attackValue != null ? (
-          <div className="statBadge statBadge--atk" style={attackStyle} title={t('stats.atk', { defaultValue: 'ATK' })}>
+          <div
+            className="statBadge statBadge--atk"
+            style={attackStyle}
+            title={t('stats.atk', { defaultValue: 'ATK' })}
+          >
             <span className="statIcon" aria-hidden="true">
               {attackBadge.iconUrl ? (
-                <img src={attackBadge.iconUrl} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                <img
+                  src={attackBadge.iconUrl}
+                  alt=""
+                  style={{ width: 16, height: 16, objectFit: 'contain' }}
+                />
               ) : attackBadge.iconId && BADGE_ICONS[attackBadge.iconId] ? (
                 <BadgeIcon iconId={attackBadge.iconId} />
               ) : (
@@ -434,14 +509,24 @@ export function CardFrame({
               )}
             </span>
             <div className="statValue">{attackValue}</div>
-            <div className="statLabel">{attackBadge.text || t('stats.atk', { defaultValue: 'ATK' })}</div>
+            <div className="statLabel">
+              {attackBadge.text || t('stats.atk', { defaultValue: 'ATK' })}
+            </div>
           </div>
         ) : null}
         {defenseValue != null ? (
-          <div className="statBadge statBadge--def" style={defenseStyle} title={t('stats.def', { defaultValue: 'DEF' })}>
+          <div
+            className="statBadge statBadge--def"
+            style={defenseStyle}
+            title={t('stats.def', { defaultValue: 'DEF' })}
+          >
             <span className="statIcon" aria-hidden="true">
               {defenseBadge.iconUrl ? (
-                <img src={defenseBadge.iconUrl} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                <img
+                  src={defenseBadge.iconUrl}
+                  alt=""
+                  style={{ width: 16, height: 16, objectFit: 'contain' }}
+                />
               ) : defenseBadge.iconId && BADGE_ICONS[defenseBadge.iconId] ? (
                 <BadgeIcon iconId={defenseBadge.iconId} />
               ) : (
@@ -449,7 +534,9 @@ export function CardFrame({
               )}
             </span>
             <div className="statValue">{defenseValue}</div>
-            <div className="statLabel">{defenseBadge.text || t('stats.def', { defaultValue: 'DEF' })}</div>
+            <div className="statLabel">
+              {defenseBadge.text || t('stats.def', { defaultValue: 'DEF' })}
+            </div>
           </div>
         ) : null}
         {posterWarning && art?.kind === 'video' && !art.poster ? (
@@ -463,7 +550,11 @@ export function CardFrame({
             <div
               key={index}
               className="card-frame__spark"
-              style={{ left: spark.left, bottom: spark.bottom, animationDelay: `${spark.delay}ms` }}
+              style={{
+                left: spark.left,
+                bottom: spark.bottom,
+                animationDelay: `${spark.delay}ms`,
+              }}
             />
           ))
         : null}
@@ -486,8 +577,12 @@ function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   return {
     x: Number.isFinite(value?.x) ? value!.x : 0,
     y: Number.isFinite(value?.y) ? value!.y : 0,
-    scale: Number.isFinite(value?.scale) ? Math.min(3, Math.max(0.5, value!.scale)) : 1,
-    rotate: Number.isFinite(value?.rotate) ? Math.max(-180, Math.min(180, value!.rotate)) : 0,
+    scale: Number.isFinite(value?.scale)
+      ? Math.min(3, Math.max(0.5, value!.scale))
+      : 1,
+    rotate: Number.isFinite(value?.rotate)
+      ? Math.max(-180, Math.min(180, value!.rotate))
+      : 0,
     fit: value?.fit === 'contain' ? 'contain' : 'cover',
   };
 }
@@ -503,14 +598,16 @@ function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
   const iconUrl = String(style?.iconUrl ?? '').trim();
   const iconId = String(style?.iconId ?? '').trim();
   const text = String(style?.text ?? '').trim();
-  
+
   const x = style?.x;
   const y = style?.y;
   const xOffset = Number(style?.xOffset ?? 0);
   const yOffset = Number(style?.yOffset ?? 0);
   const gap = Number.isFinite(style?.gap) ? Number(style?.gap) : 4;
-  
-  const borderWidth = Number.isFinite(style?.borderWidth) ? Number(style?.borderWidth) : 0;
+
+  const borderWidth = Number.isFinite(style?.borderWidth)
+    ? Number(style?.borderWidth)
+    : 0;
   const borderColor = String(style?.borderColor ?? '').trim();
   const borderStyle = (style?.borderStyle ?? 'solid') as any;
   const borderRadius = Number(style?.borderRadius ?? 0);
@@ -518,45 +615,79 @@ function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
   const glow = Number(style?.glow ?? 0);
 
   return {
-    visible, scale, rotation, opacity,
-    color, color2, gradient,
-    iconUrl, iconId, text,
-    x, y, xOffset, yOffset, gap,
-    borderWidth, borderColor, borderStyle, borderRadius,
-    shadow, glow
+    visible,
+    scale,
+    rotation,
+    opacity,
+    color,
+    color2,
+    gradient,
+    iconUrl,
+    iconId,
+    text,
+    x,
+    y,
+    xOffset,
+    yOffset,
+    gap,
+    borderWidth,
+    borderColor,
+    borderStyle,
+    borderRadius,
+    shadow,
+    glow,
   };
 }
 
 function getBadgeCss(style: Required<BadgeStyle>) {
-  const { 
-    visible, scale, rotation, opacity, 
-    color, color2, gradient, 
-    x, y, xOffset, yOffset,
-    borderWidth, borderColor, borderStyle, borderRadius,
-    shadow, glow
+  const {
+    visible,
+    scale,
+    rotation,
+    opacity,
+    color,
+    color2,
+    gradient,
+    x,
+    y,
+    xOffset,
+    yOffset,
+    borderWidth,
+    borderColor,
+    borderStyle,
+    borderRadius,
+    shadow,
+    glow,
   } = style;
 
-  const bg = gradient && color && color2 
-    ? `linear-gradient(135deg, ${color}, ${color2})` 
-    : color || undefined;
+  const bg =
+    gradient && color && color2
+      ? `linear-gradient(135deg, ${color}, ${color2})`
+      : color || undefined;
 
-  const boxShadow = shadow === 'neon' && color 
-    ? `0 0 5px ${color}, 0 0 10px ${color}`
-    : shadow === 'strong' ? '0 4px 8px rgba(0,0,0,0.5)'
-    : shadow === 'soft' ? '0 2px 4px rgba(0,0,0,0.2)'
-    : undefined;
+  const boxShadow =
+    shadow === 'neon' && color
+      ? `0 0 5px ${color}, 0 0 10px ${color}`
+      : shadow === 'strong'
+        ? '0 4px 8px rgba(0,0,0,0.5)'
+        : shadow === 'soft'
+          ? '0 2px 4px rgba(0,0,0,0.2)'
+          : undefined;
 
   const transform = `translate(${xOffset}px, ${yOffset}px) scale(${scale}) rotate(${rotation}deg)`;
-  
+
   // If x/y percentages are provided, we use absolute positioning
-  const positionStyles: CSSProperties = (x !== undefined && y !== undefined) ? {
-    position: 'absolute',
-    left: `${x}%`,
-    top: `${y}%`,
-    transform: `translate(-50%, -50%) ${transform}`, // Center anchor + transform
-  } : {
-    transform,
-  };
+  const positionStyles: CSSProperties =
+    x !== undefined && y !== undefined
+      ? {
+          position: 'absolute',
+          left: `${x}%`,
+          top: `${y}%`,
+          transform: `translate(-50%, -50%) ${transform}`, // Center anchor + transform
+        }
+      : {
+          transform,
+        };
 
   return {
     container: {
@@ -571,8 +702,10 @@ function getBadgeCss(style: Required<BadgeStyle>) {
       borderStyle: borderWidth ? borderStyle : undefined,
       borderRadius: borderRadius ? `${borderRadius}px` : undefined,
       boxShadow,
-      filter: glow ? `drop-shadow(0 0 ${glow}px ${color || '#fff'})` : undefined,
-    }
+      filter: glow
+        ? `drop-shadow(0 0 ${glow}px ${color || '#fff'})`
+        : undefined,
+    },
   };
 }
 
@@ -591,13 +724,19 @@ function buildStatStyle(
   explicitColor?: string,
 ): CSSProperties {
   const safeColor = color || '#ffffff';
-  const borderColor = isHexColor(safeColor) ? hexToRgba(safeColor, 0.55) : safeColor;
+  const borderColor = isHexColor(safeColor)
+    ? hexToRgba(safeColor, 0.55)
+    : safeColor;
   const glow = isHexColor(safeColor)
     ? hexToRgba(safeColor, isLegendary ? 0.5 : isEpic ? 0.4 : 0.3)
     : safeColor;
   const backgroundColor = explicitColor
-    ? (isHexColor(explicitColor) ? hexToRgba(explicitColor, 0.8) : explicitColor)
-    : (isHexColor(safeColor) ? hexToRgba(safeColor, 0.12) : undefined);
+    ? isHexColor(explicitColor)
+      ? hexToRgba(explicitColor, 0.8)
+      : explicitColor
+    : isHexColor(safeColor)
+      ? hexToRgba(safeColor, 0.12)
+      : undefined;
 
   return {
     borderColor,
@@ -625,14 +764,32 @@ function clampNumber(value: number, min: number, max: number) {
 function StatIcon({ kind }: { kind: 'atk' | 'def' }) {
   if (kind === 'def') {
     return (
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        width="14"
+        height="14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
         <path d="M9 12l2 2 4-4" />
       </svg>
     );
   }
   return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M14.5 4.5l5 5-9.5 9.5H5v-5l9.5-9.5z" />
       <path d="M12 7l5 5" />
       <path d="M4 20h6" />

@@ -26,14 +26,22 @@ type SimOptions = {
 };
 
 function score(card: Card, options?: SimOptions) {
-  const bonus = options?.target && matchesTarget(card, options.target) ? options.bonus : undefined;
+  const bonus =
+    options?.target && matchesTarget(card, options.target)
+      ? options.bonus
+      : undefined;
   const attack = card.attack + (bonus?.attack ?? 0);
   const defense = card.defense + (bonus?.defense ?? 0);
   // Simple scoring: attack has more weight, defense as stability
   return attack * 1.2 + defense * 1.0;
 }
 
-export function simulate(runs: number, p1: Card[], p2: Card[], options?: SimOptions): SimResult {
+export function simulate(
+  runs: number,
+  p1: Card[],
+  p2: Card[],
+  options?: SimOptions,
+): SimResult {
   let p1Wins = 0;
   let p2Wins = 0;
   let draws = 0;

@@ -12,7 +12,10 @@ function applyLanguage(lang: string) {
   document.body.dataset.lang = lang;
 }
 
-const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
+const saved =
+  typeof window !== 'undefined'
+    ? window.localStorage.getItem(STORAGE_KEY)
+    : null;
 const initialLang = saved || 'en';
 
 i18n.use(initReactI18next).init({

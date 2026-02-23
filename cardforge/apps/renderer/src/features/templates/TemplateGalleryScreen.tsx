@@ -65,39 +65,61 @@ export function TemplateGalleryScreen(props: {
             </div>
             <div>
               <div className="hint">{t('templates.categoryLabel')}</div>
-              <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+              <Select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
                 <option value="all">{t('templates.allCategories')}</option>
                 {categories.map((cat) => (
-                  <option key={cat} value={cat}>{getCategoryLabel(t, cat)}</option>
+                  <option key={cat} value={cat}>
+                    {getCategoryLabel(t, cat)}
+                  </option>
                 ))}
               </Select>
             </div>
             <div>
               <div className="hint">{t('templates.projectNameLabel')}</div>
-              <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+              <Input
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
             </div>
           </div>
 
-          <div className="template-count">{t('templates.templateCount', { count: filtered.length })}</div>
+          <div className="template-count">
+            {t('templates.templateCount', { count: filtered.length })}
+          </div>
 
           {filtered.length === 0 ? (
             <div className="empty">{t('templates.noTemplates')}</div>
           ) : (
             <div className="template-grid">
               {filtered.map((tpl) => {
-                const thumb = tpl.thumbnail ?? '/assets/backgrounds/template-placeholder.svg';
-                const nameText = resolveLocalized(tpl.name, i18n.language) || t('templates.descriptionFallback');
-                const descText = resolveLocalized(tpl.description, i18n.language) || t('templates.descriptionFallback');
+                const thumb =
+                  tpl.thumbnail ??
+                  '/assets/backgrounds/template-placeholder.svg';
+                const nameText =
+                  resolveLocalized(tpl.name, i18n.language) ||
+                  t('templates.descriptionFallback');
+                const descText =
+                  resolveLocalized(tpl.description, i18n.language) ||
+                  t('templates.descriptionFallback');
                 return (
                   <div key={tpl.id} className="template-card">
-                    <div className="template-thumb" style={{ backgroundImage: `url(${thumb})` }} />
+                    <div
+                      className="template-thumb"
+                      style={{ backgroundImage: `url(${thumb})` }}
+                    />
                     <div className="template-meta">
                       <div className="template-name">{nameText}</div>
                       <div className="hint">{descText}</div>
                       <Badge>{getCategoryLabel(t, tpl.category)}</Badge>
                     </div>
                     <div className="template-actions">
-                      <Button size="sm" onClick={() => createFromTemplate(tpl.id)}>
+                      <Button
+                        size="sm"
+                        onClick={() => createFromTemplate(tpl.id)}
+                      >
                         {t('templates.createFromTemplate')}
                       </Button>
                     </div>

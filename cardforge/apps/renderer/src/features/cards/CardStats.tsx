@@ -13,17 +13,24 @@ const StatOrb: React.FC<StatOrbProps> = ({ label, value, x, isAttack }) => {
     <Group x={x}>
       {/* الظل الخارجي لإعطاء عمق */}
       <Circle radius={32} fill="rgba(0,0,0,0.7)" shadowBlur={15} />
-      
+
       {/* الإطار الذهبي الاحترافي */}
       <Circle
         radius={28}
         strokeLinearGradientStartPoint={{ x: -20, y: -20 }}
         strokeLinearGradientEndPoint={{ x: 20, y: 20 }}
-        strokeLinearGradientColorStops={[0, '#BF953F', 0.5, '#FCF6BA', 1, '#B38728']}
+        strokeLinearGradientColorStops={[
+          0,
+          '#BF953F',
+          0.5,
+          '#FCF6BA',
+          1,
+          '#B38728',
+        ]}
         strokeWidth={3}
         fill="#1a1a1a"
       />
-      
+
       {/* القيمة الرقمية للهجوم أو الدفاع */}
       <Text
         text={value.toString()}
@@ -41,23 +48,27 @@ const StatOrb: React.FC<StatOrbProps> = ({ label, value, x, isAttack }) => {
       />
 
       {/* نص التسمية أسفل الرمز */}
-      <Text 
-        text={label} 
-        y={38} 
-        x={-30} 
-        width={60} 
-        align="center" 
-        fill="#FFD700" 
-        fontSize={13} 
-        fontStyle="bold" 
+      <Text
+        text={label}
+        y={38}
+        x={-30}
+        width={60}
+        align="center"
+        fill="#FFD700"
+        fontSize={13}
+        fontStyle="bold"
       />
     </Group>
   );
 };
 
-export const CardStats: React.FC<{ attack: number, hp: number, width: number }> = ({ attack, hp, width }) => (
+export const CardStats: React.FC<{
+  attack: number;
+  hp: number;
+  width: number;
+}> = ({ attack, hp, width }) => (
   <Group>
-     <StatOrb label="هجوم" value={attack} x={75} isAttack={true} />
-     <StatOrb label="دفاع" value={hp} x={width - 75} isAttack={false} />
+    <StatOrb label="هجوم" value={attack} x={75} isAttack={true} />
+    <StatOrb label="دفاع" value={hp} x={width - 75} isAttack={false} />
   </Group>
 );

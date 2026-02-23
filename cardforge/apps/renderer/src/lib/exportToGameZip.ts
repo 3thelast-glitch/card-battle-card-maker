@@ -7,11 +7,19 @@ function dataUrlToBytes(dataUrl: string) {
   for (let i = 0; i < bin.length; i += 1) {
     u8[i] = bin.charCodeAt(i);
   }
-  const ext = meta.includes('image/png') ? 'png' : meta.includes('image/jpeg') ? 'jpg' : 'bin';
+  const ext = meta.includes('image/png')
+    ? 'png'
+    : meta.includes('image/jpeg')
+      ? 'jpg'
+      : 'bin';
   return { u8, ext };
 }
 
-function normalizeLocalized(value: any, fallbackEn?: string, fallbackAr?: string) {
+function normalizeLocalized(
+  value: any,
+  fallbackEn?: string,
+  fallbackAr?: string,
+) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return {
       en: String(value.en ?? fallbackEn ?? ''),
@@ -44,9 +52,13 @@ export async function exportToGameZip(opts: {
 
   // Build runtime cards.json (minimal)
   const runtimeCards = (opts.cards ?? []).map((card) => {
-    const data = (card && card.data) ? card.data : card ?? {};
+    const data = card && card.data ? card.data : (card ?? {});
     const art = card?.art ?? data.art;
-    const name = normalizeLocalized(data.name, data.character_name_en ?? card?.character_name_en, data.character_name_ar ?? card?.character_name_ar);
+    const name = normalizeLocalized(
+      data.name,
+      data.character_name_en ?? card?.character_name_en,
+      data.character_name_ar ?? card?.character_name_ar,
+    );
     const ability = normalizeLocalized(
       data.desc ?? data.ability,
       data.ability_en ?? card?.ability_en,
@@ -58,19 +70,23 @@ export async function exportToGameZip(opts: {
       rarity: data.rarity ?? card?.rarity,
       template: resolveTemplate(data),
       bgColor: data.bgColor ?? card?.bgColor,
-      attack: normalizeNumber(data.attack ?? data.stats?.attack ?? card?.attack),
-      defense: normalizeNumber(data.defense ?? data.stats?.defense ?? card?.defense),
+      attack: normalizeNumber(
+        data.attack ?? data.stats?.attack ?? card?.attack,
+      ),
+      defense: normalizeNumber(
+        data.defense ?? data.stats?.defense ?? card?.defense,
+      ),
       cost: data.cost ?? card?.cost,
       name,
       ability,
       art: art
         ? {
-          kind: art.kind,
-          src: art.kind === 'video' ? (art.poster || art.src) : art.src,
-          videoSrc: art.kind === 'video' ? art.src : undefined,
-          poster: art.kind === 'video' ? art.poster : undefined,
-          transform: art.transform,
-        }
+            kind: art.kind,
+            src: art.kind === 'video' ? art.poster || art.src : art.src,
+            videoSrc: art.kind === 'video' ? art.src : undefined,
+            poster: art.kind === 'video' ? art.poster : undefined,
+            transform: art.transform,
+          }
         : undefined,
       tags: data.tags ?? card?.tags,
     };
@@ -82,7 +98,11 @@ export async function exportToGameZip(opts: {
   const postersDir = root.folder('posters')!;
   for (const card of opts.cards ?? []) {
     const art = card?.art ?? card?.data?.art;
-    if (art?.kind === 'video' && typeof art.poster === 'string' && art.poster.startsWith('data:')) {
+    if (
+      art?.kind === 'video' &&
+      typeof art.poster === 'string' &&
+      art.poster.startsWith('data:')
+    ) {
       const { u8, ext } = dataUrlToBytes(art.poster);
       postersDir.file(`${card.id}.${ext}`, u8);
     }
@@ -92,7 +112,11 @@ export async function exportToGameZip(opts: {
   const imagesDir = root.folder('images')!;
   for (const card of opts.cards ?? []) {
     const art = card?.art ?? card?.data?.art;
-    if (art?.kind === 'image' && typeof art.src === 'string' && art.src.startsWith('data:')) {
+    if (
+      art?.kind === 'image' &&
+      typeof art.src === 'string' &&
+      art.src.startsWith('data:')
+    ) {
       const { u8, ext } = dataUrlToBytes(art.src);
       imagesDir.file(`${card.id}.${ext}`, u8);
     }

@@ -11,11 +11,16 @@ export function SettingsScreen() {
         <div className="settings-grid">
           <div>
             <div className="hint">{t('settings.languageLabel')}</div>
-            <Select value={i18n.language} onChange={(e) => i18n.changeLanguage(e.target.value)}>
+            <Select
+              value={i18n.language}
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+            >
               <option value="en">{t('settings.english')}</option>
               <option value="ar">{t('settings.arabic')}</option>
             </Select>
-            <div className="hint" style={{ marginTop: 6 }}>{t('settings.languageHint')}</div>
+            <div className="hint" style={{ marginTop: 6 }}>
+              {t('settings.languageHint')}
+            </div>
           </div>
         </div>
       </Panel>

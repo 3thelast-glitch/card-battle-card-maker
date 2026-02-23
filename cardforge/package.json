@@ -11,7 +11,7 @@
     "doctor": "npm run doctor:renderer && npm run doctor:main && npm run doctor:audit",
     "doctor:renderer": "npm --prefix apps/renderer run build",
     "doctor:main": "npm --prefix apps/main run build",
-    "doctor:audit":"powershell -NoProfile -Command \"npm --prefix apps/renderer audit; exit 0\"",
+    "doctor:audit": "powershell -NoProfile -Command \"npm --prefix apps/renderer audit; exit 0\"",
     "dist": "npm run build && npm --prefix apps/main run dist",
     "lint": "npm --prefix apps/renderer run lint",
     "test": "npm --prefix packages/core run test",
@@ -26,4 +26,3 @@
     "xlsx": "^0.18.5"
   }
 }
-

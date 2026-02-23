@@ -1,24 +1,60 @@
-﻿﻿import { useMemo, useState, type ReactNode } from 'react';
-import type { CardArt, CardRace, CardTrait, DataRow, ElementKey, Project } from '../../../../../packages/core/src/index';
+﻿import { useMemo, useState, type ReactNode } from 'react';
+import type {
+  CardArt,
+  CardRace,
+  CardTrait,
+  DataRow,
+  ElementKey,
+  Project,
+} from '../../../../../packages/core/src/index';
 import { getParentPath } from '@cardsmith/storage';
 import { useTranslation } from 'react-i18next';
 import { HexColorPicker } from 'react-colorful';
 import {
-  Palette, Image as ImageIcon, X, Eye,
-  Layout, Wand2, Type, Shield, Zap, Sword,
-  Crown, Pen, Sparkles, Copy, Trash2, UploadCloud, CheckCircle2,
+  Palette,
+  Image as ImageIcon,
+  X,
+  Eye,
+  Layout,
+  Wand2,
+  Type,
+  Shield,
+  Zap,
+  Sword,
+  Crown,
+  Pen,
+  Sparkles,
+  Copy,
+  Trash2,
+  UploadCloud,
+  CheckCircle2,
 } from 'lucide-react';
 
-import { CARD_TEMPLATES, type TemplateKey } from '../../templates/cardTemplates';
+import {
+  CARD_TEMPLATES,
+  type TemplateKey,
+} from '../../templates/cardTemplates';
 import type { Rarity } from '../../lib/balanceRules';
 import { TemplatePicker } from '../templates/TemplatePicker';
-import { TraitIcon, TRAIT_META, TRAIT_OPTIONS, type TraitKey } from '../../ui/icons/traitIcons';
+import {
+  TraitIcon,
+  TRAIT_META,
+  TRAIT_OPTIONS,
+  type TraitKey,
+} from '../../ui/icons/traitIcons';
 import { ELEMENTS } from '../../lib/elements';
 import { resolveImageSrc } from '../../utils/file';
 
 // --- Constants ---
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
-const RACE_OPTIONS: CardRace[] = ['human', 'elf', 'demon', 'beast', 'animal', 'amphibian'];
+const RACE_OPTIONS: CardRace[] = [
+  'human',
+  'elf',
+  'demon',
+  'beast',
+  'animal',
+  'amphibian',
+];
 
 const RARITY_GRADIENT: Record<Rarity, string> = {
   common: 'from-slate-500 to-slate-600',
@@ -115,9 +151,11 @@ function GradientButton({
 }) {
   const variants = {
     default: 'bg-blue-600 hover:bg-blue-700 text-white',
-    magic: 'bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:brightness-110 text-white',
+    magic:
+      'bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:brightness-110 text-white',
     danger: 'bg-rose-600 hover:bg-rose-700 text-white',
-    ghost: 'bg-white/[0.06] hover:bg-white/[0.10] text-slate-300 border border-white/[0.09] hover:border-white/[0.15]',
+    ghost:
+      'bg-white/[0.06] hover:bg-white/[0.10] text-slate-300 border border-white/[0.09] hover:border-white/[0.15]',
   };
   return (
     <button
@@ -175,14 +213,16 @@ function Section({
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors duration-150 group"
       >
         <span className={`flex-shrink-0 ${iconColors[accent]}`}>{icon}</span>
-        <span className="flex-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</span>
-        <span className={`text-slate-600 group-hover:text-slate-400 transition-colors text-[10px] ${open ? 'rotate-180' : ''} inline-block`}>▾</span>
+        <span className="flex-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          {title}
+        </span>
+        <span
+          className={`text-slate-600 group-hover:text-slate-400 transition-colors text-[10px] ${open ? 'rotate-180' : ''} inline-block`}
+        >
+          ▾
+        </span>
       </button>
-      {open && (
-        <div className="px-4 pb-4 space-y-3">
-          {children}
-        </div>
-      )}
+      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
     </div>
   );
 }
@@ -190,7 +230,9 @@ function Section({
 // --- Child Components ---
 
 const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
-  const [activeTab, setActiveTab] = useState<'layout' | 'colors' | 'effects' | 'content'>('layout');
+  const [activeTab, setActiveTab] = useState<
+    'layout' | 'colors' | 'effects' | 'content'
+  >('layout');
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
 
   const tabs = {
@@ -204,14 +246,32 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
     <div className="flex flex-col gap-4">{children}</div>
   );
 
-  const ControlRow = ({ label, children }: { label: string; children: ReactNode }) => (
+  const ControlRow = ({
+    label,
+    children,
+  }: {
+    label: string;
+    children: ReactNode;
+  }) => (
     <div>
       <FieldLabel>{label}</FieldLabel>
       <div className="flex items-center gap-3">{children}</div>
     </div>
   );
 
-  const GameSlider = ({ value, min, max, step, onChange: onSliderChange }: { value: number; min: number; max: number; step: number; onChange: (v: number) => void }) => (
+  const GameSlider = ({
+    value,
+    min,
+    max,
+    step,
+    onChange: onSliderChange,
+  }: {
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    onChange: (v: number) => void;
+  }) => (
     <input
       type="range"
       value={value}
@@ -223,17 +283,28 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
     />
   );
 
-  const ColorButton = ({ color, field }: { color: string; field: keyof BadgeModel }) => (
+  const ColorButton = ({
+    color,
+    field,
+  }: {
+    color: string;
+    field: keyof BadgeModel;
+  }) => (
     <button
       type="button"
-      onClick={() => setShowColorPicker(showColorPicker === field ? null : field)}
+      onClick={() =>
+        setShowColorPicker(showColorPicker === field ? null : field)
+      }
       className="w-full h-9 rounded-lg border-2 border-slate-600 hover:border-slate-400 transition-colors duration-200 shadow-inner"
       style={{ backgroundColor: color }}
     />
   );
 
   return (
-    <div dir="rtl" className="w-full rounded-xl border border-white/[0.08] overflow-hidden bg-black/20">
+    <div
+      dir="rtl"
+      className="w-full rounded-xl border border-white/[0.08] overflow-hidden bg-black/20"
+    >
       {/* Tab bar */}
       <div className="flex bg-white/[0.04] border-b border-white/[0.07]">
         {Object.entries(tabs).map(([key, { label, icon: Icon }]) => (
@@ -261,12 +332,28 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
         {activeTab === 'layout' && (
           <ControlWrapper>
             <ControlRow label="الحجم (Scale)">
-              <GameSlider value={badge.scale} min={0.5} max={2} step={0.05} onChange={(v) => onChange({ scale: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.scale.toFixed(2)}x</span>
+              <GameSlider
+                value={badge.scale}
+                min={0.5}
+                max={2}
+                step={0.05}
+                onChange={(v) => onChange({ scale: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                {badge.scale.toFixed(2)}x
+              </span>
             </ControlRow>
             <ControlRow label="الدوران (Rotation)">
-              <GameSlider value={badge.rotation} min={-180} max={180} step={1} onChange={(v) => onChange({ rotation: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.rotation}°</span>
+              <GameSlider
+                value={badge.rotation}
+                min={-180}
+                max={180}
+                step={1}
+                onChange={(v) => onChange({ rotation: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                {badge.rotation}°
+              </span>
             </ControlRow>
           </ControlWrapper>
         )}
@@ -277,17 +364,31 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
               <ColorButton color={badge.color} field="color" />
             </ControlRow>
             {showColorPicker === 'color' && (
-              <HexColorPicker color={badge.color} onChange={(c) => onChange({ color: c })} />
+              <HexColorPicker
+                color={badge.color}
+                onChange={(c) => onChange({ color: c })}
+              />
             )}
             <ControlRow label="لون النص">
               <ColorButton color={badge.textColor} field="textColor" />
             </ControlRow>
             {showColorPicker === 'textColor' && (
-              <HexColorPicker color={badge.textColor} onChange={(c) => onChange({ textColor: c })} />
+              <HexColorPicker
+                color={badge.textColor}
+                onChange={(c) => onChange({ textColor: c })}
+              />
             )}
             <ControlRow label="الشفافية (Opacity)">
-              <GameSlider value={badge.opacity} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">%{Math.round(badge.opacity * 100)}</span>
+              <GameSlider
+                value={badge.opacity}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(v) => onChange({ opacity: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                %{Math.round(badge.opacity * 100)}
+              </span>
             </ControlRow>
           </ControlWrapper>
         )}
@@ -295,28 +396,58 @@ const BadgeStylingPanel = ({ badge, onChange }: BadgeStylingPanelProps) => {
         {activeTab === 'effects' && (
           <ControlWrapper>
             <ControlRow label="عرض الإطار">
-              <GameSlider value={badge.borderWidth} min={0} max={10} step={0.5} onChange={(v) => onChange({ borderWidth: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.borderWidth}px</span>
+              <GameSlider
+                value={badge.borderWidth}
+                min={0}
+                max={10}
+                step={0.5}
+                onChange={(v) => onChange({ borderWidth: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                {badge.borderWidth}px
+              </span>
             </ControlRow>
             <ControlRow label="لون الإطار">
               <ColorButton color={badge.borderColor} field="borderColor" />
             </ControlRow>
             {showColorPicker === 'borderColor' && (
-              <HexColorPicker color={badge.borderColor} onChange={(c) => onChange({ borderColor: c })} />
+              <HexColorPicker
+                color={badge.borderColor}
+                onChange={(c) => onChange({ borderColor: c })}
+              />
             )}
             <ControlRow label="تدوير الحواف">
-              <GameSlider value={badge.borderRadius} min={0} max={32} step={1} onChange={(v) => onChange({ borderRadius: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.borderRadius}px</span>
+              <GameSlider
+                value={badge.borderRadius}
+                min={0}
+                max={32}
+                step={1}
+                onChange={(v) => onChange({ borderRadius: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                {badge.borderRadius}px
+              </span>
             </ControlRow>
             <ControlRow label="قوة التوهج (Shadow)">
-              <GameSlider value={badge.shadowBlur} min={0} max={30} step={1} onChange={(v) => onChange({ shadowBlur: v })} />
-              <span className="text-slate-300 text-xs w-12 text-center font-mono">{badge.shadowBlur}px</span>
+              <GameSlider
+                value={badge.shadowBlur}
+                min={0}
+                max={30}
+                step={1}
+                onChange={(v) => onChange({ shadowBlur: v })}
+              />
+              <span className="text-slate-300 text-xs w-12 text-center font-mono">
+                {badge.shadowBlur}px
+              </span>
             </ControlRow>
             <ControlRow label="لون التوهج">
               <ColorButton color={badge.shadowColor} field="shadowColor" />
             </ControlRow>
             {showColorPicker === 'shadowColor' && (
-              <HexColorPicker color={badge.shadowColor} onChange={(c) => onChange({ shadowColor: c })} />
+              <HexColorPicker
+                color={badge.shadowColor}
+                onChange={(c) => onChange({ shadowColor: c })}
+              />
             )}
           </ControlWrapper>
         )}
@@ -348,7 +479,9 @@ const TraitPicker = ({
   onRemoveTrait: (trait: TraitKey) => void;
   maxTraits?: number;
 }) => {
-  const availableOptions = TRAIT_OPTIONS.filter((option) => !selectedTraits.includes(option.value));
+  const availableOptions = TRAIT_OPTIONS.filter(
+    (option) => !selectedTraits.includes(option.value),
+  );
 
   return (
     <div className="space-y-3">
@@ -414,7 +547,15 @@ export function CardInspector(props: {
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
-  const { cardData, project, language, onChange, onPickImage, onDuplicate, onDelete } = props;
+  const {
+    cardData,
+    project,
+    language,
+    onChange,
+    onPickImage,
+    onDuplicate,
+    onDelete,
+  } = props;
 
   const data = cardData?.data ?? {};
   const art: CardArt | undefined = cardData?.art ?? (data as any).art;
@@ -445,7 +586,9 @@ export function CardInspector(props: {
         src: asset.src,
         resolvedSrc: resolveImageSrc(
           asset.src,
-          project?.meta?.filePath ? getParentPath(project.meta.filePath) : undefined,
+          project?.meta?.filePath
+            ? getParentPath(project.meta.filePath)
+            : undefined,
         ),
       })),
     [project],
@@ -465,7 +608,10 @@ export function CardInspector(props: {
   };
 
   const removeTrait = (trait: TraitKey) => {
-    handleUpdateData('traits', traits.filter((t) => t !== trait));
+    handleUpdateData(
+      'traits',
+      traits.filter((t) => t !== trait),
+    );
   };
 
   const handleUpdateStat = (key: 'attack' | 'defense', value: number) => {
@@ -482,7 +628,9 @@ export function CardInspector(props: {
     });
   };
 
-  const [selectedBadgeId, setSelectedBadgeId] = useState<'attackBadge' | 'defenseBadge' | 'elementBadge' | 'tribe'>('attackBadge');
+  const [selectedBadgeId, setSelectedBadgeId] = useState<
+    'attackBadge' | 'defenseBadge' | 'elementBadge' | 'tribe'
+  >('attackBadge');
 
   const selectedBadgeStyle: BadgeModel = {
     ...defaultBadgeStyle,
@@ -519,7 +667,9 @@ export function CardInspector(props: {
           <ImageIcon size={20} className="text-slate-600" />
         </div>
         <p className="text-sm font-medium text-slate-500">{t('cards.empty')}</p>
-        <p className="text-xs text-slate-700 leading-relaxed">Select a card from the list to inspect it</p>
+        <p className="text-xs text-slate-700 leading-relaxed">
+          Select a card from the list to inspect it
+        </p>
       </div>
     );
   }
@@ -530,7 +680,9 @@ export function CardInspector(props: {
       <header className="flex items-center justify-between px-4 py-2.5 border-b border-[#1A1F2E] flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inspector</h3>
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            Inspector
+          </h3>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -554,9 +706,12 @@ export function CardInspector(props: {
 
       {/* ── Scrollable body ── */}
       <div className="flex-1 overflow-y-auto divide-y divide-[#1A1F2E]">
-
         {/* ── Card Identity ── */}
-        <Section title={t('editor.inspector.card')} icon={<Type size={13} />} accent="violet">
+        <Section
+          title={t('editor.inspector.card')}
+          icon={<Type size={13} />}
+          accent="violet"
+        >
           <div className="grid grid-cols-2 gap-3">
             <div>
               <FieldLabel>{t('common.name')} (EN)</FieldLabel>
@@ -583,15 +738,21 @@ export function CardInspector(props: {
               <StyledInput
                 type="number"
                 value={cost}
-                onChange={(e) => handleUpdateData('cost', Number(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleUpdateData('cost', Number(e.target.value) || 0)
+                }
                 placeholder="0"
               />
             </div>
             <div className="col-span-2">
-              <FieldLabel>{t('cards.meta.type', { defaultValue: 'Element' })}</FieldLabel>
+              <FieldLabel>
+                {t('cards.meta.type', { defaultValue: 'Element' })}
+              </FieldLabel>
               <StyledSelect
                 value={element}
-                onChange={(e) => handleUpdateData('element', e.target.value || undefined)}
+                onChange={(e) =>
+                  handleUpdateData('element', e.target.value || undefined)
+                }
               >
                 <option value="">{t('common.none')}</option>
                 {Object.keys(ELEMENTS).map((key) => (
@@ -607,7 +768,9 @@ export function CardInspector(props: {
             <FieldLabel>{t('cards.meta.race')}</FieldLabel>
             <StyledSelect
               value={race}
-              onChange={(e) => handleUpdateData('race', e.target.value || undefined)}
+              onChange={(e) =>
+                handleUpdateData('race', e.target.value || undefined)
+              }
             >
               <option value="">{t('common.none')}</option>
               {RACE_OPTIONS.map((option) => (
@@ -619,7 +782,9 @@ export function CardInspector(props: {
           </div>
 
           <div>
-            <FieldLabel>{t('cards.meta.class', { defaultValue: 'Traits / Class' })}</FieldLabel>
+            <FieldLabel>
+              {t('cards.meta.class', { defaultValue: 'Traits / Class' })}
+            </FieldLabel>
             <TraitPicker
               selectedTraits={traits as TraitKey[]}
               onAddTrait={addTrait}
@@ -629,7 +794,11 @@ export function CardInspector(props: {
         </Section>
 
         {/* ── Stats ── */}
-        <Section title={t('editor.inspector.stats')} icon={<Zap size={13} />} accent="amber">
+        <Section
+          title={t('editor.inspector.stats')}
+          icon={<Zap size={13} />}
+          accent="amber"
+        >
           {/* Stat orbs */}
           <div className="grid grid-cols-2 gap-3">
             {/* ATK */}
@@ -643,7 +812,9 @@ export function CardInspector(props: {
               <StyledInput
                 type="number"
                 value={attack}
-                onChange={(e) => handleUpdateStat('attack', Number(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleUpdateStat('attack', Number(e.target.value) || 0)
+                }
                 className="text-center font-mono text-xl font-bold text-rose-300 bg-transparent border-rose-500/30 focus:border-rose-400"
               />
               <div className="mt-2 h-1 bg-black/30 rounded-full overflow-hidden">
@@ -664,7 +835,9 @@ export function CardInspector(props: {
               <StyledInput
                 type="number"
                 value={defense}
-                onChange={(e) => handleUpdateStat('defense', Number(e.target.value) || 0)}
+                onChange={(e) =>
+                  handleUpdateStat('defense', Number(e.target.value) || 0)
+                }
                 className="text-center font-mono text-xl font-bold text-sky-300 bg-transparent border-sky-500/30 focus:border-sky-400"
               />
               <div className="mt-2 h-1 bg-black/30 rounded-full overflow-hidden">
@@ -678,7 +851,11 @@ export function CardInspector(props: {
         </Section>
 
         {/* ── Text / Lore ── */}
-        <Section title={t('editor.inspector.text')} icon={<Type size={13} />} accent="cyan">
+        <Section
+          title={t('editor.inspector.text')}
+          icon={<Type size={13} />}
+          accent="cyan"
+        >
           <div className="space-y-3">
             <div>
               <FieldLabel>{t('common.description')} (EN)</FieldLabel>
@@ -698,7 +875,10 @@ export function CardInspector(props: {
               />
             </div>
             <div>
-              <FieldLabel>{t('editor.inspector.ability', { defaultValue: 'Ability' })} (EN)</FieldLabel>
+              <FieldLabel>
+                {t('editor.inspector.ability', { defaultValue: 'Ability' })}{' '}
+                (EN)
+              </FieldLabel>
               <StyledInput
                 value={abilityEn}
                 onChange={(e) => handleUpdateData('ability.en', e.target.value)}
@@ -706,7 +886,10 @@ export function CardInspector(props: {
               />
             </div>
             <div>
-              <FieldLabel>{t('editor.inspector.ability', { defaultValue: 'Ability' })} (AR)</FieldLabel>
+              <FieldLabel>
+                {t('editor.inspector.ability', { defaultValue: 'Ability' })}{' '}
+                (AR)
+              </FieldLabel>
               <StyledInput
                 value={abilityAr}
                 onChange={(e) => handleUpdateData('ability.ar', e.target.value)}
@@ -718,7 +901,11 @@ export function CardInspector(props: {
         </Section>
 
         {/* ── Visuals ── */}
-        <Section title={t('editor.inspector.visuals', { defaultValue: 'Visuals' })} icon={<ImageIcon size={13} />} accent="emerald">
+        <Section
+          title={t('editor.inspector.visuals', { defaultValue: 'Visuals' })}
+          icon={<ImageIcon size={13} />}
+          accent="emerald"
+        >
           {/* Template */}
           <div>
             <FieldLabel>{t('editor.inspector.template')}</FieldLabel>
@@ -755,13 +942,19 @@ export function CardInspector(props: {
           <div>
             <FieldLabel>{t('data.uploadImage')}</FieldLabel>
             <div className="flex items-center gap-2">
-              <GradientButton onClick={onPickImage} variant="default" className="flex-1">
+              <GradientButton
+                onClick={onPickImage}
+                variant="default"
+                className="flex-1"
+              >
                 <UploadCloud size={14} />
                 {t('data.uploadImage')}
               </GradientButton>
               <GradientButton
                 variant="magic"
-                onClick={() => { console.log('[Vibe Sync] AI magic triggered ✨'); }}
+                onClick={() => {
+                  console.log('[Vibe Sync] AI magic triggered ✨');
+                }}
                 className="flex-shrink-0"
               >
                 <Sparkles size={13} />
@@ -770,15 +963,23 @@ export function CardInspector(props: {
             </div>
 
             {/* Art status pill */}
-            <div className={[
-              'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-              art?.kind === 'image' ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/40' :
-                art?.kind === 'video' ? 'bg-blue-900/40 text-blue-400 border border-blue-700/40' :
-                  'bg-slate-800/60 text-slate-500 border border-slate-700/40',
-            ].join(' ')}>
-              {art?.kind === 'image' ? <CheckCircle2 size={12} /> :
-                art?.kind === 'video' ? <Eye size={12} /> :
-                  <ImageIcon size={12} />}
+            <div
+              className={[
+                'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+                art?.kind === 'image'
+                  ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-700/40'
+                  : art?.kind === 'video'
+                    ? 'bg-blue-900/40 text-blue-400 border border-blue-700/40'
+                    : 'bg-slate-800/60 text-slate-500 border border-slate-700/40',
+              ].join(' ')}
+            >
+              {art?.kind === 'image' ? (
+                <CheckCircle2 size={12} />
+              ) : art?.kind === 'video' ? (
+                <Eye size={12} />
+              ) : (
+                <ImageIcon size={12} />
+              )}
               {art?.kind === 'video'
                 ? t('data.videoUsesPoster')
                 : art?.kind === 'image'
@@ -790,17 +991,24 @@ export function CardInspector(props: {
           {/* Asset grid */}
           {assetOptions.length > 0 && (
             <div>
-              <FieldLabel>{t('assets.title', { defaultValue: 'Project Assets' })}</FieldLabel>
+              <FieldLabel>
+                {t('assets.title', { defaultValue: 'Project Assets' })}
+              </FieldLabel>
               <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5">
                 {assetOptions.map((asset) => {
                   const isSelected =
-                    art?.kind === 'image' && (art.src === asset.resolvedSrc || art.src === asset.src);
+                    art?.kind === 'image' &&
+                    (art.src === asset.resolvedSrc || art.src === asset.src);
                   return (
                     <button
                       key={asset.id}
                       type="button"
                       onClick={() => {
-                        if (cardData) onChange({ ...cardData, art: { kind: 'image', src: asset.resolvedSrc } });
+                        if (cardData)
+                          onChange({
+                            ...cardData,
+                            art: { kind: 'image', src: asset.resolvedSrc },
+                          });
                       }}
                       className={[
                         'group relative rounded-lg overflow-hidden border-2 transition-all duration-200 aspect-square',
@@ -811,11 +1019,15 @@ export function CardInspector(props: {
                     >
                       <div
                         className="w-full h-full bg-center bg-cover"
-                        style={{ backgroundImage: `url("${asset.resolvedSrc}")` }}
+                        style={{
+                          backgroundImage: `url("${asset.resolvedSrc}")`,
+                        }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-[9px] text-white font-bold truncate">{asset.name}</p>
+                        <p className="text-[9px] text-white font-bold truncate">
+                          {asset.name}
+                        </p>
                       </div>
                       {isSelected && (
                         <div className="absolute top-1 right-1 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center">
@@ -831,17 +1043,24 @@ export function CardInspector(props: {
         </Section>
 
         {/* ── Badge Designer ── */}
-        <Section title="Badge Designer" icon={<Palette size={13} />} accent="rose" defaultOpen={false}>
+        <Section
+          title="Badge Designer"
+          icon={<Palette size={13} />}
+          accent="rose"
+          defaultOpen={false}
+        >
           <div className="space-y-3">
             <div>
               <FieldLabel>Badge Target</FieldLabel>
               <div className="grid grid-cols-2 gap-1.5">
-                {([
-                  { id: 'attackBadge', label: 'Attack', icon: Sword },
-                  { id: 'defenseBadge', label: 'Defense', icon: Shield },
-                  { id: 'elementBadge', label: 'Element', icon: Zap },
-                  { id: 'tribe', label: 'Tribe', icon: Crown },
-                ] as const).map(({ id, label, icon: Icon }) => (
+                {(
+                  [
+                    { id: 'attackBadge', label: 'Attack', icon: Sword },
+                    { id: 'defenseBadge', label: 'Defense', icon: Shield },
+                    { id: 'elementBadge', label: 'Element', icon: Zap },
+                    { id: 'tribe', label: 'Tribe', icon: Crown },
+                  ] as const
+                ).map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     type="button"
@@ -859,10 +1078,12 @@ export function CardInspector(props: {
                 ))}
               </div>
             </div>
-            <BadgeStylingPanel badge={selectedBadgeStyle} onChange={handleBadgeChange} />
+            <BadgeStylingPanel
+              badge={selectedBadgeStyle}
+              onChange={handleBadgeChange}
+            />
           </div>
         </Section>
-
       </div>
     </div>
   );
@@ -898,32 +1119,46 @@ function getLocalizedValue(value: any, language: 'en' | 'ar') {
 }
 
 function normalizeTemplateKey(value: any): TemplateKey {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned && Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)) {
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (
+    cleaned &&
+    Object.prototype.hasOwnProperty.call(CARD_TEMPLATES, cleaned)
+  ) {
     return cleaned as TemplateKey;
   }
   return 'classic';
 }
 
 function normalizeRarity(value: any): Rarity {
-  const cleaned = String(value || '').toLowerCase().trim();
-  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary') return cleaned as Rarity;
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (cleaned === 'rare' || cleaned === 'epic' || cleaned === 'legendary')
+    return cleaned as Rarity;
   return 'common';
 }
 
 function normalizeRace(value: any): CardRace {
-  const cleaned = String(value || '').toLowerCase().trim();
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
   return cleaned as CardRace;
 }
 
 function normalizeElement(value: any): ElementKey {
-  const cleaned = String(value || '').toLowerCase().trim();
+  const cleaned = String(value || '')
+    .toLowerCase()
+    .trim();
   return cleaned as ElementKey;
 }
 
 function normalizeTraits(value: any): CardTrait[] {
   if (Array.isArray(value)) {
-    return value.map((trait) => String(trait).toLowerCase().trim()).filter(Boolean) as CardTrait[];
+    return value
+      .map((trait) => String(trait).toLowerCase().trim())
+      .filter(Boolean) as CardTrait[];
   }
   const raw = String(value || '').trim();
   if (!raw) return [];

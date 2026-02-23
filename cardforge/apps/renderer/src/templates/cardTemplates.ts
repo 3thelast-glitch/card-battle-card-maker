@@ -9,17 +9,24 @@ export type TemplateKey =
   | 'frost'
   | 'storm'
   | 'modern-dark'
-  | 'steampunk';
+  | 'steampunk'
+  | 'blood-ritual';
 
 export type CardTemplate = {
   key: TemplateKey;
   label: { en: string; ar: string };
-  layout?: 'standard' | 'full-bleed';
+  layout?: 'standard' | 'full-bleed' | 'steampunk' | 'blood-ritual';
   titleKey?: string;
   descKey?: string;
   thumbnail?: string;
   defaultBgColor?: string;
-  artRect: { left: number; top: number; right: number; bottom: number; radius: number };
+  artRect: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    radius: number;
+  };
   title: { x: number; y: number; size: number; letterSpacing?: number };
   desc: { x: number; y: number; size: number; maxLines?: number };
   badge?: { x: number; y: number; text?: string };
@@ -143,6 +150,16 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
     layout: 'steampunk',
     thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#2C1810',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  'blood-ritual': {
+    key: 'blood-ritual',
+    label: { en: 'Blood Ritual', ar: 'طقوس الدم' },
+    layout: 'blood-ritual',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#100000',
     artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
     title: { x: 0, y: 0, size: 22 },
     desc: { x: 0, y: 0, size: 12 },

@@ -24,11 +24,16 @@ export type CardContentResult = {
 const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
 
 if (!apiKey && import.meta.env.DEV) {
-  console.warn('⚠️ VITE_GEMINI_API_KEY is not set or empty - gemini.service.ts:27');
+  console.warn(
+    '⚠️ VITE_GEMINI_API_KEY is not set or empty - gemini.service.ts:27',
+  );
 }
 
 // ✅ الدالة الأساسية للاتصال (تستخدم v1beta للموديلات الحديثة)
-const callGeminiAPI = async (modelName: string, prompt: string): Promise<string> => {
+const callGeminiAPI = async (
+  modelName: string,
+  prompt: string,
+): Promise<string> => {
   if (!apiKey) {
     throw new Error('MISSING_API_KEY');
   }
@@ -36,7 +41,9 @@ const callGeminiAPI = async (modelName: string, prompt: string): Promise<string>
   // ✅ التحديث الجوهري: استخدام v1beta بدلاً من v1
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  console.log(`📡 Sending request to: ${modelName} (v1beta) - gemini.service.ts:39`);
+  console.log(
+    `📡 Sending request to: ${modelName} (v1beta) - gemini.service.ts:39`,
+  );
 
   const response = await fetch(url, {
     method: 'POST',
@@ -48,26 +55,29 @@ const callGeminiAPI = async (modelName: string, prompt: string): Promise<string>
         {
           parts: [
             {
-              text: prompt
-            }
-          ]
-        }
+              text: prompt,
+            },
+          ],
+        },
       ],
       generationConfig: {
         temperature: 0.8, // رفعنا الإبداع قليلاً للوصف
         maxOutputTokens: 1024,
-      }
-    })
+      },
+    }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Gemini API Error (${modelName}): - gemini.service.ts:65`, errorText);
+    console.error(
+      `Gemini API Error (${modelName}): - gemini.service.ts:65`,
+      errorText,
+    );
     throw new Error(`Gemini API failed: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
-  
+
   if (!data.candidates || data.candidates.length === 0) {
     throw new Error('No response candidates from Gemini');
   }
@@ -80,9 +90,9 @@ export const generateGeminiText = async (prompt: string): Promise<string> => {
   // ✅ القائمة الجديدة: نبدأ بالأذكى (Pro) ثم الأسرع (Flash)
   // ملاحظة: لا نكتب "models/" هنا لأننا نضيفها في الرابط
   const modelsToTry = [
-    'gemini-1.5-pro',        // الخيار الأول: الأذكى والأقوى
-    'gemini-1.5-flash',      // الخيار الثاني: السريع والفعال
-    'gemini-1.0-pro'         // الخيار الاحتياطي
+    'gemini-1.5-pro', // الخيار الأول: الأذكى والأقوى
+    'gemini-1.5-flash', // الخيار الثاني: السريع والفعال
+    'gemini-1.0-pro', // الخيار الاحتياطي
   ];
 
   for (const model of modelsToTry) {
@@ -90,12 +100,17 @@ export const generateGeminiText = async (prompt: string): Promise<string> => {
       console.log(`🔄 Trying model: ${model}... - gemini.service.ts:90`);
       return await callGeminiAPI(model, prompt);
     } catch (error: any) {
-      console.warn(`❌ Model ${model} failed. Trying next... - gemini.service.ts:93`, error.message);
+      console.warn(
+        `❌ Model ${model} failed. Trying next... - gemini.service.ts:93`,
+        error.message,
+      );
       // استمر للموديل التالي في القائمة
     }
   }
 
-  throw new Error('All Gemini models failed. Please check your API key and quota.');
+  throw new Error(
+    'All Gemini models failed. Please check your API key and quota.',
+  );
 };
 
 // بناء النص (Prompt) - لم يتغير
@@ -145,13 +160,18 @@ const extractJson = (text: string) => {
     const jsonText = text.slice(start, end + 1);
     return JSON.parse(jsonText) as CardContentResult;
   } catch (e) {
-    console.error("Failed to parse JSON from AI: - gemini.service.ts:148", text);
+    console.error(
+      'Failed to parse JSON from AI: - gemini.service.ts:148',
+      text,
+    );
     throw e;
   }
 };
 
 // الدالة النهائية المصدرة
-export const generateCardContent = async (context: CardContext): Promise<CardContentResult> => {
+export const generateCardContent = async (
+  context: CardContext,
+): Promise<CardContentResult> => {
   const prompt = buildPrompt(context);
   const text = await generateGeminiText(prompt);
   const data = extractJson(text);
@@ -160,8 +180,12 @@ export const generateCardContent = async (context: CardContext): Promise<CardCon
     name: data.name ?? '',
     description: data.description ?? '',
     balance: {
-      atk: Number.isFinite(data.balance?.atk) ? data.balance.atk : context.attack ?? 0,
-      def: Number.isFinite(data.balance?.def) ? data.balance.def : context.defense ?? 0,
+      atk: Number.isFinite(data.balance?.atk)
+        ? data.balance.atk
+        : (context.attack ?? 0),
+      def: Number.isFinite(data.balance?.def)
+        ? data.balance.def
+        : (context.defense ?? 0),
       note: data.balance?.note ?? '',
     },
   };

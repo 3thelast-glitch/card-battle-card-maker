@@ -35,7 +35,10 @@ Ensure the response is valid JSON and contains no markdown formatting.`;
       const text = response.text();
 
       // Clean up potential markdown code blocks
-      const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleanedText = text
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
 
       return JSON.parse(cleanedText) as GeneratedCardData;
     } catch (error) {

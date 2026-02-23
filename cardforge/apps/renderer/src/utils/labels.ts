@@ -1,7 +1,9 @@
 import type { TFunction } from 'i18next';
 
 function normalize(value?: string) {
-  return String(value ?? '').toLowerCase().replace(/[\s\-_]/g, '');
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[\s\-_]/g, '');
 }
 
 export function getCategoryLabel(t: TFunction, category?: string) {

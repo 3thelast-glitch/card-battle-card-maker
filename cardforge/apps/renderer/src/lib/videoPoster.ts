@@ -1,5 +1,8 @@
 async function captureFromVideo(video: HTMLVideoElement, timeSec: number) {
-  const seekTime = Math.min(Math.max(timeSec, 0), Math.max(0, (video.duration || 1) - 0.05));
+  const seekTime = Math.min(
+    Math.max(timeSec, 0),
+    Math.max(0, (video.duration || 1) - 0.05),
+  );
   await new Promise<void>((resolve, reject) => {
     video.currentTime = seekTime;
     video.onseeked = () => resolve();
@@ -17,7 +20,10 @@ async function captureFromVideo(video: HTMLVideoElement, timeSec: number) {
   return canvas.toDataURL('image/png');
 }
 
-export async function captureVideoPoster(file: File, timeSec = 0.1): Promise<string> {
+export async function captureVideoPoster(
+  file: File,
+  timeSec = 0.1,
+): Promise<string> {
   const url = URL.createObjectURL(file);
   try {
     const video = document.createElement('video');
@@ -37,7 +43,10 @@ export async function captureVideoPoster(file: File, timeSec = 0.1): Promise<str
   }
 }
 
-export async function captureVideoPosterFromUrl(src: string, timeSec = 0.1): Promise<string> {
+export async function captureVideoPosterFromUrl(
+  src: string,
+  timeSec = 0.1,
+): Promise<string> {
   const video = document.createElement('video');
   video.src = src;
   video.muted = true;

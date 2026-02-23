@@ -41,7 +41,7 @@ export const TraitBadges: React.FC<TraitBadgesProps> = ({
     if (traits.length > 4) {
       console.warn(
         `[TraitBadges] Too many traits provided (${traits.length}). Capping at 4.`,
-        traits
+        traits,
       );
       return traits.slice(0, 4);
     }
@@ -65,7 +65,17 @@ export const TraitBadges: React.FC<TraitBadgesProps> = ({
   );
 };
 
-const TraitIcon = ({ trait, index, size, padding }: { trait: string; index: number; size: number; padding: number }) => {
+const TraitIcon = ({
+  trait,
+  index,
+  size,
+  padding,
+}: {
+  trait: string;
+  index: number;
+  size: number;
+  padding: number;
+}) => {
   // Assumes assets are served from public/assets/icons/
   // e.g. 'Sword' -> '/assets/icons/Sword.png'
   const [image] = useImage(traitIconMap[trait] || `/assets/icons/${trait}.png`);

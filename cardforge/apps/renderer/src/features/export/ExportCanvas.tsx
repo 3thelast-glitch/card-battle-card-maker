@@ -1,13 +1,31 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { Stage, Layer, Rect, Text, Image as KonvaImage, Group } from 'react-konva';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Stage,
+  Layer,
+  Rect,
+  Text,
+  Image as KonvaImage,
+  Group,
+} from 'react-konva';
 import Konva from 'konva';
-import type { Blueprint, ElementModel } from '../../../../../packages/core/src/index';
+import type {
+  Blueprint,
+  ElementModel,
+} from '../../../../../packages/core/src/index';
 import { applyBindingsToElements } from '../../../../../packages/core/src/index';
 import { useHtmlImage } from '../../utils/konva';
 import { getImageLayout } from '../../utils/imageFit';
 
 export type ExportCanvasHandle = {
-  renderToDataUrl: (rowData: Record<string, any>, pixelRatio: number) => Promise<string | null>;
+  renderToDataUrl: (
+    rowData: Record<string, any>,
+    pixelRatio: number,
+  ) => Promise<string | null>;
 };
 
 export const ExportCanvas = forwardRef<
@@ -31,7 +49,11 @@ export const ExportCanvas = forwardRef<
 
   return (
     <div style={{ width: 0, height: 0, overflow: 'hidden' }}>
-      <Stage ref={stageRef} width={props.blueprint.size.w} height={props.blueprint.size.h}>
+      <Stage
+        ref={stageRef}
+        width={props.blueprint.size.w}
+        height={props.blueprint.size.h}
+      >
         <Layer>
           <Rect
             x={0}
@@ -82,7 +104,7 @@ function renderStaticElement(el: ElementModel, projectRoot?: string) {
         text={el.text ?? ''}
         fontSize={el.fontSize ?? 32}
         fontFamily={el.fontFamily ?? 'Segoe UI'}
-        fontStyle={isBold(el.fontWeight) ? 'bold' : el.fontStyle ?? 'normal'}
+        fontStyle={isBold(el.fontWeight) ? 'bold' : (el.fontStyle ?? 'normal')}
         align={el.align ?? 'left'}
         verticalAlign={el.verticalAlign ?? 'top'}
         fill={el.fill ?? '#fff'}
@@ -123,7 +145,13 @@ function renderStaticElement(el: ElementModel, projectRoot?: string) {
   return null;
 }
 
-function StaticImage({ el, projectRoot }: { el: ElementModel; projectRoot?: string }) {
+function StaticImage({
+  el,
+  projectRoot,
+}: {
+  el: ElementModel;
+  projectRoot?: string;
+}) {
   const img = useHtmlImage((el as any).src, projectRoot);
   const item = el as any;
   const layout = getImageLayout(img, item.w, item.h, item.fit);
