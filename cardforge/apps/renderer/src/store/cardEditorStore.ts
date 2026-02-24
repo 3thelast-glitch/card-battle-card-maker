@@ -15,7 +15,7 @@ export type EditorLayer = {
   type: LayerType;
   visible: boolean;
 };
-export type BadgeKey = 'element' | 'rarity' | 'attack' | 'hp';
+export type BadgeKey = 'element' | 'rarity' | 'attack' | 'hp' | 'title' | 'desc';
 export type BadgePos = { x: number; y: number };
 
 export type CardEditorState = Required<
@@ -97,6 +97,8 @@ const DEFAULT_STATE: CardEditorState = {
     rarity: { x: 0, y: 0 },
     attack: { x: 0, y: 0 },
     hp: { x: 0, y: 0 },
+    title: { x: 0, y: 0 },
+    desc: { x: 0, y: 0 },
   },
   showDescription: true,
   artZoneHeight: 240,

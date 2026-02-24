@@ -1,3 +1,6 @@
+/* ── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@700;900&display=swap');
+
 /* ── Tailwind directives ─────────────────────────────────── */
 @tailwind base;
 @tailwind components;
@@ -5,6 +8,7 @@
 
 /* ── Phase 7: @layer components – reusable CSS classes ───── */
 @layer components {
+
   /* Glassmorphism panel */
   .glass-panel {
     @apply bg-white/[0.05] border border-white/[0.09] backdrop-blur-xl rounded-2xl;
@@ -59,6 +63,7 @@
 
 /* ── Phase 7: @layer utilities – single-purpose helpers ───── */
 @layer utilities {
+
   /* Shimmer animation (used by GeneratorPage progress bar + CardFrame legendary) */
   .animate-shimmer {
     animation: shimmer 1.8s linear infinite;
@@ -131,6 +136,7 @@
 }
 
 @keyframes rarity-pulse {
+
   0%,
   100% {
     box-shadow: 0 0 12px 2px rgba(255, 200, 50, 0.35);
@@ -142,6 +148,7 @@
 }
 
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0px);
@@ -189,6 +196,7 @@
 }
 
 @keyframes vial-liquid {
+
   0%,
   100% {
     height: 45%;
@@ -209,6 +217,106 @@
 
 .animate-vial-drip {
   animation: vial-liquid 4s ease-in-out infinite;
+}
+
+@keyframes drip {
+  0% {
+    transform: translateY(-10px) scaleY(0.5);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(200px) scaleY(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes eldritch-pulse {
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes eye-iris-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.12);
+    filter: brightness(1.4) drop-shadow(0 0 8px rgba(139, 0, 0, 0.8));
+  }
+}
+
+.animate-drip {
+  animation: drip 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-drip-delay {
+  animation: drip 4s cubic-bezier(0.4, 0, 0.6, 1) infinite 1.3s;
+}
+
+.animate-drip-delay-2 {
+  animation: drip 5s cubic-bezier(0.4, 0, 0.6, 1) infinite 2.7s;
+}
+
+.animate-spin-slow {
+  animation: spin 18s linear infinite;
+}
+
+.animate-spin-medium {
+  animation: spin 10s linear infinite;
+}
+
+.animate-spin-reverse-slow {
+  animation: spin-reverse 25s linear infinite;
+}
+
+.animate-eldritch-pulse {
+  animation: eldritch-pulse 3s ease-in-out infinite;
+}
+
+.animate-eye-iris {
+  animation: eye-iris-pulse 2.5s ease-in-out infinite;
 }
 
 /* ── Default = DARK (current design) ─────────────────────── */
@@ -243,8 +351,7 @@ html.light {
 }
 
 /* ── Smooth theme transitions — :where() has zero specificity so Tailwind wins ── */
-:where(
-  div,
+:where(div,
   section,
   aside,
   main,
@@ -260,8 +367,7 @@ html.light {
   h4,
   h5,
   h6,
-  label
-) {
+  label) {
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
@@ -654,7 +760,7 @@ code {
   overflow: hidden;
 }
 
-.progress-bar > div {
+.progress-bar>div {
   height: 100%;
   background: linear-gradient(90deg, #38bdf8, #6ee7d2);
 }
@@ -692,7 +798,7 @@ code {
   transition: transform 0.2s ease;
 }
 
-.toggle input:checked + .toggle-track::after {
+.toggle input:checked+.toggle-track::after {
   transform: translateX(18px);
   background: #6ee7d2;
 }
@@ -863,11 +969,9 @@ html[dir='rtl'] textarea {
   top: 56px;
   bottom: 72px;
   border-radius: 10px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.12),
-    rgba(255, 255, 255, 0.02)
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.02));
   border: 1px solid rgba(255, 255, 255, 0.08);
   background-size: cover;
   background-position: center;
@@ -977,11 +1081,9 @@ html[dir='rtl'] textarea {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(255, 255, 255, 0.1),
-    rgba(10, 12, 18, 0.62)
-  );
+  background: radial-gradient(circle at 30% 30%,
+      rgba(255, 255, 255, 0.1),
+      rgba(10, 12, 18, 0.62));
   border: 2px solid rgba(255, 255, 255, 0.25);
   box-shadow:
     0 12px 20px rgba(0, 0, 0, 0.45),
@@ -1241,12 +1343,10 @@ html[dir='rtl'] .card-frame__desc {
   left: -60%;
   width: 220%;
   height: 40%;
-  background: linear-gradient(
-    120deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.35) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(120deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%);
   transform: translateX(-60%) rotate(18deg);
   animation: frame-sweep 1.8s linear infinite;
   mix-blend-mode: screen;
@@ -1275,6 +1375,7 @@ html[dir='rtl'] .card-frame__desc {
 }
 
 @keyframes frame-pulse {
+
   0%,
   100% {
     opacity: 1;
@@ -1328,10 +1429,192 @@ html[dir='rtl'] .card-frame__desc {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .card-frame--epic .card-frame__frame,
   .card-frame--legendary .card-frame__frame,
   .card-frame__sweep,
   .card-frame__spark {
     animation: none;
   }
+}
+
+/* ── Glitch Artifact Keyframes ──────────────────────────────── */
+@keyframes glitchScan {
+
+  0%,
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 0.8;
+  }
+
+  95% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes glitchFloat {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scaleX(1);
+    opacity: 0.4;
+  }
+
+  25% {
+    transform: translate(3px, -2px) scaleX(3);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translate(-2px, 1px) scaleX(0.5);
+    opacity: 0.3;
+  }
+
+  75% {
+    transform: translate(1px, 2px) scaleX(2);
+    opacity: 0.6;
+  }
+}
+
+@keyframes glitchTear {
+
+  0%,
+  90%,
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  92% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  96% {
+    opacity: 0.5;
+    transform: scaleX(0.7) translateX(10px);
+  }
+}
+
+/* --- Phase 11: Glitch Artifact Animations --- */
+
+/* 1. Scanline Overlay Effect */
+@keyframes glitchScan {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* 2. Floating/Jitter Effect */
+@keyframes glitchFloat {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  20% {
+    transform: translate(-2px, 1px);
+  }
+
+  40% {
+    transform: translate(1px, -2px);
+  }
+
+  60% {
+    transform: translate(-1px, 2px);
+  }
+
+  80% {
+    transform: translate(2px, -1px);
+  }
+}
+
+/* 3. RGB Split and Tear Effect */
+@keyframes glitchTear {
+
+  0%,
+  100% {
+    transform: skew(0deg);
+    text-shadow: none;
+    clip-path: inset(0 0 0 0);
+  }
+
+  10% {
+    transform: skew(-5deg);
+    text-shadow: 2px 0 cyan, -2px 0 magenta;
+    clip-path: inset(10% 0 80% 0);
+  }
+
+  20% {
+    transform: skew(5deg);
+    text-shadow: -2px 0 cyan, 2px 0 magenta;
+    clip-path: inset(80% 0 10% 0);
+  }
+
+  30% {
+    transform: skew(0deg);
+    text-shadow: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Utility Classes to use in React */
+.animate-glitch-scan {
+  animation: glitchScan 3s linear infinite;
+  background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.2), transparent);
+}
+
+.animate-glitch-float {
+  animation: glitchFloat 4s ease-in-out infinite;
+}
+
+.animate-glitch-tear {
+  animation: glitchTear 2s infinite alternate;
+}
+
+/* --- Phase 12: Swamp Layout Animations --- */
+
+@keyframes bubbleRise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 0.8; }
+  80% { opacity: 0.5; }
+  100% { transform: translateY(-520px) scale(0.5); opacity: 0; }
+}
+
+@keyframes rippleExpand {
+  0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0.8; }
+  100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+}
+
+@keyframes weedSway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+@keyframes waveShift {
+  0% { transform: translateX(-8px); }
+  100% { transform: translateX(8px); }
+}
+
+@keyframes swampSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.swamp-card-frame {
+  box-shadow: 0 50px 120px rgba(0,150,60,0.55), 0 0 0 1px rgba(0,100,40,0.4), inset 0 0 100px rgba(0,0,0,0.85);
 }

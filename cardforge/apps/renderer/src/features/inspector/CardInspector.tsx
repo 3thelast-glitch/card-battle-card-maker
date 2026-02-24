@@ -653,7 +653,7 @@ export function CardInspector(props: {
       data: {
         ...cardData.data,
         style: {
-          ...(cardData.data as Record<string, unknown>).style,
+          ...(((cardData.data as any).style as object) || {}),
           badges: newBadgeStyles,
         },
       },

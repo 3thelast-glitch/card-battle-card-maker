@@ -1,33 +1,4 @@
 {
-	"robotcode.disableExtension": true,
-	"geminicodeassist.outlines.automaticOutlineGeneration": true,
-	"Codegeex.RepoIndex": true,
-	"piny.project_settings": {
-		"open-pages": [
-			"pinyfakepage.html"
-		],
-		"tw-external-config": {},
-		"source-folders": null,
-		"preview-url": "http://localhost:5173",
-		"ai-project-brief": null,
-		"recent-classes": [
-			"b",
-			"n",
-			"i",
-			"s",
-			"v",
-			"w",
-			"o",
-			"r",
-			"x",
-			"e",
-			"f",
-			"5",
-			".",
-			"3",
-			"-",
-			"l",
-			"p"
-		]
-	}
+	"css.lint.unknownAtRules": "ignore",
+	"tailwindCSS.emmetCompletions": true
 }

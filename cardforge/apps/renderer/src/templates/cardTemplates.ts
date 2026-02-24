@@ -10,12 +10,22 @@ export type TemplateKey =
   | 'storm'
   | 'modern-dark'
   | 'steampunk'
-  | 'blood-ritual';
+  | 'blood-ritual'
+  | 'eldritch-eye'
+  | 'glitch-artifact'
+  | 'swamp';
 
 export type CardTemplate = {
   key: TemplateKey;
   label: { en: string; ar: string };
-  layout?: 'standard' | 'full-bleed' | 'steampunk' | 'blood-ritual';
+  layout?:
+  | 'standard'
+  | 'full-bleed'
+  | 'steampunk'
+  | 'blood-ritual'
+  | 'eldritch-eye'
+  | 'glitch-artifact'
+  | 'swamp';
   titleKey?: string;
   descKey?: string;
   thumbnail?: string;
@@ -160,6 +170,36 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
     layout: 'blood-ritual',
     thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#100000',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  'eldritch-eye': {
+    key: 'eldritch-eye',
+    label: { en: 'Eldritch Eye', ar: 'عين الهاوية' },
+    layout: 'eldritch-eye',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#000000',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  'glitch-artifact': {
+    key: 'glitch-artifact',
+    label: { en: 'Glitch Artifact', ar: 'كرت الخلل الكوني' },
+    layout: 'glitch-artifact',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#050005',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  swamp: {
+    key: 'swamp',
+    label: { en: 'Swamp', ar: 'سيد المستنقع' },
+    layout: 'swamp',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#001508',
     artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
     title: { x: 0, y: 0, size: 22 },
     desc: { x: 0, y: 0, size: 12 },
