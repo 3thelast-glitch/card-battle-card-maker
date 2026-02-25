@@ -1,7 +1,7 @@
 // TemplateGallery.tsx
 // Floating glassmorphic panel with card template thumbnails.
 import { memo, ReactNode } from 'react';
-import { X, Sparkles, Leaf } from 'lucide-react';
+import { X, Sparkles, Leaf, Gem } from 'lucide-react';
 import { useCardEditorStore } from '../../../../store/cardEditorStore';
 
 type TemplateTheme = {
@@ -69,6 +69,14 @@ const TEMPLATES: TemplateTheme[] = [
         accentColor: '#34d399',
         borderColor: 'rgba(4,120,87,0.5)',
         emoji: <Leaf className="text-emerald-400" size={28} />,
+    },
+    {
+        id: 'elven-luxury',
+        label: 'إيلف فاخر',
+        bg: '#0C1508',
+        accentColor: '#FFD700',
+        borderColor: '#FFD700',
+        emoji: <Gem className="text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]" size={28} />,
     },
 ];
 

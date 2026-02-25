@@ -1589,32 +1589,122 @@ html[dir='rtl'] .card-frame__desc {
 /* --- Phase 12: Swamp Layout Animations --- */
 
 @keyframes bubbleRise {
-  0% { transform: translateY(0) scale(1); opacity: 0; }
-  10% { opacity: 0.8; }
-  80% { opacity: 0.5; }
-  100% { transform: translateY(-520px) scale(0.5); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.8;
+  }
+
+  80% {
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translateY(-520px) scale(0.5);
+    opacity: 0;
+  }
 }
 
 @keyframes rippleExpand {
-  0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0.8; }
-  100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; }
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
 }
 
 @keyframes weedSway {
-  0%, 100% { transform: rotate(-4deg); }
-  50% { transform: rotate(4deg); }
+
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+
+  50% {
+    transform: rotate(4deg);
+  }
 }
 
 @keyframes waveShift {
-  0% { transform: translateX(-8px); }
-  100% { transform: translateX(8px); }
+  0% {
+    transform: translateX(-8px);
+  }
+
+  100% {
+    transform: translateX(8px);
+  }
 }
 
 @keyframes swampSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .swamp-card-frame {
-  box-shadow: 0 50px 120px rgba(0,150,60,0.55), 0 0 0 1px rgba(0,100,40,0.4), inset 0 0 100px rgba(0,0,0,0.85);
+  box-shadow: 0 50px 120px rgba(0, 150, 60, 0.55), 0 0 0 1px rgba(0, 100, 40, 0.4), inset 0 0 100px rgba(0, 0, 0, 0.85);
+}
+
+/* --- Phase 13: Elven Luxury Animations --- */
+
+@keyframes leafDrift {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  80% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translate(-100px, 150px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes floatSparkle {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translateY(-10px) scale(1.5);
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.luxury-card-shadow {
+  box-shadow: 0 50px 140px rgba(0, 140, 60, 0.35), 0 0 0 1px rgba(200, 168, 75, 0.35), inset 0 0 120px rgba(0, 0, 0, 0.88);
 }

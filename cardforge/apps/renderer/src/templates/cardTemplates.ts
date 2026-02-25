@@ -13,7 +13,8 @@ export type TemplateKey =
   | 'blood-ritual'
   | 'eldritch-eye'
   | 'glitch-artifact'
-  | 'swamp';
+  | 'swamp'
+  | 'elven-luxury';
 
 export type CardTemplate = {
   key: TemplateKey;
@@ -25,7 +26,8 @@ export type CardTemplate = {
   | 'blood-ritual'
   | 'eldritch-eye'
   | 'glitch-artifact'
-  | 'swamp';
+  | 'swamp'
+  | 'elven-luxury';
   titleKey?: string;
   descKey?: string;
   thumbnail?: string;
@@ -200,6 +202,16 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
     layout: 'swamp',
     thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#001508',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  'elven-luxury': {
+    key: 'elven-luxury',
+    label: { en: 'Elven Luxury', ar: 'إيلف فاخر' },
+    layout: 'elven-luxury',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#040803',
     artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
     title: { x: 0, y: 0, size: 22 },
     desc: { x: 0, y: 0, size: 12 },

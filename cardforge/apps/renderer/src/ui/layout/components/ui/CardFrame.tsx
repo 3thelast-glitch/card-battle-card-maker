@@ -1,6 +1,6 @@
 import React, { memo, useRef, useCallback } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import { Heart, Sword } from 'lucide-react';
+import { Heart, Sword, Moon } from 'lucide-react';
 import { StarRating } from './StarRating';
 import type { BadgeKey, BadgePos } from '../../../../store/cardEditorStore';
 
@@ -55,7 +55,8 @@ interface CardFrameProps {
     | 'eldritch-eye'
     | 'cyber-neon'
     | 'glitch-artifact'
-    | 'swamp';
+    | 'swamp'
+    | 'elven-luxury';
 }
 
 const ELEMENT_CONFIG: Record<
@@ -264,6 +265,82 @@ const DraggableBadge = memo(
     },
 );
 DraggableBadge.displayName = 'DraggableBadge';
+
+// ── Elven Luxury Components ────────────────────────────────────
+
+const GemStone = () => (
+    <div className="absolute z-40 pointer-events-none" style={{ bottom: '15px', left: '50%', transform: 'translateX(-50%)' }}>
+        <svg width="40" height="40" viewBox="0 0 40 40">
+            <path d="M20 2L36 20L20 38L4 20Z" fill="url(#gem-grad)" stroke="#FFD700" strokeWidth="1.5" />
+            <path d="M20 6L30 20L20 34L10 20Z" fill="rgba(255,255,255,0.2)" />
+            <defs>
+                <linearGradient id="gem-grad" x1="0" y1="0" x2="40" y2="40">
+                    <stop offset="0%" stopColor="#80FFB0" />
+                    <stop offset="50%" stopColor="#20C060" />
+                    <stop offset="100%" stopColor="#006020" />
+                </linearGradient>
+            </defs>
+        </svg>
+    </div>
+);
+
+const LuxuryCorner = ({ position }: { position: string }) => {
+    const isTop = position.includes('top');
+    const isLeft = position.includes('left');
+    const transform = `scale(${isLeft ? 1 : -1}, ${isTop ? 1 : -1})`;
+    return (
+        <svg width="60" height="60" viewBox="0 0 60 60" fill="none" className="absolute z-30 opacity-80"
+            style={{
+                top: isTop ? 4 : 'auto', bottom: !isTop ? 4 : 'auto',
+                left: isLeft ? 4 : 'auto', right: !isLeft ? 4 : 'auto',
+                transform,
+                transformOrigin: 'center'
+            }}>
+            <path d="M0,0 L60,0 L60,2 L2,2 L2,60 L0,60 Z" fill="#FFD700" />
+            <path d="M10,10 L50,10 L50,12 L12,12 L12,50 L10,50 Z" fill="#C8A84B" />
+            <circle cx="20" cy="20" r="4" fill="#FFD700" />
+        </svg>
+    );
+};
+
+const ElvenLuxuryFrame = () => (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" viewBox="0 0 350 480" fill="none">
+        <rect x="1.5" y="1.5" width="347" height="477" rx="20" stroke="#FFD700" strokeWidth="1.8" opacity="0.6" />
+        <LuxuryCorner position="top-left" />
+        <LuxuryCorner position="top-right" />
+        <LuxuryCorner position="bottom-left" />
+        <LuxuryCorner position="bottom-right" />
+        <line x1="15" y1="272" x2="335" y2="272" stroke="#FFD700" strokeWidth="1.2" opacity="0.5" />
+        <circle cx="175" cy="272" r="5" fill="rgba(0,0,0,0.9)" stroke="#FFD700" strokeWidth="0.8" />
+    </svg>
+);
+
+const LuxStatOrb = ({ icon, value, side, scale = 1 }: any) => {
+    const isLeft = side === 'left';
+    const gold = '#FFD700';
+    const accent = isLeft ? '#60D0FF' : '#60FFB0';
+    const glow = isLeft ? 'rgba(80,180,255,0.5)' : 'rgba(60,220,140,0.5)';
+    return (
+        <div className="relative shrink-0 pointer-events-auto" style={{ width: 85 * scale, height: 85 * scale }}>
+            <svg className="absolute inset-0" style={{ animation: `spin ${isLeft ? 10 : 14}s linear infinite ${isLeft ? '' : 'reverse'}` }} width="100%" height="100%" viewBox="0 0 96 96">
+                <circle cx="48" cy="48" r="44" fill="none" stroke={gold} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.6" />
+                {[0, 90, 180, 270].map((a, i) => (
+                    <circle key={i} cx={48 + 44 * Math.cos((a * Math.PI) / 180)} cy={48 + 44 * Math.sin((a * Math.PI) / 180)} r="4" fill="rgba(0,0,0,0.9)" stroke={accent} strokeWidth="1" />
+                ))}
+            </svg>
+            <div className="absolute rounded-full flex flex-col items-center justify-center shadow-2xl"
+                style={{
+                    inset: 8 * scale,
+                    background: isLeft ? 'radial-gradient(circle at 38% 38%, #0D1020, #04080C)' : 'radial-gradient(circle at 38% 38%, #041008, #010704)',
+                    border: `${2 * scale}px solid rgba(200,168,75,0.7)`,
+                    boxShadow: `0 0 ${20 * scale}px ${glow}, inset 0 0 ${16 * scale}px rgba(0,0,0,0.9)`
+                }}>
+                <span style={{ fontSize: 20 * scale, marginBottom: 1 * scale, filter: `drop-shadow(0 0 ${8 * scale}px ${gold})` }}>{icon}</span>
+                <span className="font-black leading-none relative z-10" style={{ fontSize: 16 * scale, color: gold, textShadow: `0 0 ${14 * scale}px ${gold}`, fontFamily: 'Georgia,serif' }}>{value}</span>
+            </div>
+        </div>
+    );
+};
 
 // ── CardFrame ────────────────────────────────────────────────
 export const CardFrame = memo<CardFrameProps>(
@@ -2729,6 +2806,171 @@ export const CardFrame = memo<CardFrameProps>(
                             </div>
                         </div>
                     )}
+                </div>
+            );
+        }
+
+        if (layout === 'elven-luxury') {
+            const leaves = [
+                { x: '6%', y: '9%', size: 10, rotation: -30, opacity: 0.55, delay: '0s' },
+                { x: '79%', y: '6%', size: 8, rotation: 40, opacity: 0.5, delay: '1.2s' },
+                { x: '14%', y: '56%', size: 7, rotation: -20, opacity: 0.4, delay: '2s' },
+                { x: '76%', y: '61%', size: 9, rotation: 55, opacity: 0.45, delay: '0.8s' },
+                { x: '41%', y: '4%', size: 6, rotation: 10, opacity: 0.38, delay: '1.8s' },
+            ];
+
+            const elementData = data.element ? ELEMENT_CONFIG[data.element] : null;
+
+            return (
+                <div
+                    className={`relative overflow-hidden group transition-all duration-700 hover:scale-[1.02] luxury-card-shadow z-10 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+                    style={{
+                        width: W, height: H, borderRadius: r,
+                        background: `radial-gradient(ellipse 130% 80% at 50% 0%, #0C1508 0%, transparent 55%), linear-gradient(180deg, #040803 0%, #020502 50%, #040803 100%)`,
+                        cursor: onClick ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        flexShrink: 0,
+                        ...style,
+                    }}
+                    onClick={onClick}
+                >
+                    {/* Floating Leaves */}
+                    {leaves.map((l, i) => (
+                        <div key={`leaf-${i}`} className="absolute pointer-events-none z-10"
+                            style={{ left: l.x, top: l.y, opacity: l.opacity, animation: `leafDrift 6s ease-in-out infinite`, animationDelay: l.delay }}>
+                            <svg width={l.size * scale} height={l.size * 1.6 * scale} viewBox="0 0 20 32" fill="none" style={{ transform: `rotate(${l.rotation}deg)` }}>
+                                <path d="M10 1 Q18 8 16 18 Q14 26 10 31 Q6 26 4 18 Q2 8 10 1Z" fill="rgba(180,255,180,0.14)" stroke="rgba(150,255,150,0.38)" strokeWidth="0.5" />
+                            </svg>
+                        </div>
+                    ))}
+
+                    {/* Sparkles */}
+                    {[...Array(22)].map((_, i) => (
+                        <div key={`sparkle-${i}`} className="absolute rounded-full pointer-events-none z-10"
+                            style={{
+                                width: (Math.random() * 3 + 1) * scale,
+                                height: (Math.random() * 3 + 1) * scale,
+                                background: '#FFD700',
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                filter: 'blur(1px)',
+                                animation: `floatSparkle ${Math.random() * 4 + 3}s ease-in-out infinite`,
+                                animationDelay: `${Math.random() * 5}s`
+                            }} />
+                    ))}
+
+                    {/* Art Layer */}
+                    <div className="absolute top-0 left-0 w-full h-[272px] overflow-hidden rounded-t-[20px] z-0 pointer-events-none">
+                        {data.imageUrl ? (
+                            <img src={data.imageUrl} alt="Card Art" className="w-full h-full object-cover mix-blend-screen opacity-90 group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700" />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-[#020502] mix-blend-screen opacity-90 group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700">
+                                <Moon size={80 * scale} className="text-[#80FFB0] opacity-50 mb-4 drop-shadow-[0_0_15px_rgba(128,255,176,0.5)]" />
+                                <span className="text-[#80FFB0] opacity-50 font-serif" style={{ fontSize: 14 * scale }}>Visions of the Ancients</span>
+                            </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#040803] pointer-events-none z-10" />
+                    </div>
+
+                    <ElvenLuxuryFrame />
+
+                    {/* RarityBadge */}
+                    <div className="absolute top-[18px] left-[18px] z-40">
+                        <span className="font-bold tracking-widest drop-shadow-md" style={{ fontSize: 11 * scale, background: 'linear-gradient(90deg, #FFD700, #FFF, #C8A84B)', WebkitBackgroundClip: 'text', color: 'transparent', textTransform: 'uppercase' }}>
+                            {data.rarity || 'RARE'}
+                        </span>
+                    </div>
+
+                    {/* Element Badge (Top Right) */}
+                    <div className="absolute top-[18px] right-[18px] z-40">
+                        <span style={{ fontSize: 18 * scale, filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.6))' }}>
+                            {elementData ? elementData.emoji : '✨'}
+                        </span>
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="absolute bottom-[35px] left-0 right-0 px-[24px] z-20 flex flex-col items-center">
+
+                        {/* Title */}
+                        <div className="flex items-center w-full mb-3 pointer-events-none">
+                            <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-[#FFD700] opacity-50" />
+                            <h1 className="text-center font-black mx-3" style={{ fontSize: 22 * scale, color: '#FFF', textShadow: '0 0 10px rgba(255,215,0,0.8), 0 2px 4px rgba(0,0,0,0.9)', fontFamily: 'Cinzel, Georgia, serif', letterSpacing: '0.05em' }}>
+                                {data.title || 'Elven Core'}
+                            </h1>
+                            <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-[#FFD700] opacity-50" />
+                        </div>
+
+                        <div className="text-center mb-4 opacity-70 pointer-events-none" style={{ fontSize: 10 * scale, color: '#C8A84B', fontFamily: 'monospace', letterSpacing: '0.2em' }}>
+                            {data.traits?.join(' • ') || 'MYSTIC • ANCIENT'}
+                        </div>
+
+                        {/* Description Plaque */}
+                        <div className="w-full relative px-[16px] py-[12px] rounded-lg" style={{ background: 'rgba(0,10,0,0.6)', border: '1px solid rgba(200,168,75,0.4)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.8)' }}>
+                            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#FFD700] -translate-x-[1px] -translate-y-[1px]" />
+                            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#FFD700] translate-x-[1px] -translate-y-[1px]" />
+                            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#FFD700] -translate-x-[1px] translate-y-[1px]" />
+                            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#FFD700] translate-x-[1px] translate-y-[1px]" />
+
+                            <p className="text-center leading-relaxed" style={{ fontSize: 12 * scale, color: '#E0E0E0', textShadow: '0 1px 2px #000' }}>
+                                {data.description || 'Channel the ancient magic of the deep woods.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <GemStone />
+
+                    {/* Stats Group & Draggables */}
+                    {showStats && (
+                        <div className="absolute bottom-[20px] left-0 right-0 z-40 pointer-events-none flex justify-between px-3 h-[85px]">
+
+                            {/* HP Orb */}
+                            <div className="pointer-events-auto">
+                                <DraggableBadge
+                                    badgeKey="hp"
+                                    pos={bPos.hp}
+                                    isTransformMode={isTransformMode}
+                                    isActive={activeBadgeId === 'badge-hp'}
+                                    onSelect={() => handleSelect('hp')}
+                                    onMove={handleMove}
+                                >
+                                    <LuxStatOrb icon="❤️" value={data.hp || 0} side="left" scale={scale} />
+                                </DraggableBadge>
+                            </div>
+
+                            {/* Stars / Cost */}
+                            <div className="flex-1 flex justify-center items-end pb-[10px] pointer-events-auto">
+                                {data.cost !== undefined && data.cost > 0 && (
+                                    <div className="flex items-center justify-center gap-[4px] px-3 py-1 rounded-full bg-black/50 border border-[#FFD700]/30 backdrop-blur-sm" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                                        <div className="h-[1px] w-[15px] bg-gradient-to-r from-transparent to-[#FFD700] opacity-70" />
+                                        <StarRating stars={data.cost} scale={scale * 0.8} />
+                                        <div className="h-[1px] w-[15px] bg-gradient-to-l from-transparent to-[#FFD700] opacity-70" />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Attack Orb */}
+                            <div className="pointer-events-auto">
+                                <DraggableBadge
+                                    badgeKey="attack"
+                                    pos={bPos.attack}
+                                    isTransformMode={isTransformMode}
+                                    isActive={activeBadgeId === 'badge-attack'}
+                                    onSelect={() => handleSelect('attack')}
+                                    onMove={handleMove}
+                                >
+                                    <LuxStatOrb icon="⚔️" value={data.attack || 0} side="right" scale={scale} />
+                                </DraggableBadge>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="absolute bottom-[6px] w-full text-center z-50 pointer-events-none">
+                        <span style={{ fontSize: 8 * scale, color: 'rgba(200,168,75,0.6)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                            ELVEN / LUXURY EDITION
+                        </span>
+                    </div>
+
                 </div>
             );
         }
