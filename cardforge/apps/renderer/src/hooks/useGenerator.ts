@@ -133,7 +133,7 @@ export function useGenerator() {
       } catch (err: any) {
         const msg =
           err?.message === 'MISSING_API_KEY'
-            ? 'مفتاح Gemini API غير مُعيَّن. أضف VITE_GEMINI_API_KEY في ملف .env'
+            ? 'يرجى إدخال مفتاح API صحيح أولاً.'
             : (err?.message ?? 'فشل التوليد - حاول مرة أخرى');
 
         store.setStatus('error');

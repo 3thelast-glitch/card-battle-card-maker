@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { useAppStore } from '../state/appStore';
 
 export interface GeneratedCardData {
   name: string;
@@ -9,15 +10,19 @@ export interface GeneratedCardData {
 }
 
 export class CardGenerator {
-  private genAI: GoogleGenerativeAI;
-
-  constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
-  }
-
   async generateCard(theme: string): Promise<GeneratedCardData> {
+    const storeKey = useAppStore.getState().geminiApiKey?.trim();
+    const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+    const currentKey = storeKey || envKey;
+
+    if (!currentKey) {
+      throw new Error('مفتاح API مفقود أو فارغ');
+    }
+
+    const genAI = new GoogleGenerativeAI(currentKey);
+
     // Using gemini-1.5-flash for speed and efficiency
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Generate a trading card character based on the theme: "${theme}".
 Return a JSON object with the following keys:

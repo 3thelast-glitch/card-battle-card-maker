@@ -23,6 +23,7 @@ import { Button } from '../../components/ui/Button';
 import { RarityBadge, ElementBadge } from '../../components/ui/Badge';
 import { useGenerator } from '../../../../hooks/useGenerator';
 import { useCardEditor } from '../../../../hooks/useCardEditor';
+import { useAppStore } from '../../../../state/appStore';
 import type {
   GeneratedCard,
   HistoryEntry,
@@ -166,6 +167,7 @@ HistoryItem.displayName = 'HistoryItem';
 export const GeneratorPage = memo(() => {
   const [selectedTheme, setSelectedTheme] = useState('');
   const { applyCard } = useCardEditor();
+  const { geminiApiKey, setGeminiApiKey } = useAppStore();
 
   const {
     prompt,
@@ -224,10 +226,9 @@ export const GeneratorPage = memo(() => {
                 key={t}
                 onClick={() => handleTheme(t)}
                 className={`px-2.5 py-1 rounded-full text-[10px] font-medium border transition-all
-                  ${
-                    selectedTheme === t
-                      ? 'bg-purple-600/40 border-purple-500/60 text-purple-200'
-                      : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08] hover:text-slate-200'
+                  ${selectedTheme === t
+                    ? 'bg-purple-600/40 border-purple-500/60 text-purple-200'
+                    : 'bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08] hover:text-slate-200'
                   }`}
               >
                 {t}
@@ -307,6 +308,24 @@ export const GeneratorPage = memo(() => {
             </div>
           </div>
 
+          {/* API Key Input */}
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4">
+            <label className="block text-sm font-semibold text-slate-200 mb-2">
+              مفتاح Gemini API
+            </label>
+            <input
+              type="password"
+              placeholder="AIzaSy..."
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-black/40 border border-white/[0.1] rounded-lg text-slate-200 focus:outline-none focus:border-purple-500/50 transition-colors"
+              dir="ltr"
+            />
+            <p className="text-[10px] text-slate-500 mt-2">
+              أدخل مفتاح Gemini الخاص بك لتفعيل توليد البطاقات. يتم حفظ المفتاح محلياً في متصفحك فقط.
+            </p>
+          </div>
+
           {/* Textarea */}
           <div className="relative">
             <textarea
@@ -332,7 +351,7 @@ export const GeneratorPage = memo(() => {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2">
               <span className="text-xs text-slate-500">عدد البطاقات:</span>
-              {[2, 4, 6, 8].map((n) => (
+              {[1, 2, 4, 6, 8].map((n) => (
                 <button
                   key={n}
                   onClick={() => updateConfig({ count: n })}
@@ -353,7 +372,7 @@ export const GeneratorPage = memo(() => {
                 variant="primary"
                 size="md"
                 loading={isGenerating}
-                disabled={!canGenerate}
+                disabled={!canGenerate || !geminiApiKey.trim()}
                 onClick={handleGenerate}
                 icon={!isGenerating ? <Zap size={14} /> : undefined}
               >

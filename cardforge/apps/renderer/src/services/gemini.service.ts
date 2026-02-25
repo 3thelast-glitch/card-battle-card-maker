@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { useAppStore } from '../state/appStore';
 
 type CardContext = {
   lang: 'ar' | 'en';
@@ -21,19 +22,16 @@ export type CardContentResult = {
 };
 
 // ✅ تحسين: تنظيف المفتاح من المسافات الزائدة (حل مشكلة ويندوز)
-const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
-
-if (!apiKey && import.meta.env.DEV) {
-  console.warn(
-    '⚠️ VITE_GEMINI_API_KEY is not set or empty - gemini.service.ts:27',
-  );
-}
 
 // ✅ الدالة الأساسية للاتصال (تستخدم v1beta للموديلات الحديثة)
 const callGeminiAPI = async (
   modelName: string,
   prompt: string,
 ): Promise<string> => {
+  const storeKey = useAppStore.getState().geminiApiKey?.trim();
+  const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+  const apiKey = storeKey || envKey;
+
   if (!apiKey) {
     throw new Error('MISSING_API_KEY');
   }
@@ -100,6 +98,9 @@ export const generateGeminiText = async (prompt: string): Promise<string> => {
       console.log(`🔄 Trying model: ${model}... - gemini.service.ts:90`);
       return await callGeminiAPI(model, prompt);
     } catch (error: any) {
+      if (error.message === 'MISSING_API_KEY') {
+        throw error;
+      }
       console.warn(
         `❌ Model ${model} failed. Trying next... - gemini.service.ts:93`,
         error.message,

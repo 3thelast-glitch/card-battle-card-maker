@@ -50,7 +50,7 @@ type GeneratorActions = {
 };
 
 const DEFAULT_CONFIG: GeneratorConfig = {
-  count: 4,
+  count: 1,
   elementFilter: 'random',
   rarityFilter: 'random',
 };

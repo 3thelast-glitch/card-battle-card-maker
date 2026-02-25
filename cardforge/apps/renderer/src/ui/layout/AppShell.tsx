@@ -19,10 +19,12 @@ import {
   Cpu,
   X,
   CheckCircle,
+  Gamepad2,
 } from 'lucide-react';
 import { DesignEditor } from './pages/design/DesignEditor';
 import { GeneratorPage } from './pages/generate/GeneratorPage';
 import { CollectionPage } from './pages/collection/CollectionPage';
+import { SimulationScreen } from './pages/simulation/SimulationScreen';
 import { useAppStore } from '../../state/appStore';
 import { useCardEditorStore } from '../../store/cardEditorStore';
 import {
@@ -55,7 +57,7 @@ const AssetsScreen = lazy(() =>
   })),
 );
 
-type Page = 'design' | 'generate' | 'collection';
+type Page = 'design' | 'generate' | 'collection' | 'simulation';
 type Legacy = 'editor' | 'export' | 'data' | 'assets' | null;
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -130,6 +132,7 @@ export const AppShell = () => {
     { id: 'design' as Page, icon: Palette, label: 'التصميم', badge: '' },
     { id: 'generate' as Page, icon: Zap, label: 'التوليد', badge: 'AI' },
     { id: 'collection' as Page, icon: Layers, label: 'المجموعة', badge: '' },
+    { id: 'simulation' as Page, icon: Gamepad2, label: 'المحاكاة', badge: '' },
   ];
 
   // ── Legacy tool items ──
@@ -306,6 +309,7 @@ export const AppShell = () => {
         {activePage === 'design' && <DesignEditor />}
         {activePage === 'generate' && <GeneratorPage />}
         {activePage === 'collection' && <CollectionPage />}
+        {activePage === 'simulation' && <SimulationScreen />}
       </main>
 
       {/* ══════════════════════════════════════════════════════ */}

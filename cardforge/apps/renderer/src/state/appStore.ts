@@ -23,6 +23,7 @@ type AppState = {
   activeSetId?: string;
   activeTableId?: string;
   previewRowId?: string;
+  geminiApiKey: string;
 };
 
 type AppActions = {
@@ -35,6 +36,7 @@ type AppActions = {
   setActiveSetId: (id?: string) => void;
   setActiveTableId: (id?: string) => void;
   setPreviewRowId: (id?: string) => void;
+  setGeminiApiKey: (key: string) => void;
 };
 
 export const useAppStore = create<AppState & AppActions>((set, get) => ({
@@ -55,4 +57,9 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   setActiveSetId: (id) => set({ activeSetId: id }),
   setActiveTableId: (id) => set({ activeTableId: id }),
   setPreviewRowId: (id) => set({ previewRowId: id }),
+  geminiApiKey: localStorage.getItem('geminiApiKey') || '',
+  setGeminiApiKey: (key) => {
+    localStorage.setItem('geminiApiKey', key);
+    set({ geminiApiKey: key });
+  },
 }));
