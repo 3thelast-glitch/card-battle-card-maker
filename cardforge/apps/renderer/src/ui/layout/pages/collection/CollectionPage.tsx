@@ -1,5 +1,6 @@
 // src/ui/layout/pages/collection/CollectionPage.tsx
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Search,
   Filter,
@@ -11,6 +12,8 @@ import {
   Square,
   Archive,
   SortAsc,
+  FileSpreadsheet,
+  FileDown,
 } from 'lucide-react';
 import { CardFrame } from '../../components/ui/CardFrame';
 import type {
@@ -20,142 +23,7 @@ import type {
 } from '../../components/ui/CardFrame';
 import { Button } from '../../components/ui/Button';
 import { RarityBadge, ElementBadge } from '../../components/ui/Badge';
-
-// ── Sample collection ──────────────────────────────────────
-const COLLECTION: (CardFrameData & { id: string })[] = [
-  {
-    id: 'c1',
-    title: 'تنين النار',
-    element: 'fire',
-    rarity: 'Legendary',
-    attack: 95,
-    hp: 70,
-    cost: 9,
-    traits: ['طائر', 'أسطوري'],
-    description: 'أسيد الجحيم',
-  },
-  {
-    id: 'c2',
-    title: 'ملاك النور',
-    element: 'light',
-    rarity: 'Epic',
-    attack: 80,
-    hp: 85,
-    cost: 8,
-    traits: ['ملاك', 'مقدس'],
-    description: 'حامي السماء',
-  },
-  {
-    id: 'c3',
-    title: 'محارب الظلام',
-    element: 'dark',
-    rarity: 'Rare',
-    attack: 65,
-    hp: 75,
-    cost: 6,
-    traits: ['محارب', 'شيطان'],
-    description: 'الخاتل الصامت',
-  },
-  {
-    id: 'c4',
-    title: 'روح الغابة',
-    element: 'nature',
-    rarity: 'Uncommon',
-    attack: 45,
-    hp: 100,
-    cost: 4,
-    traits: ['روح', 'حكيم'],
-    description: 'حارس الغابات',
-  },
-  {
-    id: 'c5',
-    title: 'تنين الجليد',
-    element: 'water',
-    rarity: 'Epic',
-    attack: 70,
-    hp: 60,
-    cost: 7,
-    traits: ['طائر', 'ثلج'],
-    description: 'سيد الشتاء',
-  },
-  {
-    id: 'c6',
-    title: 'عفريت النار',
-    element: 'fire',
-    rarity: 'Rare',
-    attack: 80,
-    hp: 45,
-    cost: 6,
-    traits: ['جني', 'محارب'],
-    description: 'المحرق الأزلي',
-  },
-  {
-    id: 'c7',
-    title: 'حارس الحجر',
-    element: 'neutral',
-    rarity: 'Common',
-    attack: 30,
-    hp: 110,
-    cost: 3,
-    traits: ['قديم', 'صلب'],
-    description: 'لا يتزعزع',
-  },
-  {
-    id: 'c8',
-    title: 'ساحر السحب',
-    element: 'water',
-    rarity: 'Rare',
-    attack: 55,
-    hp: 65,
-    cost: 5,
-    traits: ['ساحر', 'حكيم'],
-    description: 'سيد المطر',
-  },
-  {
-    id: 'c9',
-    title: 'فارس الظلام',
-    element: 'dark',
-    rarity: 'Uncommon',
-    attack: 60,
-    hp: 70,
-    cost: 5,
-    traits: ['فارس', 'شيطان'],
-    description: 'من أعماق التاريخ',
-  },
-  {
-    id: 'c10',
-    title: 'راعية الأرض',
-    element: 'nature',
-    rarity: 'Common',
-    attack: 35,
-    hp: 90,
-    cost: 3,
-    traits: ['شافية', 'طبيعة'],
-    description: 'بركة الأراضي',
-  },
-  {
-    id: 'c11',
-    title: 'رياح الصحراء',
-    element: 'neutral',
-    rarity: 'Uncommon',
-    attack: 50,
-    hp: 55,
-    cost: 4,
-    traits: ['عاصفة', 'رياح'],
-    description: 'سرعة البرق',
-  },
-  {
-    id: 'c12',
-    title: 'أفعى الماء',
-    element: 'water',
-    rarity: 'Common',
-    attack: 40,
-    hp: 80,
-    cost: 3,
-    traits: ['زاحف', 'ماء'],
-    description: 'خفية في الأعماق',
-  },
-];
+import { useAppStore } from '../../../../state/appStore';
 
 const ELEMENTS_ALL: Element[] = [
   'fire',
@@ -191,19 +59,20 @@ const CardThumbnail = memo(
     selected,
     onSelect,
     onOpen,
+    onRemove,
   }: {
     card: CardFrameData & { id: string };
     selected: boolean;
     onSelect: (id: string) => void;
     onOpen: (id: string) => void;
+    onRemove: (id: string) => void;
   }) => (
     <div
       className={`group relative flex flex-col gap-2 p-3 rounded-2xl cursor-pointer transition-all duration-200
-      ${
-        selected
+      ${selected
           ? 'bg-purple-600/20 border border-purple-500/50 ring-2 ring-purple-500/30'
           : 'bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.12]'
-      }`}
+        }`}
       onClick={() => onOpen(card.id)}
     >
       {/* Select checkbox */}
@@ -221,8 +90,22 @@ const CardThumbnail = memo(
         )}
       </button>
 
+      <button
+        className="absolute top-2 left-2 z-50 p-2 bg-red-900/80 text-red-200 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg border border-red-500/50"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (window.confirm('هل أنت متأكد من حذف هذه البطاقة نهائياً؟')) {
+            onRemove(card.id);
+          }
+        }}
+        aria-label="حذف البطاقة"
+        title="حذف البطاقة"
+      >
+        <Trash2 size={16} />
+      </button>
+
       <div className="flex justify-center">
-        <CardFrame data={card} scale={0.37} showGlow={selected} showStats />
+        <CardFrame card={card} data={card} scale={0.37} showGlow={selected} showStats />
       </div>
       <div className="text-center">
         <div className="text-xs font-bold text-slate-200 truncate">
@@ -250,19 +133,20 @@ const CardListRow = memo(
     selected,
     onSelect,
     onOpen,
+    onRemove,
   }: {
     card: CardFrameData & { id: string };
     selected: boolean;
     onSelect: (id: string) => void;
     onOpen: (id: string) => void;
+    onRemove: (id: string) => void;
   }) => (
     <div
-      className={`group flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all
-      ${
-        selected
+      className={`group relative flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-all
+      ${selected
           ? 'bg-purple-600/15 border border-purple-500/40'
           : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06]'
-      }`}
+        }`}
       onClick={() => onOpen(card.id)}
     >
       <button
@@ -278,7 +162,20 @@ const CardListRow = memo(
           <Square size={14} />
         )}
       </button>
-      <CardFrame data={card} scale={0.12} showGlow={false} showStats={false} />
+      <button
+        className="absolute top-2 left-2 z-50 p-2 bg-red-900/80 text-red-200 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:scale-110 shadow-lg border border-red-500/50"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (window.confirm('هل أنت متأكد من حذف هذه البطاقة نهائياً؟')) {
+            onRemove(card.id);
+          }
+        }}
+        aria-label="حذف البطاقة"
+        title="حذف البطاقة"
+      >
+        <Trash2 size={16} />
+      </button>
+      <CardFrame card={card} data={card} scale={0.12} showGlow={false} showStats={false} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-bold text-slate-200 truncate">
           {card.title}
@@ -317,6 +214,9 @@ CardListRow.displayName = 'CardListRow';
 
 // ══ Main CollectionPage ═════════════════════════════════════
 export const CollectionPage = memo(() => {
+  const { collection, addCards, removeCard, removeMultipleCards } = useAppStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [search, setSearch] = useState('');
   const [filterElement, setFilterElement] = useState<Element | 'all'>('all');
   const [filterRarity, setFilterRarity] = useState<Rarity | 'all'>('all');
@@ -325,7 +225,7 @@ export const CollectionPage = memo(() => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
-    return COLLECTION.filter((c) => {
+    return collection.filter((c: CardFrameData & { id: string }) => {
       const q = search.toLowerCase();
       if (
         q &&
@@ -336,7 +236,7 @@ export const CollectionPage = memo(() => {
       if (filterElement !== 'all' && c.element !== filterElement) return false;
       if (filterRarity !== 'all' && c.rarity !== filterRarity) return false;
       return true;
-    }).sort((a, b) => {
+    }).sort((a: CardFrameData & { id: string }, b: CardFrameData & { id: string }) => {
       if (sort === 'rarity')
         return (
           (RARITY_ORDER[b.rarity ?? 'Common'] ?? 0) -
@@ -358,18 +258,161 @@ export const CollectionPage = memo(() => {
 
   const toggleAll = useCallback(() => {
     if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map((c) => c.id)));
+    else setSelected(new Set(filtered.map((c: CardFrameData & { id: string }) => c.id)));
   }, [selected.size, filtered]);
 
   const openCard = useCallback((_id: string) => {
     // TODO: navigate to design editor with this card
   }, []);
 
+  const handleRemoveCard = useCallback(
+    (id: string) => {
+      removeCard(id);
+      setSelected((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    [removeCard],
+  );
+
+  const handleBulkDelete = useCallback(() => {
+    if (selected.size === 0) return;
+    if (window.confirm(`هل أنت متأكد من حذف ${selected.size} بطاقات نهائياً؟`)) {
+      removeMultipleCards(Array.from(selected));
+      setSelected(new Set());
+    }
+  }, [selected, removeMultipleCards]);
+
   const anySelected = selected.size > 0;
   const allSelected = selected.size === filtered.length && filtered.length > 0;
 
+  // ── Excel/CSV Import Logic ──
+  const triggerImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const data = event.target?.result as ArrayBuffer;
+      if (!data) return;
+
+      try {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const newCards: (CardFrameData & { id: string })[] = [];
+
+        workbook.SheetNames.forEach((sheetName) => {
+          const sheetRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false }) as Record<string, any>[];
+
+          sheetRows.forEach((row) => {
+            // Case-insensitive key lookup helper for user-provided excel headers
+            const getVal = (keys: string[]) => {
+              for (const k of Object.keys(row)) {
+                if (keys.includes(k.toLowerCase().trim())) {
+                  return String(row[k]).trim();
+                }
+              }
+              return undefined;
+            };
+
+            const title = getVal(['name', 'title']) || 'بدون اسم';
+
+            // Allow empty or skip entirely empty rows
+            if (!getVal(['name', 'title']) && !getVal(['description']) && !getVal(['attack'])) return;
+
+            const card: CardFrameData & { id: string } = {
+              id: `card_${crypto.randomUUID()}`,
+              title,
+              description: getVal(['description']) || '',
+              attack: parseInt(getVal(['attack']) || '0', 10),
+              hp: parseInt(getVal(['health', 'hp']) || '0', 10),
+              cost: parseInt(getVal(['stars', 'cost']) || '1', 10),
+              rarity: (getVal(['rarity']) as Rarity) || 'Common',
+              element: (getVal(['element']) as Element) || 'neutral',
+              imageUrl: getVal(['image_url', 'imageurl', 'image']) || undefined,
+            };
+
+            newCards.push(card);
+          });
+        });
+
+        if (newCards.length > 0) {
+          addCards(newCards);
+          alert(`تم استيراد ${newCards.length} بطاقة من ${workbook.SheetNames.length} صفحات بنجاح!`);
+        } else {
+          alert('لم يتم العثور على أي بطاقات صالحة في الملف.');
+        }
+      } catch (err: any) {
+        alert('حدث خطأ أثناء قراءة الملف: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    // Reset file input so same file can be chosen again
+    e.target.value = '';
+  };
+
+  const handleDownloadTemplate = useCallback(() => {
+    const workbook = XLSX.utils.book_new();
+
+    const sheets = [
+      {
+        name: 'عادي',
+        data: [
+          { name: 'جندي الحرس', attack: 20, health: 30, stars: 1, rarity: 'عادي', element: 'محايد', description: 'جندي مخلص.', template: 'classic', image_url: '' }
+        ],
+      },
+      {
+        name: 'غير شائع',
+        data: [
+          { name: 'قناص الرياح', attack: 45, health: 25, stars: 3, rarity: 'غير شائع', element: 'هواء', description: 'دقة عالية.', template: 'classic', image_url: '' }
+        ],
+      },
+      {
+        name: 'نادر',
+        data: [
+          { name: 'ساحر الظلام', attack: 70, health: 40, stars: 4, rarity: 'نادر', element: 'ظلام', description: 'سحر أسود.', template: 'blood-ritual', image_url: '' }
+        ],
+      },
+      {
+        name: 'ملحمي',
+        data: [
+          { name: 'سيد المستنقع', attack: 85, health: 120, stars: 6, rarity: 'ملحمي', element: 'ماء', description: 'وحش برمائي.', template: 'swamp', image_url: '' }
+        ],
+      },
+      {
+        name: 'أسطوري',
+        data: [
+          { name: 'فيانور', attack: 180, health: 150, stars: 7, rarity: 'أسطوري', element: 'نور', description: 'أمير الغابة الأزلية.', template: 'elven-luxury', image_url: '' },
+          { name: 'عين الهاوية', attack: 160, health: 200, stars: 7, rarity: 'أسطوري', element: 'ظلام', description: 'مراقب الكون.', template: 'eldritch-eye', image_url: '' }
+        ],
+      },
+    ];
+
+    sheets.forEach((sheet) => {
+      const worksheet = XLSX.utils.json_to_sheet(sheet.data);
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
+    });
+
+    XLSX.writeFile(workbook, 'Cards_Database_Template.xlsx');
+  }, []);
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-[#070a14]">
+      {/* Hidden file input for Excel upload */}
+      <input
+        type="file"
+        accept=".xlsx, .xls, .csv"
+        ref={fileInputRef}
+        onChange={handleExcelImport}
+        className="hidden"
+      />
+
       {/* ── Top controls bar ── */}
       <div className="px-4 py-3 border-b border-white/[0.06] bg-[#0b0e1a] flex flex-wrap items-center gap-3">
         {/* Search */}
@@ -436,7 +479,7 @@ export const CollectionPage = memo(() => {
         </div>
 
         {/* View mode */}
-        <div className="flex items-center bg-white/[0.04] border border-white/[0.07] rounded-xl">
+        <div className="flex items-center bg-white/[0.04] border border-white/[0.07] rounded-xl mr-auto">
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-purple-600/40 text-purple-300' : 'text-slate-500 hover:text-slate-300'}`}
@@ -450,6 +493,28 @@ export const CollectionPage = memo(() => {
             <List size={13} />
           </button>
         </div>
+
+        {/* Download Template Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<FileDown size={14} />}
+          onClick={handleDownloadTemplate}
+          className="border-white/[0.1] hover:border-blue-500/50 hover:bg-blue-500/10 text-slate-300 hover:text-blue-400"
+        >
+          تحميل قالب إكسيل
+        </Button>
+
+        {/* Excel/CSV Import Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<FileSpreadsheet size={14} />}
+          onClick={triggerImport}
+          className="border-white/[0.1] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-slate-300 hover:text-emerald-400"
+        >
+          استيراد (Excel/CSV)
+        </Button>
 
         {/* Stats */}
         <span className="text-xs text-slate-500 shrink-0">
@@ -480,15 +545,21 @@ export const CollectionPage = memo(() => {
             <Button variant="outline" size="xs" icon={<Download size={11} />}>
               تصدير PNG
             </Button>
-            <Button variant="danger" size="xs" icon={<Trash2 size={11} />}>
-              حذف
+            <Button
+              variant="danger"
+              size="xs"
+              icon={<Trash2 size={16} />}
+              onClick={handleBulkDelete}
+              disabled={!anySelected}
+            >
+              Delete Selected
             </Button>
           </div>
         </div>
       )}
 
       {/* ── Cards area ── */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 scroll-rtl">
         {filtered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-3 text-center">
             <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center">
@@ -498,25 +569,27 @@ export const CollectionPage = memo(() => {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {filtered.map((card) => (
+            {filtered.map((card: CardFrameData & { id: string }) => (
               <CardThumbnail
                 key={card.id}
                 card={card}
                 selected={selected.has(card.id)}
                 onSelect={toggleSelect}
                 onOpen={openCard}
+                onRemove={handleRemoveCard}
               />
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-2 max-w-4xl mx-auto">
-            {filtered.map((card) => (
+            {filtered.map((card: CardFrameData & { id: string }) => (
               <CardListRow
                 key={card.id}
                 card={card}
                 selected={selected.has(card.id)}
                 onSelect={toggleSelect}
                 onOpen={openCard}
+                onRemove={handleRemoveCard}
               />
             ))}
           </div>
@@ -526,3 +599,4 @@ export const CollectionPage = memo(() => {
   );
 });
 CollectionPage.displayName = 'CollectionPage';
+

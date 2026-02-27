@@ -135,7 +135,7 @@ export function mapRowsToCards(rows: ParsedRow[], options: MapOptions) {
       warnings.push('poster-required');
     }
 
-    const data = {
+    const data: ParsedRow = {
       ...normalizedData,
       id,
       name: { en: nameEn || '', ar: nameAr || '' },

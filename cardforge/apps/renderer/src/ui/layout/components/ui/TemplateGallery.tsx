@@ -1,7 +1,7 @@
 // TemplateGallery.tsx
 // Floating glassmorphic panel with card template thumbnails.
 import { memo, ReactNode } from 'react';
-import { X, Sparkles, Leaf, Gem } from 'lucide-react';
+import { X, Sparkles, Leaf, Gem, Terminal } from 'lucide-react';
 import { useCardEditorStore } from '../../../../store/cardEditorStore';
 
 type TemplateTheme = {
@@ -78,6 +78,14 @@ const TEMPLATES: TemplateTheme[] = [
         borderColor: '#FFD700',
         emoji: <Gem className="text-[#FFD700] drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]" size={28} />,
     },
+    {
+        id: 'cyber-neon',
+        label: 'سايبر نيون',
+        bg: 'linear-gradient(145deg,#050510,#101020)',
+        accentColor: '#00FFFF',
+        borderColor: 'rgba(34,211,238,0.5)',
+        emoji: <Terminal className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]" size={28} />,
+    },
 ];
 
 export const TemplateGallery = memo(() => {
@@ -130,7 +138,7 @@ export const TemplateGallery = memo(() => {
                     scrollbarColor: 'rgba(168,85,247,0.3) transparent',
                 }}
             >
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-2 custom-scroll">
                     {TEMPLATES.map((tpl) => {
                         const isActive = activeTemplateId === tpl.id;
                         return (

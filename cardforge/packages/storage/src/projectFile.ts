@@ -14,10 +14,10 @@ export function parseProject(text: string): Project {
 
   const version = parsed.meta.version ?? getProjectVersion();
   const meta = {
+    ...parsed.meta,
     name: parsed.meta.name ?? 'Imported Project',
     createdAt: parsed.meta.createdAt ?? new Date().toISOString(),
     updatedAt: parsed.meta.updatedAt ?? new Date().toISOString(),
-    ...parsed.meta,
     version,
   };
 

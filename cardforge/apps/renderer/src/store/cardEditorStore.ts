@@ -26,6 +26,9 @@ export type CardEditorState = Required<
 > & {
   traits: string[];
   imageUrl: string | undefined;
+  imageScale: number;
+  imageOpacity: number;
+  imageBrightness: number;
   isDirty: boolean;
   layers: EditorLayer[];
   activeLayerId: string | null;
@@ -49,6 +52,10 @@ type CardEditorActions = {
   setTraits: (traits: string[]) => void;
   toggleTrait: (trait: string) => void;
   setImageUrl: (url: string | undefined) => void;
+  setImageScale: (scale: number) => void;
+  setImageOpacity: (opacity: number) => void;
+  setImageBrightness: (brightness: number) => void;
+  resetImageSettings: () => void;
   patchCard: (patch: Partial<CardEditorState>) => void;
   resetCard: () => void;
   markClean: () => void;
@@ -83,6 +90,9 @@ const DEFAULT_STATE: CardEditorState = {
   cost: 4,
   traits: [],
   imageUrl: undefined,
+  imageScale: 1,
+  imageOpacity: 1,
+  imageBrightness: 1,
   isDirty: false,
   layers: [
     { id: 'l1', name: 'الفن الرئيسي', type: 'art', visible: true },
@@ -119,6 +129,16 @@ export const useCardEditorStore = create<CardEditorState & CardEditorActions>(
     setHp: (hp) => set({ hp, isDirty: true }),
     setCost: (cost) => set({ cost, isDirty: true }),
     setImageUrl: (imageUrl) => set({ imageUrl, isDirty: true }),
+    setImageScale: (imageScale) => set({ imageScale, isDirty: true }),
+    setImageOpacity: (imageOpacity) => set({ imageOpacity, isDirty: true }),
+    setImageBrightness: (imageBrightness) => set({ imageBrightness, isDirty: true }),
+    resetImageSettings: () =>
+      set({
+        imageScale: 1,
+        imageOpacity: 1,
+        imageBrightness: 1,
+        isDirty: true,
+      }),
 
     setTraits: (traits) => set({ traits, isDirty: true }),
 

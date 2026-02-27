@@ -1,4 +1,3 @@
-import type { Rarity } from './balanceRules';
 import { BALANCE_RANGES, type Rarity } from './balanceRules';
 import {
   ABILITY_POWER,

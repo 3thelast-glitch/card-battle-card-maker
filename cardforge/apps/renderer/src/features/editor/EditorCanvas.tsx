@@ -15,7 +15,7 @@ import type {
   ElementModel,
 } from '../../../../../packages/core/src/index';
 import { applyBindingsToElements } from '../../../../../packages/core/src/index';
-import { useHtmlImage } from '../../utils/konva';
+import { useHtmlMedia } from '../../utils/konva';
 import { getImageLayout } from '../../utils/imageFit';
 
 type Props = {
@@ -31,6 +31,7 @@ type Props = {
   onSelectIds: (ids: string[]) => void;
   onChange: (elements: ElementModel[]) => void;
   onZoomChange: (zoom: number) => void;
+  onStageReady?: (stage: Konva.Stage | null) => void;
   onDropAsset?: (
     asset: DroppedAsset,
     position: { x: number; y: number },
@@ -82,6 +83,13 @@ export function EditorCanvas(props: Props) {
   const selectionJustFinishedRef = useRef(false);
   const dragStartRef = useRef<DragStart | null>(null);
   const draggingIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    props.onStageReady?.(stageRef.current);
+    return () => {
+      props.onStageReady?.(null);
+    };
+  }, [props.onStageReady]);
 
   const renderElements = useMemo(() => {
     if (!props.previewData) return props.elements;
@@ -141,9 +149,14 @@ export function EditorCanvas(props: Props) {
       ? Math.round(value / props.gridSize) * props.gridSize
       : value;
 
-  const updateElement = (id: string, patch: Partial<ElementModel>) => {
+  const updateElement = (
+    id: string,
+    patch: Partial<Omit<ElementModel, 'id' | 'type'>>,
+  ) => {
     props.onChange(
-      props.elements.map((el) => (el.id === id ? { ...el, ...patch } : el)),
+      props.elements.map((el) =>
+        el.id === id ? ({ ...el, ...patch } as ElementModel) : el,
+      ),
     );
   };
 
@@ -442,8 +455,8 @@ export function EditorCanvas(props: Props) {
                     cornerRadius={el.radius ?? 0}
                     opacity={el.opacity ?? 1}
                     draggable={!el.locked}
-                    onClick={(e) => handleSelect(el, e.evt.shiftKey)}
-                    onTap={(e) => handleSelect(el, e.evt.shiftKey)}
+                    onClick={(e) => handleSelect(el, hasShiftKey(e.evt))}
+                    onTap={(e) => handleSelect(el, hasShiftKey(e.evt))}
                     onDragStart={() => onDragStart(el.id)}
                     onDragMove={(e) => onDragMove(el.id, e.target)}
                     onDragEnd={(e) => onDragEnd(el.id, e.target)}
@@ -487,8 +500,8 @@ export function EditorCanvas(props: Props) {
                     shadowOpacity={el.shadowOpacity}
                     opacity={el.opacity ?? 1}
                     draggable={!el.locked}
-                    onClick={(e) => handleSelect(el, e.evt.shiftKey)}
-                    onTap={(e) => handleSelect(el, e.evt.shiftKey)}
+                    onClick={(e) => handleSelect(el, hasShiftKey(e.evt))}
+                    onTap={(e) => handleSelect(el, hasShiftKey(e.evt))}
                     onDragStart={() => onDragStart(el.id)}
                     onDragMove={(e) => onDragMove(el.id, e.target)}
                     onDragEnd={(e) => onDragEnd(el.id, e.target)}
@@ -519,8 +532,8 @@ export function EditorCanvas(props: Props) {
                     fill={el.fill ?? '#ffffff'}
                     opacity={el.opacity ?? 1}
                     draggable={!el.locked}
-                    onClick={(e) => handleSelect(el, e.evt.shiftKey)}
-                    onTap={(e) => handleSelect(el, e.evt.shiftKey)}
+                    onClick={(e) => handleSelect(el, hasShiftKey(e.evt))}
+                    onTap={(e) => handleSelect(el, hasShiftKey(e.evt))}
                     onDragStart={() => onDragStart(el.id)}
                     onDragMove={(e) => onDragMove(el.id, e.target)}
                     onDragEnd={(e) => onDragEnd(el.id, e.target)}
@@ -736,7 +749,10 @@ function rectsIntersect(
 function ImageNode(props: {
   el: ElementModel;
   onSelect: (el: ElementModel, additive: boolean) => void;
-  onUpdate: (id: string, patch: Partial<ElementModel>) => void;
+  onUpdate: (
+    id: string,
+    patch: Partial<Omit<ElementModel, 'id' | 'type'>>,
+  ) => void;
   onDragStart: (id: string) => void;
   onDragMove: (id: string, node: Konva.Node) => void;
   onDragEnd: (id: string, node: Konva.Node) => void;
@@ -744,11 +760,75 @@ function ImageNode(props: {
   multiSelected: boolean;
   projectRoot?: string;
 }) {
-  const img = useHtmlImage((props.el as any).src, props.projectRoot);
+  const groupRef = useRef<Konva.Group>(null);
+  const animationRef = useRef<Konva.Animation | null>(null);
+  const media = useHtmlMedia((props.el as any).src, props.projectRoot);
   const el = props.el as any;
-  const layout = getImageLayout(img, el.w, el.h, el.fit);
+  const layoutSource =
+    media instanceof HTMLVideoElement
+      ? media.videoWidth > 0 && media.videoHeight > 0
+        ? ({
+            width: media.videoWidth,
+            height: media.videoHeight,
+          } as HTMLImageElement)
+        : null
+      : media instanceof HTMLImageElement
+        ? media
+        : null;
+  const layout = getImageLayout(layoutSource, el.w, el.h, el.fit);
+
+  useEffect(() => {
+    if (!(media instanceof HTMLVideoElement)) return;
+    const layer = groupRef.current?.getLayer();
+    if (!layer) return;
+
+    const video = media;
+    const animation = new Konva.Animation(() => {}, layer);
+    animationRef.current = animation;
+
+    const startAnimation = () => {
+      if (!animation.isRunning()) {
+        animation.start();
+      }
+      // Force immediate redraw and batch draw for smooth video playback
+      layer.batchDraw();
+    };
+    
+    // Only start animation after video successfully plays
+    const startVideoAndAnimation = () => {
+      video.play().then(() => {
+        startAnimation();
+      }).catch((e) => {
+        console.error("Video playback failed:", e);
+      });
+    };
+    const stopAnimation = () => {
+      if (animation.isRunning()) {
+        animation.stop();
+      }
+    };
+
+    video.addEventListener('play', startAnimation);
+    video.addEventListener('pause', stopAnimation);
+    video.addEventListener('ended', stopAnimation);
+    // Start video and animation with proper sequencing
+    startVideoAndAnimation();
+
+    return () => {
+      stopAnimation();
+      video.pause();
+      video.removeEventListener('play', startAnimation);
+      video.removeEventListener('pause', stopAnimation);
+      video.removeEventListener('ended', stopAnimation);
+      if (animationRef.current === animation) {
+        animationRef.current = null;
+      }
+    };
+  }, [media]);
+
   return (
     <Group
+      ref={groupRef}
       id={el.id}
       x={el.x}
       y={el.y}
@@ -759,8 +839,8 @@ function ImageNode(props: {
       clipY={0}
       clipWidth={el.w}
       clipHeight={el.h}
-      onClick={(e) => props.onSelect(el, e.evt.shiftKey)}
-      onTap={(e) => props.onSelect(el, e.evt.shiftKey)}
+      onClick={(e) => props.onSelect(el, hasShiftKey(e.evt))}
+      onTap={(e) => props.onSelect(el, hasShiftKey(e.evt))}
       onDragStart={() => props.onDragStart(el.id)}
       onDragMove={(e) => props.onDragMove(el.id, e.target)}
       onDragEnd={(e) => props.onDragEnd(el.id, e.target)}
@@ -772,7 +852,7 @@ function ImageNode(props: {
     >
       <Rect width={el.w} height={el.h} opacity={0} listening={false} />
       <KonvaImage
-        image={img ?? undefined}
+        image={media ?? undefined}
         x={layout.x}
         y={layout.y}
         width={layout.width}
@@ -787,6 +867,10 @@ function isBold(weight?: number | string) {
   if (weight == null) return false;
   if (typeof weight === 'number') return weight >= 600;
   return String(weight).toLowerCase() === 'bold';
+}
+
+function hasShiftKey(evt: Event) {
+  return (evt as MouseEvent).shiftKey === true;
 }
 
 function applyTransform(

@@ -16,7 +16,7 @@ import type {
 } from '../../../../../packages/core/src/index';
 import { CARD_TEMPLATES, TemplateKey } from '../../templates/cardTemplates';
 import { RaceIcon } from '../../ui/icons/raceIcons';
-import { TraitIcon, TRAIT_META } from '../../ui/icons/traitIcons';
+import { TraitIcon, TRAIT_META, type TraitKey } from '../../ui/icons/traitIcons';
 import { ELEMENTS, getMatchup } from '../../lib/elements';
 import {
   Shield,
@@ -125,6 +125,11 @@ type BadgeStyleConfig = {
   tribe?: BadgeStyle;
 };
 
+type NormalizedBadgeStyle = Omit<Required<BadgeStyle>, 'x' | 'y'> & {
+  x?: number;
+  y?: number;
+};
+
 function hexToRgb(hex: string) {
   const cleaned = hex.replace('#', '');
   const normalized =
@@ -194,7 +199,6 @@ export function CardFrame({
     left: template.title.x,
     right: template.title.x,
     top: badgeTop,
-    display: tribeBadge.visible ? 'flex' : 'none',
     justifyContent: 'center',
     gap: tribeBadge.gap,
     ...tribeCss.container,
@@ -209,7 +213,9 @@ export function CardFrame({
   );
   const raceKey = race ? String(race).toLowerCase() : '';
   const elementKey = element ? String(element).toLowerCase() : '';
-  const elementInfo = elementKey && ELEMENTS[elementKey as ElementKey];
+  const elementInfo = elementKey
+    ? ELEMENTS[elementKey as ElementKey]
+    : undefined;
   const matchup = elementInfo
     ? getMatchup(elementKey as ElementKey)
     : { weakTo: [], strongAgainst: [], resist: [] };
@@ -287,11 +293,12 @@ export function CardFrame({
 
   const controlsEnabled = showControls ? true : hovered;
   const showVideo = art?.kind === 'video' && artInteractive && !videoFailed;
-  const showPoster = art?.kind === 'video' && !showVideo && art?.poster;
+  const posterSrc = art?.kind === 'video' ? art.poster : undefined;
+  const showPoster = art?.kind === 'video' && !showVideo && Boolean(posterSrc);
 
   useEffect(() => {
     setVideoFailed(false);
-  }, [art?.src, art?.poster]);
+  }, [art?.src, posterSrc]);
 
   const artRectStyle: CSSProperties = {
     left: template.artRect.left,
@@ -354,7 +361,7 @@ export function CardFrame({
             <video
               className="card-frame__media cardArtMedia"
               src={art.src}
-              poster={art.poster}
+              poster={posterSrc}
               playsInline
               muted
               loop
@@ -368,7 +375,7 @@ export function CardFrame({
           {showPoster ? (
             <img
               className="card-frame__media cardArtMedia"
-              src={(art as any).poster}
+              src={posterSrc ?? ''}
               alt=""
               draggable={false}
               style={{ objectFit: artTransform.fit }}
@@ -405,8 +412,9 @@ export function CardFrame({
             ) : null}
             {visibleTraits.map((trait, index) => {
               const key = trait.toLowerCase();
-              const meta = TRAIT_META[key];
-              const className = `traitBadge${meta ? ` traitBadge--${meta.tintClass}` : ''} bg-slate-900`;
+              const hasMeta = isTraitKey(key);
+              const meta = hasMeta ? TRAIT_META[key] : undefined;
+              const className = `traitBadge${meta ? ` traitBadge--${key}` : ''} bg-slate-900`;
               return (
                 <span
                   key={`${key}-${index}`}
@@ -416,7 +424,7 @@ export function CardFrame({
                     ...tribeCss.style,
                   }}
                 >
-                  <TraitIcon trait={key} size={12} />
+                  {hasMeta ? <TraitIcon trait={key} size={12} /> : null}
                 </span>
               );
             })}
@@ -573,6 +581,10 @@ function normalizeStat(value?: number) {
   return Math.max(0, Math.round(value as number));
 }
 
+function isTraitKey(value: string): value is TraitKey {
+  return Object.prototype.hasOwnProperty.call(TRAIT_META, value);
+}
+
 function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   return {
     x: Number.isFinite(value?.x) ? value!.x : 0,
@@ -587,7 +599,7 @@ function normalizeArtTransform(value?: ArtTransform): ArtTransform {
   };
 }
 
-function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
+function normalizeBadgeStyle(style?: BadgeStyle): NormalizedBadgeStyle {
   const visible = style?.visible ?? true;
   const scale = clampNumber(Number(style?.scale ?? 1), 0.2, 3);
   const rotation = Number(style?.rotation ?? 0);
@@ -639,7 +651,7 @@ function normalizeBadgeStyle(style?: BadgeStyle): Required<BadgeStyle> {
   };
 }
 
-function getBadgeCss(style: Required<BadgeStyle>) {
+function getBadgeCss(style: NormalizedBadgeStyle) {
   const {
     visible,
     scale,

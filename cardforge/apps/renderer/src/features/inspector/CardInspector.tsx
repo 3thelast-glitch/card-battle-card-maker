@@ -44,6 +44,7 @@ import {
 } from '../../ui/icons/traitIcons';
 import { ELEMENTS } from '../../lib/elements';
 import { resolveImageSrc } from '../../utils/file';
+import { resolveMediaKind } from '../../utils/media';
 
 // --- Constants ---
 const RARITY_OPTIONS: Rarity[] = ['common', 'rare', 'epic', 'legendary'];
@@ -590,6 +591,7 @@ export function CardInspector(props: {
             ? getParentPath(project.meta.filePath)
             : undefined,
         ),
+        mediaKind: resolveMediaKind(asset.src),
       })),
     [project],
   );
@@ -997,7 +999,7 @@ export function CardInspector(props: {
               <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto p-0.5">
                 {assetOptions.map((asset) => {
                   const isSelected =
-                    art?.kind === 'image' &&
+                    art?.kind === asset.mediaKind &&
                     (art.src === asset.resolvedSrc || art.src === asset.src);
                   return (
                     <button
@@ -1007,7 +1009,13 @@ export function CardInspector(props: {
                         if (cardData)
                           onChange({
                             ...cardData,
-                            art: { kind: 'image', src: asset.resolvedSrc },
+                            art: {
+                              kind:
+                                asset.mediaKind === 'video'
+                                  ? 'video'
+                                  : 'image',
+                              src: asset.resolvedSrc,
+                            },
                           });
                       }}
                       className={[
@@ -1017,12 +1025,23 @@ export function CardInspector(props: {
                           : 'border-slate-700 hover:border-slate-500 hover:scale-105',
                       ].join(' ')}
                     >
-                      <div
-                        className="w-full h-full bg-center bg-cover"
-                        style={{
-                          backgroundImage: `url("${asset.resolvedSrc}")`,
-                        }}
-                      />
+                      {asset.mediaKind === 'video' ? (
+                        <video
+                          src={asset.resolvedSrc}
+                          muted
+                          loop
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full bg-center bg-cover"
+                          style={{
+                            backgroundImage: `url("${asset.resolvedSrc}")`,
+                          }}
+                        />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <p className="text-[9px] text-white font-bold truncate">

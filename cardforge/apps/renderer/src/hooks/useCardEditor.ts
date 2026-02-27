@@ -19,6 +19,10 @@ export function useCardEditor() {
     cost: store.cost,
     traits: store.traits,
     imageUrl: store.imageUrl,
+    artUrl: store.imageUrl,
+    imageScale: store.imageScale,
+    imageOpacity: store.imageOpacity,
+    imageBrightness: store.imageBrightness,
   };
 
   // Apply a full card snapshot (e.g., from AI generation or template)
@@ -32,7 +36,10 @@ export function useCardEditor() {
       hp: data.hp ?? store.hp,
       cost: data.cost ?? store.cost,
       traits: data.traits ?? store.traits,
-      imageUrl: data.imageUrl,
+      imageUrl: data.artUrl ?? data.imageUrl,
+      imageScale: data.imageScale ?? store.imageScale,
+      imageOpacity: data.imageOpacity ?? store.imageOpacity,
+      imageBrightness: data.imageBrightness ?? store.imageBrightness,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -53,6 +60,13 @@ export function useCardEditor() {
     setTraits: store.setTraits,
     toggleTrait: store.toggleTrait,
     setImageUrl: store.setImageUrl,
+    setImageScale: store.setImageScale,
+    setImageOpacity: store.setImageOpacity,
+    setImageBrightness: store.setImageBrightness,
+    resetImageSettings: store.resetImageSettings,
+    imageScale: store.imageScale,
+    imageOpacity: store.imageOpacity,
+    imageBrightness: store.imageBrightness,
 
     // Compound actions
     applyCard,

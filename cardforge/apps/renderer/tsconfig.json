@@ -9,7 +9,9 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "@templates/*": ["../../templates/*"]
+      "@templates/*": ["../../templates/*"],
+      "@cardsmith/core": ["../../packages/core/src/index.ts"],
+      "@cardsmith/storage": ["../../packages/storage/src/index.ts"]
     },
     "strict": true,
     "skipLibCheck": true,

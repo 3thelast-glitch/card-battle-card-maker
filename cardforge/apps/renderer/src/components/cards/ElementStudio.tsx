@@ -1,5 +1,9 @@
 import { useState, useCallback } from 'react';
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+import {
+  Group as PanelGroup,
+  Panel,
+  Separator as PanelResizeHandle,
+} from 'react-resizable-panels';
 import { HexColorPicker } from 'react-colorful';
 import Draggable from 'react-draggable';
 import {
@@ -78,6 +82,23 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
   const [activeTab, setActiveTab] = useState<'style' | 'icon'>('style'); // Tab state
 
   const editingElement = elements.find((e) => e.id === editingId) || null;
+
+  const getRenderedIcon = useCallback((element: ElementProps) => {
+    const defaultIconId =
+      element.type === 'trait'
+        ? 'shield'
+        : element.type === 'orb'
+          ? 'star'
+          : element.type === 'icon'
+            ? 'zap'
+            : undefined;
+    const iconId = element.iconId ?? defaultIconId;
+    if (!iconId) return null;
+    const iconMeta = ICON_LIBRARY.find((item) => item.id === iconId);
+    if (!iconMeta) return null;
+    const Icon = iconMeta.icon;
+    return <Icon className="w-full h-full" />;
+  }, []);
 
   // --- Helpers ---
   const updateElement = useCallback(
@@ -160,7 +181,7 @@ export function ElementStudio({ elements, onUpdate }: ElementStudioProps) {
         </div>
 
         {editingElement && (
-          <PanelGroup direction="vertical" className="h-[calc(90vh-12rem)]">
+          <PanelGroup orientation="vertical" className="h-[calc(90vh-12rem)]">
             <Panel defaultSize={50}>
               <div className="p-4 space-y-4 overflow-y-auto h-full custom-scrollbar">
                 {/* Position Controls */}

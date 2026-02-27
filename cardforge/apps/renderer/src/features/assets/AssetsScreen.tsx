@@ -5,9 +5,25 @@ import { Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, Panel, Row } from '../../components/ui';
 import { resolveImageSrc } from '../../utils/file';
+import { resolveMediaKind } from '../../utils/media';
 
-const SUPPORTED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
-const SUPPORTED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+const SUPPORTED_EXTENSIONS = [
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.gif',
+  '.mp4',
+  '.webm',
+];
+const SUPPORTED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+]);
 
 export function AssetsScreen(props: {
   project: Project;
@@ -94,6 +110,7 @@ export function AssetsScreen(props: {
       ? asset.src
       : resolveImageSrc(asset.src, projectRoot),
     size: asset.size ?? 0,
+    kind: resolveMediaKind(asset.src),
   }));
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -123,7 +140,7 @@ export function AssetsScreen(props: {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
             multiple
             className="hidden"
             onChange={handleFileInputChange}
@@ -159,7 +176,9 @@ export function AssetsScreen(props: {
                     defaultValue: 'Drop images here or click to upload',
                   })}
             </div>
-            <div className="text-xs text-slate-500">PNG, JPG, JPEG, WEBP</div>
+            <div className="text-xs text-slate-500">
+              PNG, JPG, JPEG, WEBP, GIF, MP4, WEBM
+            </div>
           </div>
           <Row gap={10}>
             <Button onClick={handleBrowseClick}>{t('assets.import')}</Button>
@@ -193,12 +212,25 @@ export function AssetsScreen(props: {
                     event.dataTransfer.effectAllowed = 'copy';
                   }}
                 >
-                  <div
-                    className="asset-thumb"
-                    style={{
-                      backgroundImage: `url("${asset.path}")`,
-                    }}
-                  />
+                  <div className="asset-thumb">
+                    {asset.kind === 'video' ? (
+                      <video
+                        src={asset.path}
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="h-full w-full bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url("${asset.path}")`,
+                        }}
+                      />
+                    )}
+                  </div>
                   <div className="asset-meta">
                     <div className="asset-name">{asset.name}</div>
                     <div className="hint">{formatBytes(asset.size ?? 0)}</div>

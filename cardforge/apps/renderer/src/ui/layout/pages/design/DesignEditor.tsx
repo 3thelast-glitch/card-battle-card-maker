@@ -1,5 +1,5 @@
 // and the right panel controls all card properties.
-import { memo, useState, useCallback, useRef } from 'react';
+import { memo, useState, useCallback, useRef, type ChangeEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Layers,
@@ -15,6 +15,8 @@ import {
   Sparkles,
   Palette,
   Image,
+  ImagePlay,
+  Film,
   Move,
 } from 'lucide-react';
 import { CardFrame } from '../../components/ui/CardFrame';
@@ -23,6 +25,7 @@ import { TemplateGallery } from '../../components/ui/TemplateGallery';
 import { Button } from '../../components/ui/Button';
 import { RarityBadge } from '../../components/ui/Badge';
 import { useCardEditor } from '../../../../hooks/useCardEditor';
+import { useAppStore } from '../../../../state/appStore';
 import {
   CARD_TEMPLATES,
   type TemplateKey,
@@ -93,14 +96,23 @@ const PanelHeader = ({
 
 // ── Left Panel ──────────────────────────────────────────────
 const LeftPanel = memo(() => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const gifInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const {
     layers,
     activeLayerId,
     isTransformMode,
     imageUrl,
+    imageScale,
+    imageOpacity,
+    imageBrightness,
     setTransformMode,
     setImageUrl,
+    setImageScale,
+    setImageOpacity,
+    setImageBrightness,
+    resetImageSettings,
     setActiveLayerId,
     toggleLayerVisibility,
     addLayer,
@@ -115,6 +127,22 @@ const LeftPanel = memo(() => {
     stats: <Sliders size={11} />,
     image: <Image size={11} />,
   };
+
+  const handleMediaUpload = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        if (typeof loadEvent.target?.result === 'string') {
+          setImageUrl(loadEvent.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    },
+    [setImageUrl],
+  );
 
   return (
     <div className="h-full flex flex-col gap-3 p-3 overflow-y-auto pointer-events-auto">
@@ -188,35 +216,36 @@ const LeftPanel = memo(() => {
 
       <Panel>
         <PanelHeader title="الأدوات" icon={<Palette size={13} />} />
-        <div className="p-3 grid grid-cols-3 gap-2">
-          {/* Hidden Image Upload for Main Art Zone */}
+        <div className="p-3 grid grid-cols-4 gap-2">
+          {/* Hidden media uploads for Main Art Zone */}
           <input
             type="file"
-            accept="image/*"
-            ref={fileInputRef}
+            accept="image/png,image/jpeg,image/webp"
+            ref={imageInputRef}
             className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                  if (typeof event.target?.result === 'string') {
-                    setImageUrl(event.target.result);
-                  }
-                };
-                reader.readAsDataURL(file);
-                e.target.value = ''; // Reset
-              }
-            }}
+            onChange={handleMediaUpload}
+          />
+          <input
+            type="file"
+            accept="image/gif"
+            ref={gifInputRef}
+            className="hidden"
+            onChange={handleMediaUpload}
+          />
+          <input
+            type="file"
+            accept="video/mp4,video/webm"
+            ref={videoInputRef}
+            className="hidden"
+            onChange={handleMediaUpload}
           />
 
           <button
             onClick={() => setTransformMode(!isTransformMode)}
-            className={`flex flex-col items-center gap-1 py-2 rounded-xl border transition-all active:scale-95 ${
-              isTransformMode
+            className={`flex flex-col items-center gap-1 py-2 rounded-xl border transition-all active:scale-95 ${isTransformMode
                 ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
                 : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.05] hover:border-white/[0.12] text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             <Move size={14} />
             <span className="text-[8px]">تحريك</span>
@@ -231,11 +260,25 @@ const LeftPanel = memo(() => {
             <span className="text-[8px]">نص</span>
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => imageInputRef.current?.click()}
             className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95"
           >
             <Image size={14} />
             <span className="text-[8px]">صورة</span>
+          </button>
+          <button
+            onClick={() => gifInputRef.current?.click()}
+            className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95"
+          >
+            <ImagePlay size={14} />
+            <span className="text-[8px]">Ù…ØªØ­Ø±ÙƒØ©</span>
+          </button>
+          <button
+            onClick={() => videoInputRef.current?.click()}
+            className="flex flex-col items-center gap-1 py-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] hover:border-white/[0.12] transition-all text-slate-400 hover:text-slate-200 active:scale-95"
+          >
+            <Film size={14} />
+            <span className="text-[8px]">ÙÙŠØ¯ÙŠÙˆ</span>
           </button>
           <button
             onClick={() => console.log('Open Effect Panel')}
@@ -264,6 +307,71 @@ const LeftPanel = memo(() => {
           >
             <Trash2 size={14} />
             <span className="text-[8px]">حذف</span>
+          </button>
+        </div>
+      </Panel>
+      <Panel>
+        <PanelHeader title="إعدادات الصورة" icon={<Sliders size={13} />} />
+        <div className="p-3 flex flex-col gap-3">
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">تكبير</span>
+              <span className="font-bold text-slate-200">
+                {imageScale.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0.5}
+              max={2.5}
+              step={0.1}
+              value={imageScale}
+              onChange={(e) => setImageScale(parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full accent-purple-500 cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">شفافية</span>
+              <span className="font-bold text-slate-200">
+                {imageOpacity.toFixed(2)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={imageOpacity}
+              onChange={(e) => setImageOpacity(parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full accent-purple-500 cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">إضاءة</span>
+              <span className="font-bold text-slate-200">
+                {imageBrightness.toFixed(1)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0.2}
+              max={2}
+              step={0.1}
+              value={imageBrightness}
+              onChange={(e) => setImageBrightness(parseFloat(e.target.value))}
+              className="w-full h-1.5 rounded-full accent-purple-500 cursor-pointer"
+            />
+          </div>
+
+          <button
+            onClick={resetImageSettings}
+            className="mt-1 rounded-xl border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-300 transition-all hover:border-purple-500/40 hover:bg-purple-500/10 hover:text-purple-300 active:scale-95"
+          >
+            إعادة تعيين
           </button>
         </div>
       </Panel>
@@ -392,7 +500,9 @@ const RightPanel = memo(() => {
     toggleDescription,
     setArtZoneHeight,
     toggleTemplateGallery,
+    markClean,
   } = useCardEditor();
+  const saveCard = useAppStore((state) => state.saveCard);
 
   const TABS = [
     { id: 'card' as const, label: 'البطاقة' },
@@ -430,11 +540,10 @@ const RightPanel = memo(() => {
                     key={r}
                     onClick={() => setRarity(r)}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all
-                    ${
-                      cardData.rarity === r
+                    ${cardData.rarity === r
                         ? 'bg-purple-600/30 border border-purple-500/50 text-purple-200'
                         : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:bg-white/[0.07] hover:text-slate-200'
-                    }`}
+                      }`}
                   >
                     <RarityBadge rarity={r} />
                     {cardData.rarity === r && (
@@ -453,11 +562,10 @@ const RightPanel = memo(() => {
                     key={el}
                     onClick={() => setElement(el)}
                     className={`py-2 rounded-xl text-[10px] font-medium transition-all text-center
-                    ${
-                      cardData.element === el
+                    ${cardData.element === el
                         ? 'bg-purple-600/30 border border-purple-500/50 text-white'
                         : 'bg-white/[0.03] border border-white/[0.06] text-slate-400 hover:bg-white/[0.07]'
-                    }`}
+                      }`}
                   >
                     {ELEMENT_LABELS[el]}
                   </button>
@@ -502,22 +610,19 @@ const RightPanel = memo(() => {
                 {/* Show Description Toggle */}
                 <button
                   onClick={toggleDescription}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all text-xs font-medium ${
-                    showDescription
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all text-xs font-medium ${showDescription
                       ? 'bg-purple-500/15 border-purple-500/40 text-purple-300'
                       : 'bg-white/[0.03] border-white/[0.06] text-slate-500'
-                  }`}
+                    }`}
                 >
                   <span>إظهار الوصف</span>
                   <span
-                    className={`w-8 h-4 rounded-full relative transition-all ${
-                      showDescription ? 'bg-purple-500' : 'bg-slate-700'
-                    }`}
+                    className={`w-8 h-4 rounded-full relative transition-all ${showDescription ? 'bg-purple-500' : 'bg-slate-700'
+                      }`}
                   >
                     <span
-                      className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${
-                        showDescription ? 'right-0.5' : 'left-0.5'
-                      }`}
+                      className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${showDescription ? 'right-0.5' : 'left-0.5'
+                        }`}
                     />
                   </span>
                 </button>
@@ -670,8 +775,8 @@ const RightPanel = memo(() => {
         {tab === 'template' && (
           <Panel>
             <PanelHeader title="القوالب" icon={<Sparkles size={13} />} />
-            <div className="p-3 grid grid-cols-2 gap-2">
-              {['كلاسيك', 'حديث', 'أسطوري', 'سايبربنك', 'عربي', 'طبيعة'].map(
+            <div className="p-3 grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {['كلاسيك', 'حديث', 'أسطوري', 'سايبربنك', 'عربي', 'طبيعة', 'دم', 'عين', 'خلل', 'مستنقع', 'إيلف', 'نيون'].map(
                 (tpl) => (
                   <button
                     key={tpl}
@@ -689,6 +794,17 @@ const RightPanel = memo(() => {
 
       {/* Footer */}
       <div className="p-3 border-t border-white/[0.06] bg-black/20 flex gap-2 shrink-0">
+        <Button
+          variant="success"
+          size="sm"
+          fullWidth
+          onClick={() => {
+            saveCard(cardData);
+            markClean();
+          }}
+        >
+          حفظ في المجموعة
+        </Button>
         <Button
           variant="primary"
           size="sm"

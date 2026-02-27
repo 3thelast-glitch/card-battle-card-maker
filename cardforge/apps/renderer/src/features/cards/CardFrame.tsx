@@ -1,8 +1,8 @@
 import { useMemo, type FC } from 'react';
 import { Group, Rect, Text } from 'react-konva';
-import { getElementGradient } from '../../utils/elementStyles';
+import { getElementGradient } from './elementStyles';
 import { TraitBadges } from './TraitBadges';
-import { StatBadge } from './StatBadge';
+import { StatBadge } from '../../StatBadge';
 
 export { CardFrame } from '../../components/cards/CardFrame';
 

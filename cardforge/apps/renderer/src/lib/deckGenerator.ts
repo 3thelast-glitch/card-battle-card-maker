@@ -148,7 +148,7 @@ function normalizeRange(range: NumRange | undefined, fallback: NumRange) {
 
 function normalizeDistribution(
   distribution: Partial<DeckDistribution>,
-  activeRarities: RarityKey[] = RARITIES,
+  activeRarities: readonly RarityKey[] = RARITIES,
 ) {
   const raw: DeckDistribution = {
     common: toNumber(distribution.common),
@@ -189,7 +189,7 @@ function normalizeDistribution(
 function computeCounts(
   size: number,
   normalized: DeckDistribution,
-  activeRarities: RarityKey[] = RARITIES,
+  activeRarities: readonly RarityKey[] = RARITIES,
 ): { counts: Record<RarityKey, number>; autoBalanced: boolean } {
   const counts: Record<RarityKey, number> = {
     common: 0,
@@ -386,7 +386,7 @@ export function generateDeck({
       )
     : null;
 
-  const abilityUsage: Record<RarityKey, Record<AbilityKey, number>> = {
+  const abilityUsage: Record<RarityKey, Partial<Record<AbilityKey, number>>> = {
     common: {},
     rare: {},
     epic: {},

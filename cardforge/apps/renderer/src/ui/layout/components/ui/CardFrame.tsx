@@ -2,7 +2,9 @@ import React, { memo, useRef, useCallback } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { Heart, Sword, Moon } from 'lucide-react';
 import { StarRating } from './StarRating';
+import { useCardEditorStore } from '../../../../store/cardEditorStore';
 import type { BadgeKey, BadgePos } from '../../../../store/cardEditorStore';
+import { isVideoMediaUrl } from '../../../../utils/media';
 
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 export type Element =
@@ -22,14 +24,20 @@ export interface CardFrameData {
     defense?: number;
     hp?: number;
     imageUrl?: string;
+    artUrl?: string;
     traits?: string[];
     cost?: number;
     name?: string; // Used in some layouts as fallback for title
     icon?: string; // Potentially used for element icon override
+    // Image Controls
+    imageScale?: number;
+    imageOpacity?: number;
+    imageBrightness?: number;
 }
 
 interface CardFrameProps {
     data?: CardFrameData;
+    card?: CardFrameData;
     width?: number;
     height?: number;
     scale?: number;
@@ -345,7 +353,8 @@ const LuxStatOrb = ({ icon, value, side, scale = 1 }: any) => {
 // ── CardFrame ────────────────────────────────────────────────
 export const CardFrame = memo<CardFrameProps>(
     ({
-        data = {},
+        data: inputData,
+        card,
         scale = 1,
         showStats = true,
         showGlow = true,
@@ -361,6 +370,7 @@ export const CardFrame = memo<CardFrameProps>(
         artZoneHeight,
         layout = 'standard',
     }) => {
+        const data = card ?? inputData ?? {};
         const el = (data.element ?? 'neutral') as Element;
         const rarity = (data.rarity ?? 'Common') as Rarity;
         const elCfg = ELEMENT_CONFIG[el] ?? ELEMENT_CONFIG.neutral;
@@ -375,6 +385,63 @@ export const CardFrame = memo<CardFrameProps>(
         const scaleDown = 1;
         const r = (layout === 'steampunk' ? 8 : layout === 'blood-ritual' ? 0 : 16) * scale;
         const pad = `${12 * scale}px`;
+        const editorImageSettings = useCardEditorStore.getState();
+        const hasPersistedCard = Boolean(card);
+        const imgScale =
+            card?.imageScale ??
+            data.imageScale ??
+            (hasPersistedCard ? 1 : editorImageSettings.imageScale ?? 1);
+        const imgOpacity =
+            card?.imageOpacity ??
+            data.imageOpacity ??
+            (hasPersistedCard ? 1 : editorImageSettings.imageOpacity ?? 1);
+        const imgBrightness =
+            card?.imageBrightness ??
+            data.imageBrightness ??
+            (hasPersistedCard ? 1 : editorImageSettings.imageBrightness ?? 1);
+        const artUrl = String(data.artUrl ?? data.imageUrl ?? '').trim();
+        const hasArt = artUrl.length > 0;
+
+        const renderArtMedia = useCallback(
+            (opts?: {
+                className?: string;
+                style?: CSSProperties;
+                alt?: string;
+            }) => {
+                if (!hasArt) return null;
+                const className = opts?.className;
+                const mediaStyle: CSSProperties = {
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    ...(opts?.style ?? {}),
+                };
+                if (isVideoMediaUrl(artUrl)) {
+                    return (
+                        <video
+                            src={artUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            preload="auto"
+                            className={className}
+                            style={mediaStyle}
+                        />
+                    );
+                }
+                return (
+                    <img
+                        src={artUrl}
+                        alt={opts?.alt ?? data.title ?? 'Card Art'}
+                        className={className}
+                        style={mediaStyle}
+                    />
+                );
+            },
+            [artUrl, data.title, hasArt],
+        );
 
         const bPos = badgePositions || {
             element: { x: 0, y: 0 },
@@ -432,11 +499,19 @@ export const CardFrame = memo<CardFrameProps>(
                     role={onClick ? 'button' : undefined}
                 >
                     {/* Full Bleed Image Background */}
-                    {data.imageUrl ? (
-                        <div
-                            className="absolute inset-0 z-0 bg-cover bg-center mix-blend-luminosity opacity-80"
-                            style={{ backgroundImage: `url(${data.imageUrl})` }}
-                        />
+                    {hasArt ? (
+                        <div className="absolute inset-0 z-0 overflow-hidden">
+                            {renderArtMedia({
+                                className:
+                                    'w-full h-full object-cover mix-blend-luminosity',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity * 0.8,
+                                    filter: `brightness(${imgBrightness})`,
+                                    transition: 'all 0.1s ease',
+                                },
+                            })}
+                        </div>
                     ) : (
                         <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#2a0808] to-[#0a0000] flex items-center justify-center">
                             <span style={{ fontSize: 80 * scale, opacity: 0.1 }}>🩸</span>
@@ -589,13 +664,13 @@ export const CardFrame = memo<CardFrameProps>(
                                     marginTop: 4 * scale,
                                 }}
                             >
-                                {/* ATK Vial */}
+                                {/* HP Vial */}
                                 <DraggableBadge
-                                    badgeKey="attack"
-                                    pos={bPos.attack}
+                                    badgeKey="hp"
+                                    pos={bPos.hp}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-attack'}
-                                    onSelect={() => handleSelect('attack')}
+                                    isActive={activeBadgeId === 'badge-hp'}
+                                    onSelect={() => handleSelect('hp')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -632,19 +707,19 @@ export const CardFrame = memo<CardFrameProps>(
                                                     lineHeight: 1.1,
                                                 }}
                                             >
-                                                {data.attack ?? 0}
+                                                {data.hp ?? 0}
                                             </span>
                                         </div>
                                     </div>
                                 </DraggableBadge>
 
-                                {/* HP Vial */}
+                                {/* ATK Vial */}
                                 <DraggableBadge
-                                    badgeKey="hp"
-                                    pos={bPos.hp}
+                                    badgeKey="attack"
+                                    pos={bPos.attack}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-hp'}
-                                    onSelect={() => handleSelect('hp')}
+                                    isActive={activeBadgeId === 'badge-attack'}
+                                    onSelect={() => handleSelect('attack')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -681,7 +756,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                     lineHeight: 1.1,
                                                 }}
                                             >
-                                                {data.hp ?? 0}
+                                                {data.attack ?? 0}
                                             </span>
                                         </div>
                                     </div>
@@ -1034,19 +1109,26 @@ export const CardFrame = memo<CardFrameProps>(
                     <StringLines />
 
                     {/* ── Layer 2: Full-art image OR Cosmic Eye fallback ──── */}
-                    {data.imageUrl ? (
+                    {hasArt ? (
                         <div
                             style={{
                                 position: 'absolute',
                                 inset: 0,
                                 zIndex: 2,
-                                backgroundImage: `url(${data.imageUrl})`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                opacity: 0.6,
-                                mixBlendMode: 'luminosity',
+                                overflow: 'hidden',
                             }}
-                        />
+                        >
+                            {renderArtMedia({
+                                className: 'w-full h-full object-cover',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity,
+                                    filter: `brightness(${imgBrightness})`,
+                                    mixBlendMode: 'luminosity',
+                                    transition: 'all 0.1s ease',
+                                },
+                            })}
+                        </div>
                     ) : (
                         <CosmicEye />
                     )}
@@ -1263,13 +1345,13 @@ export const CardFrame = memo<CardFrameProps>(
                                     marginBottom: 4 * scale,
                                 }}
                             >
-                                {/* ATK Badge (Eye) - LEFT */}
+                                {/* HP Badge (Eye) - LEFT */}
                                 <DraggableBadge
-                                    badgeKey="attack"
-                                    pos={bPos.attack}
+                                    badgeKey="hp"
+                                    pos={bPos.hp}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-attack'}
-                                    onSelect={() => handleSelect('attack')}
+                                    isActive={activeBadgeId === 'badge-hp'}
+                                    onSelect={() => handleSelect('hp')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -1315,7 +1397,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                 marginTop: 2 * scale
                                             }}
                                         >
-                                            {data.attack ?? 0}
+                                            {data.hp ?? 0}
                                         </span>
                                     </div>
                                 </DraggableBadge>
@@ -1342,13 +1424,13 @@ export const CardFrame = memo<CardFrameProps>(
                                     )}
                                 </div>
 
-                                {/* HP Badge (Heart) - RIGHT */}
+                                {/* ATK Badge (Heart) - RIGHT */}
                                 <DraggableBadge
-                                    badgeKey="hp"
-                                    pos={bPos.hp}
+                                    badgeKey="attack"
+                                    pos={bPos.attack}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-hp'}
-                                    onSelect={() => handleSelect('hp')}
+                                    isActive={activeBadgeId === 'badge-attack'}
+                                    onSelect={() => handleSelect('attack')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -1381,7 +1463,7 @@ export const CardFrame = memo<CardFrameProps>(
                                             <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(200,0,0,0.8)" strokeWidth="1.5" strokeDasharray="4 3" />
                                         </svg>
                                         <span style={{ fontSize: 20 * scale, lineHeight: 1, filter: 'drop-shadow(0 0 4px rgba(255,0,0,0.8))' }}>
-                                            ❤️
+                                            {'\u2694\uFE0F'}
                                         </span>
                                         <span
                                             style={{
@@ -1394,7 +1476,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                 marginTop: 2 * scale
                                             }}
                                         >
-                                            {data.hp ?? 0}
+                                            {data.attack ?? 0}
                                         </span>
                                     </div>
                                 </DraggableBadge>
@@ -1554,19 +1636,26 @@ export const CardFrame = memo<CardFrameProps>(
                                 background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(60,0,60,0.35) 0%, rgba(0,30,30,0.2) 50%, transparent 80%)'
                             }} />
 
-                        {data.imageUrl ? (
+                        {hasArt ? (
                             <div
                                 style={{
                                     position: 'absolute',
                                     inset: 0,
                                     zIndex: 10,
-                                    backgroundImage: `url(${data.imageUrl})`,
-                                    backgroundSize: 'cover',
-                                    backgroundPosition: 'center',
-                                    mixBlendMode: 'luminosity',
-                                    opacity: 0.85
+                                    overflow: 'hidden',
                                 }}
-                            />
+                            >
+                                {renderArtMedia({
+                                    className: 'w-full h-full object-cover',
+                                    style: {
+                                        transform: `scale(${imgScale})`,
+                                        opacity: imgOpacity,
+                                        filter: `brightness(${imgBrightness})`,
+                                        mixBlendMode: 'luminosity',
+                                        transition: 'all 0.1s ease',
+                                    },
+                                })}
+                            </div>
                         ) : (
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
                                 style={{ width: 130 * scale, height: 130 * scale }}>
@@ -1639,7 +1728,7 @@ export const CardFrame = memo<CardFrameProps>(
                         )}
 
                         {/* Missing line from lines extending from center */}
-                        {!data.imageUrl && (
+                        {!hasArt && (
                             <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.07 }}>
                                 {[...Array(20)].map((_, i) => {
                                     const angle = (i * 18 * Math.PI) / 180;
@@ -1811,13 +1900,13 @@ export const CardFrame = memo<CardFrameProps>(
                     {/* Stats Bar */}
                     {showStats && (
                         <div className="absolute z-20 flex items-center justify-between" style={{ bottom: 16 * scale, left: 12 * scale, right: 12 * scale }}>
-                            {/* ATK - left */}
+                            {/* HP - left */}
                             <DraggableBadge
-                                badgeKey="attack"
-                                pos={bPos.attack}
+                                badgeKey="hp"
+                                pos={bPos.hp}
                                 isTransformMode={isTransformMode}
-                                isActive={activeBadgeId === 'badge-attack'}
-                                onSelect={() => handleSelect('attack')}
+                                isActive={activeBadgeId === 'badge-hp'}
+                                onSelect={() => handleSelect('hp')}
                                 onMove={handleMove}
                             >
                                 <div className="relative" style={{ width: 88 * scale, height: 88 * scale }}>
@@ -1847,10 +1936,10 @@ export const CardFrame = memo<CardFrameProps>(
                                             border: `${1 * scale}px solid rgba(255,0,60,0.4)`,
                                             boxShadow: `0 0 ${20 * scale}px rgba(255,0,60,0.3), inset 0 0 ${12 * scale}px rgba(0,0,0,0.9)`
                                         }}>
-                                        <span style={{ fontSize: 18 * scale, filter: `drop-shadow(0 0 ${6 * scale}px rgba(255,0,60,1))` }}>⚔️</span>
+                                        <span style={{ fontSize: 18 * scale, filter: `drop-shadow(0 0 ${6 * scale}px rgba(255,0,60,1))` }}>{'\u2764\uFE0F'}</span>
                                         <span className="font-black font-mono leading-tight"
                                             style={{ fontSize: 16 * scale, color: '#FF6080', textShadow: `0 0 ${10 * scale}px rgba(255,0,60,0.9)` }}>
-                                            {data.attack ?? 0}
+                                            {data.hp ?? 0}
                                         </span>
                                     </div>
                                 </div>
@@ -1869,13 +1958,13 @@ export const CardFrame = memo<CardFrameProps>(
                                 </div>
                             </div>
 
-                            {/* HP - right */}
+                            {/* ATK - right */}
                             <DraggableBadge
-                                badgeKey="hp"
-                                pos={bPos.hp}
+                                badgeKey="attack"
+                                pos={bPos.attack}
                                 isTransformMode={isTransformMode}
-                                isActive={activeBadgeId === 'badge-hp'}
-                                onSelect={() => handleSelect('hp')}
+                                isActive={activeBadgeId === 'badge-attack'}
+                                onSelect={() => handleSelect('attack')}
                                 onMove={handleMove}
                             >
                                 <div className="relative" style={{ width: 88 * scale, height: 88 * scale }}>
@@ -1906,10 +1995,10 @@ export const CardFrame = memo<CardFrameProps>(
                                             border: `${1 * scale}px solid rgba(0,255,150,0.4)`,
                                             boxShadow: `0 0 ${20 * scale}px rgba(0,255,150,0.3), inset 0 0 ${12 * scale}px rgba(0,0,0,0.9)`
                                         }}>
-                                        <span style={{ fontSize: 18 * scale, filter: `drop-shadow(0 0 ${6 * scale}px rgba(0,255,150,1))` }}>❤️</span>
+                                        <span style={{ fontSize: 18 * scale, filter: `drop-shadow(0 0 ${6 * scale}px rgba(0,255,150,1))` }}>{'\u2694\uFE0F'}</span>
                                         <span className="font-black font-mono leading-tight"
                                             style={{ fontSize: 16 * scale, color: '#00FF96', textShadow: `0 0 ${10 * scale}px rgba(0,255,150,0.9)` }}>
-                                            {data.hp ?? 0}
+                                            {data.attack ?? 0}
                                         </span>
                                     </div>
                                 </div>
@@ -2043,9 +2132,17 @@ export const CardFrame = memo<CardFrameProps>(
                         <Ripple top="50%" left="50%" size={210 * scale} delay="1.6s" color="rgba(0,200,100,0.05)" />
 
                         <div className="absolute inset-0 z-0">
-                            {data.imageUrl ? (
-                                <div className="w-full h-full mix-blend-screen opacity-90 transition-all duration-1000 group-hover:scale-110 group-hover:opacity-100"
-                                    style={{ backgroundImage: `url('${data.imageUrl}')`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                            {hasArt ? (
+                                renderArtMedia({
+                                    className:
+                                        'w-full h-full object-cover mix-blend-screen opacity-90 transition-all duration-1000 group-hover:scale-110 group-hover:opacity-100',
+                                    style: {
+                                        transform: `scale(${imgScale})`,
+                                        opacity: imgOpacity * 0.9,
+                                        filter: `brightness(${imgBrightness})`,
+                                        transition: 'all 0.1s ease',
+                                    },
+                                })
                             ) : (
                                 <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-black to-[#001E0C]">
                                     <span style={{ fontSize: 60 * scale, filter: 'drop-shadow(0 0 10px rgba(0,255,100,0.8))' }}>🌊</span>
@@ -2218,6 +2315,275 @@ export const CardFrame = memo<CardFrameProps>(
             );
         }
 
+        if (layout === 'cyber-neon') {
+            return (
+                <div
+                    className={`transition-all duration-300 hover:scale-[1.02] hover:brightness-110 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+                    style={{
+                        width: 350 * scale,
+                        height: 480 * scale,
+                        borderRadius: 16 * scale,
+                        position: 'relative',
+                        overflow: 'hidden',
+                        cursor: onClick ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        flexShrink: 0,
+                        backgroundColor: '#050510',
+                        border: `${2 * scale}px solid #00FFFF`,
+                        boxShadow: showGlow ? '0 0 30px rgba(34,211,238,0.4), inset 0 0 20px rgba(255,0,255,0.2)' : 'none',
+                        ...style,
+                    }}
+                    onClick={onClick}
+                    role={onClick ? 'button' : undefined}
+                >
+                    {/* Background Grid */}
+                    <div className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none"
+                        style={{
+                            backgroundImage: `
+                                linear-gradient(rgba(0, 255, 255, 0.4) ${1 * scale}px, transparent ${1 * scale}px),
+                                linear-gradient(90deg, rgba(0, 255, 255, 0.4) ${1 * scale}px, transparent ${1 * scale}px)
+                            `,
+                            backgroundSize: `${20 * scale}px ${20 * scale}px`,
+                            transform: `perspective(${500 * scale}px) rotateX(60deg) translateY(${100 * scale}px) scale(2.5)`,
+                            transformOrigin: 'bottom center'
+                        }}
+                    />
+
+                    {/* Scanlines overlay */}
+                    <div className="absolute inset-0 pointer-events-none z-10 opacity-10"
+                        style={{
+                            backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent ${2 * scale}px, rgba(255,255,255,1) ${2 * scale}px, rgba(255,255,255,1) ${4 * scale}px)`,
+                            backgroundSize: `100% ${4 * scale}px`,
+                            mixBlendMode: 'overlay'
+                        }}
+                    />
+
+                    {/* Image Art Area */}
+                    {hasArt ? (
+                        <div
+                            className="absolute z-0 overflow-hidden"
+                            style={{
+                                top: 50 * scale,
+                                left: 20 * scale,
+                                right: 20 * scale,
+                                height: 210 * scale,
+                                border: `${1 * scale}px solid #00FFFF`,
+                                boxShadow: `0 0 ${15 * scale}px rgba(0, 255, 255, 0.5), inset 0 0 ${20 * scale}px rgba(255, 0, 255, 0.4)`,
+                            }}
+                        >
+                            {renderArtMedia({
+                                className:
+                                    'w-full h-full object-cover mix-blend-screen',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity * 0.8,
+                                    filter: `brightness(${imgBrightness}) contrast(1.2) drop-shadow(0 0 ${5 * scale}px rgba(255, 0, 255, 0.8))`,
+                                    transition: 'all 0.1s ease',
+                                },
+                            })}
+                        </div>
+                    ) : (
+                        <div
+                            className="absolute z-0 flex items-center justify-center bg-gray-900"
+                            style={{
+                                top: 50 * scale,
+                                left: 20 * scale,
+                                right: 20 * scale,
+                                height: 210 * scale,
+                                border: `${1 * scale}px solid #00FFFF`,
+                                boxShadow: `0 0 ${15 * scale}px rgba(0, 255, 255, 0.5), inset 0 0 ${20 * scale}px rgba(255, 0, 255, 0.4)`,
+                            }}
+                        >
+                            <span style={{ fontSize: 40 * scale, filter: `drop-shadow(0 0 ${10 * scale}px #00FFFF)` }}>⚡</span>
+                        </div>
+                    )}
+
+                    {/* Rarity Tag */}
+                    <DraggableBadge
+                        badgeKey="rarity"
+                        pos={bPos.rarity}
+                        isTransformMode={isTransformMode}
+                        isActive={activeBadgeId === 'badge-rarity'}
+                        onSelect={() => handleSelect('rarity')}
+                        onMove={handleMove}
+                    >
+                        <div className="absolute z-30 pointer-events-auto" style={{ top: -5 * scale, left: -6 * scale }}>
+                            <div
+                                style={{
+                                    background: 'rgba(255,0,255,0.2)',
+                                    border: `${1 * scale}px solid #FF00FF`,
+                                    padding: `${6 * scale}px ${20 * scale}px`,
+                                    paddingLeft: `${16 * scale}px`,
+                                    color: '#FF00FF',
+                                    fontWeight: 900,
+                                    fontSize: 10 * scale,
+                                    textTransform: 'uppercase',
+                                    clipPath: 'polygon(0% 0%, 100% 0%, 85% 100%, 0% 100%)',
+                                    backdropFilter: 'blur(5px)',
+                                    boxShadow: `0 0 ${10 * scale}px rgba(255,0,255,0.8)`
+                                }}
+                            >
+                                {rCfg.label}
+                            </div>
+                        </div>
+                    </DraggableBadge>
+
+                    {/* Element Icon Overlay */}
+                    <DraggableBadge
+                        badgeKey="element"
+                        pos={bPos.element}
+                        isTransformMode={isTransformMode}
+                        isActive={activeBadgeId === 'badge-element'}
+                        onSelect={() => handleSelect('element')}
+                        onMove={handleMove}
+                    >
+                        <div className="absolute z-30 pointer-events-auto" style={{ top: 10 * scale, right: 10 * scale }}>
+                            <div className="flex items-center justify-center"
+                                style={{
+                                    width: 32 * scale,
+                                    height: 32 * scale,
+                                    border: `${2 * scale}px solid #00FFFF`,
+                                    background: 'rgba(0,255,255,0.1)',
+                                    boxShadow: `0 0 ${10 * scale}px rgba(0,255,255,0.6)`,
+                                    transform: 'rotate(45deg)'
+                                }}>
+                                <span style={{ transform: 'rotate(-45deg)', fontSize: 16 * scale, filter: `drop-shadow(0 0 ${5 * scale}px #00FFFF)` }}>
+                                    {elCfg.emoji}
+                                </span>
+                            </div>
+                        </div>
+                    </DraggableBadge>
+
+
+                    {/* Title */}
+                    <DraggableBadge
+                        badgeKey="title"
+                        pos={bPos.title}
+                        isTransformMode={isTransformMode}
+                        isActive={activeBadgeId === 'badge-title'}
+                        onSelect={() => handleSelect('title')}
+                        onMove={handleMove}
+                    >
+                        <div className="absolute left-0 right-0 text-center z-20 pointer-events-auto" style={{ top: 275 * scale, padding: `0 ${20 * scale}px` }}>
+                            <h2
+                                style={{
+                                    color: '#00FFFF',
+                                    fontSize: 24 * scale,
+                                    fontWeight: 900,
+                                    fontFamily: "'Noto Kufi Arabic', sans-serif",
+                                    textShadow: `0 0 ${10 * scale}px #00FFFF, 0 0 ${20 * scale}px rgba(0,255,255,0.5)`,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 2 * scale,
+                                    lineHeight: 1.1
+                                }}
+                            >
+                                {data.title || 'بدون اسم'}
+                            </h2>
+                        </div>
+                    </DraggableBadge>
+
+                    {/* Description Panel */}
+                    {showDescription && (
+                        <DraggableBadge
+                            badgeKey="desc"
+                            pos={bPos.desc}
+                            isTransformMode={isTransformMode}
+                            isActive={activeBadgeId === 'badge-desc'}
+                            onSelect={() => handleSelect('desc')}
+                            onMove={handleMove}
+                        >
+                            <div className="absolute z-20 pointer-events-auto" style={{ top: 320 * scale, left: 20 * scale, right: 20 * scale }}>
+                                <div
+                                    style={{
+                                        background: 'rgba(0,0,0,0.6)',
+                                        borderLeft: `${3 * scale}px solid #FF00FF`,
+                                        borderRight: `${3 * scale}px solid #00FFFF`,
+                                        padding: `${10 * scale}px`,
+                                        color: '#E0E0E0',
+                                        fontSize: 10.5 * scale,
+                                        fontFamily: "'Noto Kufi Arabic', sans-serif",
+                                        textAlign: 'center',
+                                        minHeight: 65 * scale,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: `inset 0 0 ${15 * scale}px rgba(0,0,0,0.8)`
+                                    }}
+                                >
+                                    {data.description || 'وصف شبكي لمعلومات البطاقة.'}
+                                </div>
+                            </div>
+                        </DraggableBadge>
+                    )}
+
+                    {/* HUD Stats */}
+                    {showStats && (
+                        <div className="absolute bottom-0 w-full flex justify-between px-4 pb-4 z-20" style={{ marginBottom: 4 * scale }}>
+                            {/* HP */}
+                            <DraggableBadge
+                                badgeKey="hp"
+                                pos={bPos.hp}
+                                isTransformMode={isTransformMode}
+                                isActive={activeBadgeId === 'badge-hp'}
+                                onSelect={() => handleSelect('hp')}
+                                onMove={handleMove}
+                            >
+                                <div className="pointer-events-auto flex flex-col items-center justify-center relative"
+                                    style={{
+                                        width: 55 * scale, height: 55 * scale,
+                                        border: `${2 * scale}px solid #FF00FF`,
+                                        background: 'rgba(255,0,255,0.15)',
+                                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                                        boxShadow: `0 0 ${15 * scale}px rgba(255,0,255,0.6), inset 0 0 ${10 * scale}px rgba(255,0,255,0.4)`
+                                    }}
+                                >
+                                    <span style={{ fontSize: 16 * scale, filter: `drop-shadow(0 0 ${8 * scale}px #FF00FF)` }}>{'\u2764\uFE0F'}</span>
+                                    <span style={{ color: '#FF00FF', fontWeight: 900, fontFamily: 'monospace', fontSize: 16 * scale, textShadow: `0 0 ${10 * scale}px #FF00FF` }}>
+                                        {data.hp ?? 0}
+                                    </span>
+                                </div>
+                            </DraggableBadge>
+
+                            {/* Center Stars */}
+                            <div className="flex flex-col items-center gap-1 justify-end pb-2">
+                                <div style={{ fontSize: 9 * scale, color: 'rgba(0,255,255,0.6)', letterSpacing: '0.2em', fontFamily: 'monospace' }}>SYSTEM.PR1ME</div>
+                                {data.cost !== undefined && data.cost > 0 && (
+                                    <div style={{ filter: `drop-shadow(0 0 ${5 * scale}px #00FFFF)` }}>
+                                        <StarRating stars={data.cost} scale={scale * 0.9} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ATK */}
+                            <DraggableBadge
+                                badgeKey="attack"
+                                pos={bPos.attack}
+                                isTransformMode={isTransformMode}
+                                isActive={activeBadgeId === 'badge-attack'}
+                                onSelect={() => handleSelect('attack')}
+                                onMove={handleMove}
+                            >
+                                <div className="pointer-events-auto flex flex-col items-center justify-center relative"
+                                    style={{
+                                        width: 55 * scale, height: 55 * scale,
+                                        border: `${2 * scale}px solid #00FFFF`,
+                                        background: 'rgba(0,255,255,0.15)',
+                                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                                        boxShadow: `0 0 ${15 * scale}px rgba(0,255,255,0.6), inset 0 0 ${10 * scale}px rgba(0,255,255,0.4)`
+                                    }}
+                                >
+                                    <span style={{ fontSize: 16 * scale, filter: `drop-shadow(0 0 ${8 * scale}px #00FFFF)` }}>{'\u2694\uFE0F'}</span>
+                                    <span style={{ color: '#00FFFF', fontWeight: 900, fontFamily: 'monospace', fontSize: 16 * scale, textShadow: `0 0 ${10 * scale}px #00FFFF` }}>
+                                        {data.attack ?? 0}
+                                    </span>
+                                </div>
+                            </DraggableBadge>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         if (layout === 'full-bleed') {
             return (
                 <div
@@ -2240,11 +2606,18 @@ export const CardFrame = memo<CardFrameProps>(
                     role={onClick ? 'button' : undefined}
                 >
                     {/* Background Image */}
-                    {data.imageUrl ? (
-                        <div
-                            className="absolute inset-0 z-0 bg-cover bg-center"
-                            style={{ backgroundImage: `url(${data.imageUrl})` }}
-                        />
+                    {hasArt ? (
+                        <div className="absolute inset-0 z-0 overflow-hidden">
+                            {renderArtMedia({
+                                className: 'w-full h-full object-cover',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity,
+                                    filter: `brightness(${imgBrightness})`,
+                                    transition: 'all 0.1s ease',
+                                },
+                            })}
+                        </div>
                     ) : (
                         <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#2a2a35] to-[#0a0a0c]" />
                     )}
@@ -2365,13 +2738,13 @@ export const CardFrame = memo<CardFrameProps>(
                                 className="flex justify-between w-full mt-2"
                                 style={{ padding: `0 ${10 * scale}px` }}
                             >
-                                {/* ATK */}
+                                {/* HP */}
                                 <DraggableBadge
-                                    badgeKey="attack"
-                                    pos={bPos.attack}
+                                    badgeKey="hp"
+                                    pos={bPos.hp}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-attack'}
-                                    onSelect={() => handleSelect('attack')}
+                                    isActive={activeBadgeId === 'badge-hp'}
+                                    onSelect={() => handleSelect('hp')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -2397,7 +2770,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                 boxShadow: '0 0 15px rgba(239,68,68,0.4)',
                                             }}
                                         >
-                                            <Sword
+                                            <Heart
                                                 size={24 * scale}
                                                 color="#fca5a5"
                                                 className="mb-[2px]"
@@ -2410,19 +2783,19 @@ export const CardFrame = memo<CardFrameProps>(
                                                     lineHeight: 1,
                                                 }}
                                             >
-                                                {data.attack ?? 0}
+                                                {data.hp ?? 0}
                                             </span>
                                         </div>
                                     </div>
                                 </DraggableBadge>
 
-                                {/* HP */}
+                                {/* ATK */}
                                 <DraggableBadge
-                                    badgeKey="hp"
-                                    pos={bPos.hp}
+                                    badgeKey="attack"
+                                    pos={bPos.attack}
                                     isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-hp'}
-                                    onSelect={() => handleSelect('hp')}
+                                    isActive={activeBadgeId === 'badge-attack'}
+                                    onSelect={() => handleSelect('attack')}
                                     onMove={handleMove}
                                 >
                                     <div
@@ -2448,7 +2821,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                 boxShadow: '0 0 15px rgba(74,222,128,0.4)',
                                             }}
                                         >
-                                            <Heart
+                                            <Sword
                                                 size={24 * scale}
                                                 color="#86efac"
                                                 className="mb-[2px]"
@@ -2461,7 +2834,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                     lineHeight: 1,
                                                 }}
                                             >
-                                                {data.hp ?? 0}
+                                                {data.attack ?? 0}
                                             </span>
                                         </div>
                                     </div>
@@ -2507,14 +2880,18 @@ export const CardFrame = memo<CardFrameProps>(
                     role={onClick ? 'button' : undefined}
                 >
                     {/* Full Bleed Image Background */}
-                    {data.imageUrl ? (
-                        <div
-                            className="absolute inset-0 z-0 bg-cover bg-center"
-                            style={{
-                                backgroundImage: `url(${data.imageUrl})`,
-                                filter: 'sepia(0.35) contrast(1.15) brightness(0.9)',
-                            }}
-                        />
+                    {hasArt ? (
+                        <div className="absolute inset-0 z-0 overflow-hidden">
+                            {renderArtMedia({
+                                className: 'w-full h-full object-cover',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity,
+                                    filter: `brightness(${imgBrightness}) sepia(0.35) contrast(1.15) brightness(0.9)`,
+                                    transition: 'all 0.1s ease',
+                                },
+                            })}
+                        </div>
                     ) : (
                         <div className="absolute inset-0 z-0 bg-gradient-to-br from-[#2C1810] to-[#0f0804] flex items-center justify-center">
                             <span style={{ fontSize: 80 * scale, opacity: 0.1 }}>⚙️</span>
@@ -2700,49 +3077,6 @@ export const CardFrame = memo<CardFrameProps>(
                                     marginTop: 4 * scale,
                                 }}
                             >
-                                {/* ATK */}
-                                <DraggableBadge
-                                    badgeKey="attack"
-                                    pos={bPos.attack}
-                                    isTransformMode={isTransformMode}
-                                    isActive={activeBadgeId === 'badge-attack'}
-                                    onSelect={() => handleSelect('attack')}
-                                    onMove={handleMove}
-                                >
-                                    <div
-                                        style={{
-                                            width: 68 * scale,
-                                            height: 68 * scale,
-                                            borderRadius: '50%',
-                                            background:
-                                                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg' fill='%238A5A19'%3E%3Cpath d='M50 0 L58 10 A40 40 0 0 1 80 20 L94 15 L100 28 L88 38 A40 40 0 0 1 90 50 A40 40 0 0 1 88 62 L100 72 L94 85 L80 80 A40 40 0 0 1 58 90 L50 100 L42 90 A40 40 0 0 1 20 80 L6 85 L0 72 L12 62 A40 40 0 0 1 10 50 A40 40 0 0 1 12 38 L0 28 L6 15 L20 20 A40 40 0 0 1 42 10 Z'/%3E%3Ccircle cx='50' cy='50' r='35' fill='%231A0F08'/%3E%3C/svg%3E\")",
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            border: `2px solid #5C1A1A`,
-                                            boxShadow:
-                                                'inset 0 0 15px #000, 0 8px 20px rgba(0,0,0,0.8)',
-                                        }}
-                                    >
-                                        <Sword
-                                            size={24 * scale}
-                                            color="#fca5a5"
-                                            className="mb-[2px]"
-                                        />
-                                        <span
-                                            style={{
-                                                fontSize: 24 * scale,
-                                                fontWeight: 900,
-                                                color: '#FFB8B8',
-                                                lineHeight: 1,
-                                            }}
-                                        >
-                                            {data.attack ?? 0}
-                                        </span>
-                                    </div>
-                                </DraggableBadge>
-
                                 {/* HP */}
                                 <DraggableBadge
                                     badgeKey="hp"
@@ -2763,12 +3097,55 @@ export const CardFrame = memo<CardFrameProps>(
                                             flexDirection: 'column',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            border: `2px solid #1A4D2E`,
+                                            border: `2px solid #5C1A1A`,
                                             boxShadow:
                                                 'inset 0 0 15px #000, 0 8px 20px rgba(0,0,0,0.8)',
                                         }}
                                     >
                                         <Heart
+                                            size={24 * scale}
+                                            color="#fca5a5"
+                                            className="mb-[2px]"
+                                        />
+                                        <span
+                                            style={{
+                                                fontSize: 24 * scale,
+                                                fontWeight: 900,
+                                                color: '#FFB8B8',
+                                                lineHeight: 1,
+                                            }}
+                                        >
+                                            {data.hp ?? 0}
+                                        </span>
+                                    </div>
+                                </DraggableBadge>
+
+                                {/* ATK */}
+                                <DraggableBadge
+                                    badgeKey="attack"
+                                    pos={bPos.attack}
+                                    isTransformMode={isTransformMode}
+                                    isActive={activeBadgeId === 'badge-attack'}
+                                    onSelect={() => handleSelect('attack')}
+                                    onMove={handleMove}
+                                >
+                                    <div
+                                        style={{
+                                            width: 68 * scale,
+                                            height: 68 * scale,
+                                            borderRadius: '50%',
+                                            background:
+                                                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg' fill='%238A5A19'%3E%3Cpath d='M50 0 L58 10 A40 40 0 0 1 80 20 L94 15 L100 28 L88 38 A40 40 0 0 1 90 50 A40 40 0 0 1 88 62 L100 72 L94 85 L80 80 A40 40 0 0 1 58 90 L50 100 L42 90 A40 40 0 0 1 20 80 L6 85 L0 72 L12 62 A40 40 0 0 1 10 50 A40 40 0 0 1 12 38 L0 28 L6 15 L20 20 A40 40 0 0 1 42 10 Z'/%3E%3Ccircle cx='50' cy='50' r='35' fill='%231A0F08'/%3E%3C/svg%3E\")",
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            border: `2px solid #1A4D2E`,
+                                            boxShadow:
+                                                'inset 0 0 15px #000, 0 8px 20px rgba(0,0,0,0.8)',
+                                        }}
+                                    >
+                                        <Sword
                                             size={24 * scale}
                                             color="#86efac"
                                             className="mb-[2px]"
@@ -2781,7 +3158,7 @@ export const CardFrame = memo<CardFrameProps>(
                                                 lineHeight: 1,
                                             }}
                                         >
-                                            {data.hp ?? 0}
+                                            {data.attack ?? 0}
                                         </span>
                                     </div>
                                 </DraggableBadge>
@@ -2861,8 +3238,18 @@ export const CardFrame = memo<CardFrameProps>(
 
                     {/* Art Layer */}
                     <div className="absolute top-0 left-0 w-full h-[272px] overflow-hidden rounded-t-[20px] z-0 pointer-events-none">
-                        {data.imageUrl ? (
-                            <img src={data.imageUrl} alt="Card Art" className="w-full h-full object-cover mix-blend-screen opacity-90 group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700" />
+                        {hasArt ? (
+                            renderArtMedia({
+                                className:
+                                    'w-full h-full object-cover mix-blend-screen opacity-90 group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700',
+                                style: {
+                                    transform: `scale(${imgScale})`,
+                                    opacity: imgOpacity * 0.9,
+                                    filter: `brightness(${imgBrightness})`,
+                                    transition: 'all 0.1s ease',
+                                },
+                                alt: 'Card Art',
+                            })
                         ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-[#020502] mix-blend-screen opacity-90 group-hover:mix-blend-normal group-hover:scale-110 transition-all duration-700">
                                 <Moon size={80 * scale} className="text-[#80FFB0] opacity-50 mb-4 drop-shadow-[0_0_15px_rgba(128,255,176,0.5)]" />
@@ -3095,24 +3482,23 @@ export const CardFrame = memo<CardFrameProps>(
                         height: artH,
                         borderRadius: 10 * scale,
                         overflow: 'hidden',
-                        background: data.imageUrl
+                        background: hasArt
                             ? undefined
                             : `linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))`,
                         border: `1px solid rgba(255,255,255,0.06)`,
                         zIndex: 2,
                     }}
                 >
-                    {data.imageUrl ? (
-                        <img
-                            src={data.imageUrl}
-                            alt={data.title}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                display: 'block',
-                            }}
-                        />
+                    {hasArt ? (
+                        renderArtMedia({
+                            alt: data.title,
+                            style: {
+                                transform: `scale(${imgScale})`,
+                                opacity: imgOpacity,
+                                filter: `brightness(${imgBrightness})`,
+                                transition: 'all 0.1s ease',
+                            },
+                        })
                     ) : (
                         <div
                             style={{
@@ -3285,13 +3671,13 @@ export const CardFrame = memo<CardFrameProps>(
                             overflow: 'visible',
                         }}
                     >
-                        {/* ATK badge (draggable) */}
+                        {/* HP badge (draggable) */}
                         <DraggableBadge
-                            badgeKey="attack"
-                            pos={bPos.attack}
+                            badgeKey="hp"
+                            pos={bPos.hp}
                             isTransformMode={isTransformMode}
-                            isActive={activeBadgeId === 'badge-attack'}
-                            onSelect={() => handleSelect('attack')}
+                            isActive={activeBadgeId === 'badge-hp'}
+                            onSelect={() => handleSelect('hp')}
                             onMove={handleMove}
                         >
                             <div
@@ -3317,7 +3703,7 @@ export const CardFrame = memo<CardFrameProps>(
                                         boxShadow: '0 0 10px rgba(239,68,68,0.3)',
                                     }}
                                 >
-                                    <Sword
+                                    <Heart
                                         size={22 * scale}
                                         color="#fca5a5"
                                         className="mb-[2px]"
@@ -3330,19 +3716,19 @@ export const CardFrame = memo<CardFrameProps>(
                                             lineHeight: 1,
                                         }}
                                     >
-                                        {data.attack ?? 0}
+                                        {data.hp ?? 0}
                                     </span>
                                 </div>
                             </div>
                         </DraggableBadge>
 
-                        {/* HP badge (draggable) */}
+                        {/* ATK badge (draggable) */}
                         <DraggableBadge
-                            badgeKey="hp"
-                            pos={bPos.hp}
+                            badgeKey="attack"
+                            pos={bPos.attack}
                             isTransformMode={isTransformMode}
-                            isActive={activeBadgeId === 'badge-hp'}
-                            onSelect={() => handleSelect('hp')}
+                            isActive={activeBadgeId === 'badge-attack'}
+                            onSelect={() => handleSelect('attack')}
                             onMove={handleMove}
                         >
                             <div
@@ -3368,7 +3754,7 @@ export const CardFrame = memo<CardFrameProps>(
                                         boxShadow: '0 0 10px rgba(74,222,128,0.3)',
                                     }}
                                 >
-                                    <Heart
+                                    <Sword
                                         size={22 * scale}
                                         color="#86efac"
                                         className="mb-[2px]"
@@ -3381,7 +3767,7 @@ export const CardFrame = memo<CardFrameProps>(
                                             lineHeight: 1,
                                         }}
                                     >
-                                        {data.hp ?? 0}
+                                        {data.attack ?? 0}
                                     </span>
                                 </div>
                             </div>

@@ -6,6 +6,7 @@ import React, {
   type ReactNode,
   type PointerEvent,
 } from 'react';
+import type Konva from 'konva';
 import type {
   ArtTransform,
   Blueprint,
@@ -41,6 +42,7 @@ import {
   PanelRight,
   Layers,
   Loader2,
+  Film,
 } from 'lucide-react';
 import {
   parseCsvFile,
@@ -57,6 +59,8 @@ import {
   resolveImageReference,
   resolveImageReferenceSync,
 } from '../../utils/imageBinding';
+import { isVideoMediaUrl } from '../../utils/media';
+import { exportCanvasToVideo } from '../../utils/exportVideo';
 import { generateAdvancedStats } from '../../lib/advancedBalance';
 import {
   createDefaultRangesConfig,
@@ -68,7 +72,6 @@ import {
   CARD_TEMPLATES,
   type TemplateKey,
 } from '../../templates/cardTemplates';
-import { AppShell } from '../../ui/layout/AppShell';
 import { CardList, filterCards, type CardFilters } from '../cards/CardList';
 import { CardInspector } from '../inspector/CardInspector';
 import { Dialog } from '../../ui/Dialog';
@@ -158,7 +161,9 @@ export function DataTableScreen(props: {
   // — Micro-interaction states (UI only, no logic impact) —
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [generationCardCount, setGenerationCardCount] = useState(0);
+  const [editorStage, setEditorStage] = useState<Konva.Stage | null>(null);
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastIdRef = useRef(0);
   const pushToast = (message: string, type: ToastData['type'] = 'success') => {
@@ -240,7 +245,7 @@ export function DataTableScreen(props: {
     return { kind: 'image', src: resolved } as CardArt;
   }, [selectedRow, imageBinding]);
 
-  const resolvedArt = resolveRowArt(selectedRow, previewArt);
+  const resolvedArt = resolveRowArt(selectedRow ?? undefined, previewArt);
 
   const posterWarning =
     previewArt?.kind === 'video' && !previewArt.poster
@@ -620,13 +625,19 @@ export function DataTableScreen(props: {
     if (!selectedRow) return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/*,image/gif,video/mp4,video/webm';
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
       try {
         const dataUrl = await fileToDataUrl(file, t('editor.errors.readImage'));
-        updateRowArt(selectedRow.id, { kind: 'image', src: dataUrl });
+        const isVideo =
+          file.type.toLowerCase().startsWith('video/') ||
+          isVideoMediaUrl(file.name);
+        updateRowArt(selectedRow.id, {
+          kind: isVideo ? 'video' : 'image',
+          src: dataUrl,
+        });
       } catch {
         alert(t('editor.errors.readImage'));
       }
@@ -792,6 +803,34 @@ export function DataTableScreen(props: {
       pushToast('Generation failed — check settings', 'error');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleExportVideo = async () => {
+    if (!editorStage || isRecording) return;
+    setIsRecording(true);
+    try {
+      await exportCanvasToVideo(editorStage, {
+        durationMs: 4000,
+        fileName: 'animated-card.webm',
+      });
+      pushToast(
+        t('data.exportVideoSuccess', {
+          defaultValue: 'Video exported successfully',
+        }),
+        'success',
+      );
+    } catch (error) {
+      pushToast(
+        error instanceof Error
+          ? error.message
+          : t('data.exportVideoFailed', {
+              defaultValue: 'Video export failed',
+            }),
+        'error',
+      );
+    } finally {
+      setIsRecording(false);
     }
   };
 
@@ -1770,6 +1809,29 @@ export function DataTableScreen(props: {
             </button>
             <button
               type="button"
+              onClick={handleExportVideo}
+              disabled={
+                !selectedRow ||
+                !blueprint ||
+                previewMode !== 'edit' ||
+                !editorStage ||
+                isRecording
+              }
+              className="px-2.5 py-1 rounded-md text-xs font-medium bg-[#12151E] hover:bg-[#1A2030] text-slate-400 hover:text-slate-200 border border-[#252A3A] transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+            >
+              {isRecording ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Film size={13} />
+              )}
+              <span>
+                {isRecording
+                  ? t('data.recording', { defaultValue: 'Recording...' })
+                  : t('data.exportVideo', { defaultValue: 'Export Video' })}
+              </span>
+            </button>
+            <button
+              type="button"
               onClick={() => requestDelete(selectedRow?.id)}
               disabled={!selectedRow}
               className="px-2.5 py-1 rounded-md text-xs font-medium bg-rose-500/[0.08] hover:bg-rose-500/20 text-rose-500 border border-rose-800/40 transition-colors disabled:opacity-40"
@@ -1827,6 +1889,7 @@ export function DataTableScreen(props: {
               onSelectIds={setEditorSelectedIds}
               onChange={updateBlueprintElements}
               onZoomChange={setEditorZoom}
+              onStageReady={(stage) => setEditorStage(stage)}
             />
           </div>
         ) : (
@@ -2464,14 +2527,26 @@ export function DataTableScreen(props: {
       ) : currentView === 'generate' ? (
         renderGenerateStudio()
       ) : (
-        <AppShell
-          header={header}
-          left={leftPanel}
-          center={centerPanel}
-          right={rightPanel}
-          leftClassName={leftDrawerOpen ? 'drawerOpen' : ''}
-          rightClassName={rightDrawerOpen ? 'drawerOpen' : ''}
-        />
+        <div className="appShell">
+          <header className="topBar">
+            <div className="topBarContent">{header}</div>
+          </header>
+          <div className="workspace">
+            <aside
+              className={`leftPanel panel uiPanel min-h-0 flex flex-col ${leftDrawerOpen ? 'drawerOpen' : ''}`}
+            >
+              {leftPanel}
+            </aside>
+            <section className="centerPanel panel uiPanel min-h-0 flex flex-col">
+              {centerPanel}
+            </section>
+            <aside
+              className={`rightPanel panel uiPanel min-h-0 flex flex-col ${rightDrawerOpen ? 'drawerOpen' : ''}`}
+            >
+              {rightPanel}
+            </aside>
+          </div>
+        </div>
       )}
       <div
         className={`drawerOverlay ${leftDrawerOpen || rightDrawerOpen ? 'open' : ''}`}

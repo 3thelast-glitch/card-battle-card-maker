@@ -12,9 +12,10 @@ export type TemplateKey =
   | 'steampunk'
   | 'blood-ritual'
   | 'eldritch-eye'
-  | 'glitch-artifact'
   | 'swamp'
-  | 'elven-luxury';
+  | 'elven-luxury'
+  | 'cyber-neon'
+  | 'glitch-artifact';
 
 export type CardTemplate = {
   key: TemplateKey;
@@ -25,9 +26,10 @@ export type CardTemplate = {
   | 'steampunk'
   | 'blood-ritual'
   | 'eldritch-eye'
-  | 'glitch-artifact'
+  | 'cyber-neon'
   | 'swamp'
-  | 'elven-luxury';
+  | 'elven-luxury'
+  | 'glitch-artifact';
   titleKey?: string;
   descKey?: string;
   thumbnail?: string;
@@ -212,6 +214,16 @@ export const CARD_TEMPLATES: Record<TemplateKey, CardTemplate> = {
     layout: 'elven-luxury',
     thumbnail: '/assets/backgrounds/template-placeholder.svg',
     defaultBgColor: '#040803',
+    artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
+    title: { x: 0, y: 0, size: 22 },
+    desc: { x: 0, y: 0, size: 12 },
+  },
+  'cyber-neon': {
+    key: 'cyber-neon',
+    label: { en: 'Cyber Neon', ar: 'سايبر نيون' },
+    layout: 'cyber-neon',
+    thumbnail: '/assets/backgrounds/template-placeholder.svg',
+    defaultBgColor: '#050510',
     artRect: { left: 0, top: 0, right: 0, bottom: 0, radius: 0 },
     title: { x: 0, y: 0, size: 22 },
     desc: { x: 0, y: 0, size: 12 },

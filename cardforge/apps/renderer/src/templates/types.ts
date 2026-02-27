@@ -1,4 +1,5 @@
 import type { Blueprint } from '@cardsmith/core';
+import type { Element, Rarity } from '../ui/layout/components/ui/CardFrame';
 
 export type LocalizedString = Record<string, string>;
 
@@ -7,6 +8,25 @@ export type TemplateDefinition = Omit<Blueprint, 'name' | 'description'> & {
   description?: string | LocalizedString;
   thumbnail?: string;
 };
+
+export interface Card {
+  title?: string;
+  description?: string;
+  element?: Element;
+  rarity?: Rarity;
+  attack?: number;
+  defense?: number;
+  hp?: number;
+  imageUrl?: string;
+  artUrl?: string;
+  traits?: string[];
+  cost?: number;
+  name?: string;
+  icon?: string;
+  imageScale?: number;
+  imageOpacity?: number;
+  imageBrightness?: number;
+}
 
 export function resolveLocalized(
   value: string | LocalizedString | undefined,

@@ -1,7 +1,5 @@
 import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
 
-import type { CardRace, CardTrait } from '../../../../packages/core/src/index';
-
 export type AbilityKey =
   | 'none'
   | 'shield_loss_to_draw'

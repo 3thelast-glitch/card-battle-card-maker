@@ -405,12 +405,12 @@ a {
 }
 
 /* ════════════════════════════════════════════════════════════
-   PREMIUM SCROLLBARS — 5px, flat dark, blue hover
+   PREMIUM SCROLLBARS — 8px, dark theme matching
    ════════════════════════════════════════════════════════════ */
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -418,18 +418,58 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e2435;
-  border-radius: 999px;
+  background: #4b5563;
+  /* Tailwind gray-600 */
+  border-radius: 4px;
   transition: background 0.15s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2d4a7a;
+  background: #9ca3af;
+  /* Tailwind gray-400 */
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Custom constrained scrollbar for specific grids (e.g. Template Gallery modal) */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Custom constrained scrollbar for specific grids (e.g. Design Editor Sidebar) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
 
 /* Firefox */
 * {

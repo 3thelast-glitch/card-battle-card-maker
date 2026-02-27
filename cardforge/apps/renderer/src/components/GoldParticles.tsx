@@ -30,7 +30,7 @@ export const GoldParticles = memo(
   }: GoldParticlesProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const particlesRef = useRef<Particle[]>([]);
-    const animationRef = useRef<number>();
+    const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(0);
     const [dimensions, setDimensions] = useState({ width, height });
     const isVisibleRef = useRef<boolean>(true);
@@ -168,7 +168,7 @@ export const GoldParticles = memo(
       animationRef.current = requestAnimationFrame(animate);
 
       return () => {
-        if (animationRef.current) {
+        if (animationRef.current != null) {
           cancelAnimationFrame(animationRef.current);
         }
       };
@@ -183,7 +183,7 @@ export const GoldParticles = memo(
         (entries) => {
           entries.forEach((entry) => {
             isVisibleRef.current = entry.isIntersecting;
-            if (entry.isIntersecting && !animationRef.current) {
+            if (entry.isIntersecting && animationRef.current == null) {
               animationRef.current = requestAnimationFrame(animate);
             }
           });
@@ -247,7 +247,5 @@ export const GoldParticles = memo(
     );
   },
 );
-
-export default GoldParticles;
 
 export default GoldParticles;
